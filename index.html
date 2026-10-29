@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>أثَر | ATHAR AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">\n<link rel="manifest" href="/manifest.json">\n<meta name="theme-color" content="#0D47A1">
+</head>
+<body>
+<div id="loginScreen">
+  <div class="card" style="width:90%;max-width:440px;text-align:center;">
+    <h1 style="color:var(--primary);">أثَر</h1>
+    <p class="subtitle">دخول آمن بالبريد الرسمي</p>
+    <label for="loginEmail" style="display:block;text-align:right;">البريد الإلكتروني الرسمي</label>
+    <input type="email" id="loginEmail" placeholder="name@moe.om أو name@edu.moe.om" autocomplete="email" required>
+    <button class="btn" id="requestCodeBtn" onclick="requestLoginCode()" style="width:100%;">إرسال رمز التحقق</button>
+    <div id="otpArea" hidden>
+      <label for="loginCode" style="display:block;text-align:right;margin-top:.8rem;">رمز التحقق (6 أرقام)</label>
+      <input type="text" id="loginCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••">
+      <button class="btn" id="verifyCodeBtn" onclick="verifyLoginCode()" style="width:100%;">تحقق وتسجيل الدخول</button>
+    </div>
+    <p style="font-size:.82rem;color:var(--text-light);margin-top:.8rem;">الدخول متاح للحسابات المسجلة على النطاقين الرسميين فقط. لا يمكن اختيار الدور يدويًا؛ يحدده مسؤول النظام.</p>
+    <p id="authMessage" role="status" aria-live="polite"></p>
+  </div>
+</div>
+<button class="menu-btn" onclick="toggleSidebar()">☰</button>
+<aside class="sidebar" id="sidebar">
+  <div class="logo">أثَر <small>ATHAR AI</small></div>
+
+  <div class="menu-group">
+    <div class="menu-title" onclick="toggleGroup(this)">🏠 الرئيسية</div>
+    <div class="menu-items">
+      <a href="#" data-section="dashboard" class="active">لوحة القيادة</a>
+      <a href="#" data-section="reports">التقارير</a>\n      <a href="#" data-section="principalView">متابعة الصفوف</a>
+    </div>
+  </div>
+
+  <div class="menu-group">
+    <div class="menu-title" onclick="toggleGroup(this)">👥 الطلبة والتقويم</div>
+    <div class="menu-items">
+      <a href="#" data-section="students">الطلبة والصفوف</a>
+      <a href="#" data-section="assessment">إدخال التقويمات</a>
+      <a href="#" data-section="radar">رادار التعثر</a>
+    </div>
+  </div>
+
+  <div class="menu-group">
+    <div class="menu-title" onclick="toggleGroup(this)">🤖 الذكاء والتدخل</div>
+    <div class="menu-items">
+      <a href="#" data-section="assistant">المساعد الذكي</a>
+      <a href="#" data-section="intervention">مصمم التدخلات</a>
+      <a href="#" data-section="activities">بنك الأنشطة</a>
+      <a href="#" data-section="impact">قياس الأثر</a>
+    </div>
+  </div>
+
+  <div class="menu-group">
+    <div class="menu-title" onclick="toggleGroup(this)">⚙️ الإعدادات والدعم</div>
+    <div class="menu-items">
+      <a href="#" data-section="inclusive">التعلم الشامل</a>
+      <a href="#" data-section="lowresource">وضع الإمكانات المنخفضة</a>
+      <a href="#" data-section="roles">الأدوار</a>
+      <a href="#" data-section="privacy">الخصوصية</a>
+      <a href="#" data-section="teacherdev">تطوير المعلم</a>
+      <a href="#" data-section="curriculum">المناهج العُمانية</a>\n      <a href="#" data-section="studentProgress">تقدمي الدراسي</a>\n      <a href="#" data-section="guide">دليل الاستخدام</a>
+      <a href="#" data-section="about">عن المنصة</a>
+    </div>
+  </div>
+
+  <div style="margin-top:1.5rem;padding:0 .5rem;">
+    <button class="btn outline" onclick="toggleDark()" style="width:100%;border-color:#fff;color:#fff;">🌙 وضع داكن</button>
+    <button class="btn outline" onclick="logout()" style="width:100%;border-color:#fff;color:#fff;margin-top:.4rem;">🚪 تسجيل خروج</button>
+  </div>
+</aside>
+<div class="main">
+  <section id="dashboard" class="section active">
+    <h1>لوحة القيادة التربوية</h1>
+    <p class="subtitle">من اكتشاف فجوة التعلم → التدخل المناسب → قياس الأثر بالأدلة</p>
+    <div class="cards">
+      <div class="card"><h3>متوسط إتقان الصف</h3><div class="stat">76%</div><div class="progress"><div class="progress-bar" style="width:76%"></div></div><span class="badge success">مستقر</span></div>
+      <div class="card"><h3>فجوات تحتاج متابعة</h3><div class="stat">4</div><span class="badge danger">عاجل</span></div>
+      <div class="card"><h3>التدخلات الجارية</h3><div class="stat">3</div><span class="badge warning">قيد التنفيذ</span></div>
+      <div class="card"><h3>الطلبة النشطون</h3><div class="stat">28</div><span class="badge info">الصف الخامس</span></div>
+    </div>
+    <div class="card" style="margin-top:1rem;">
+      <h3>مؤشر اكتمال الدورة</h3>
+      <div class="progress"><div class="progress-bar" id="cycleBar" style="width:40%"></div></div>
+      <p id="cycleText" style="font-size:.85rem;margin-top:.3rem;">تقويم — | تحليل — | تدخل — | قياس —</p>
+    </div>
+    <div class="card" style="margin-top:1rem;">
+      <h3>تنبيهات ذكية</h3>
+      <div id="smartAlerts"></div>
+    </div>
+    <div class="card" style="margin-top:1rem;">
+      <h3>إدارة البيانات</h3>
+      <button class="btn small" onclick="exportData()">تصدير JSON</button>
+      <button class="btn small outline" onclick="document.getElementById('imp').click()">استيراد</button>
+      <input type="file" id="imp" accept=".json" style="display:none" onchange="importData(event)">
+    </div>
+  </section>
+
+  <section id="students" class="section">
+    <h1>إدارة الطلبة والصفوف</h1>
+    <div class="card">
+      <h3>إضافة طالب</h3>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr auto; gap:0.6rem; align-items:end;">
+        <div>
+          <label>اسم الطالب</label>
+          <input type="text" id="newName" placeholder="مثال: أحمد محمد">
+        </div>
+        <div>
+          <label>الصف</label>
+          <select id="newGrade">
+            <option value="الرابع">الرابع</option>
+            <option value="الخامس" selected>الخامس</option>
+            <option value="السادس">السادس</option>
+            <option value="السابع">السابع</option>
+            <option value="الثامن">الثامن</option>
+          </select>
+        </div>
+        <div>
+          <label>الشعبة</label>
+          <input type="text" id="newSection" placeholder="أ" value="أ">
+        </div>
+        <button class="btn" onclick="addStudent()">إضافة</button>
+      </div>
+    </div>
+    <div class="card" style="margin-top:1rem;">
+      <h3>تصفية حسب الصف والشعبة</h3>
+      <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
+        <select id="filterGrade" onchange="renderStudents()">
+          <option value="">كل الصفوف</option>
+          <option value="الرابع">الرابع</option>
+          <option value="الخامس">الخامس</option>
+          <option value="السادس">السادس</option>
+          <option value="السابع">السابع</option>
+          <option value="الثامن">الثامن</option>
+        </select>
+        <input type="text" id="filterSection" placeholder="الشعبة (اختياري)" oninput="renderStudents()" style="max-width:140px;">
+      </div>
+    </div>
+    <div class="card" style="margin-top:1rem;">
+      <h3>الطلبة (<span id="studentCount">0</span>)</h3>
+      <div id="studentsList" style="margin-top:0.6rem;"></div>
+    </div>
+  </section>
+
+  <section id="assessment" class="section">
+    <h1>إدخال التقويمات</h1>
+    <div class="card">
+      <label>اسم التقويم / المهارة</label>
+      <input type="text" id="assessName" value="تمثيل الكسور">
+      <label>عدد الطلبة</label>
+      <input type="number" id="total" value="28">
+      <label>عدد الإجابات الصحيحة</label>
+      <input type="number" id="correct" value="11">
+      <button class="btn" onclick="saveAssessment()">حفظ التقويم</button>
+      <div id="assessResult" style="margin-top:.8rem;"></div>
+    </div>
+    <div id="assessList"></div>
+  </section>
+
+  <section id="radar" class="section">
+    <h1>رادار التعثر وخريطة جذور التعلم</h1>
+    <div class="card">
+      <h3>تحليل أنماط الأخطاء</h3>
+      <textarea id="errorInput" rows="3" placeholder="صف الأخطاء الشائعة..."></textarea>
+      <button class="btn small outline" onclick="document.getElementById('errorInput').value='يخلط الطلاب بين البسط والمقام'">مثال: الكسور</button>
+      <button class="btn" onclick="analyzeErrors()">تحليل</button>
+      <div id="analysisResult" style="margin-top:.8rem;"></div>
+    </div>
+    <div class="card" style="margin-top:1rem;">
+      <h3>خريطة جذور المهارات (مثال: الكسور)</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:.6rem;margin-top:.6rem;">
+        <div class="card" style="flex:1;min-width:140px;text-align:center;padding:.8rem;"><strong>الجزء والكل</strong><br><span class="badge info">مهارة سابقة</span></div>
+        <div style="align-self:center;">←</div>
+        <div class="card" style="flex:1;min-width:140px;text-align:center;padding:.8rem;background:#FFEBEE;"><strong>تمثيل الكسور</strong><br><span class="badge danger">فجوة محتملة</span></div>
+        <div style="align-self:center;">←</div>
+        <div class="card" style="flex:1;min-width:140px;text-align:center;padding:.8rem;"><strong>العمليات على الكسور</strong><br><span class="badge warning">مهارة لاحقة</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="assistant" class="section">
+    <h1>المساعد الذكي</h1>
+    <div class="card">
+      <textarea id="assistantInput" rows="3" placeholder="مثال: كيف أعالج خلط الطلاب بين البسط والمقام؟"></textarea>
+      <button class="btn" onclick="askAssistant()">إرسال</button>
+      <div id="assistantReply" style="margin-top:1rem;"></div>
+    </div>
+    <div class="note">المساعد يقدم اقتراحات فقط. الحكم النهائي بيد المعلم.</div>
+  </section>
+
+  <section id="intervention" class="section">
+    <h1>مصمم التدخلات</h1>
+    <div class="card">
+      <label>المهارة / الفجوة</label>
+      <input type="text" id="intSkill" value="تمثيل الكسور">
+      <label>الهدف</label>
+      <textarea id="intGoal" rows="2">أن يتمكن 80% من الطلبة من تمثيل الكسر بصريًا</textarea>
+      <label>خطوات التدخل</label>
+      <textarea id="intSteps" rows="3">1. نشاط ورقي بأشكال بسيطة\n2. عمل مجموعات\n3. أسئلة تحقق قصيرة</textarea>
+      <label>مسار إثرائي</label>
+      <textarea id="intEnrich" rows="2" placeholder="مثال: مسائل أكثر تعقيدًا"></textarea>
+      <button class="btn" onclick="saveIntervention()">حفظ التدخل</button>
+      <button class="btn outline" onclick="printWorksheet()">طباعة ورقة عمل</button>
+    </div>
+    <div id="intList"></div>
+  </section>
+
+  <section id="impact" class="section">
+    <h1>قياس الأثر</h1>
+    <div class="card">
+      <label>النتيجة قبل التدخل (%)</label>
+      <input type="number" id="before" value="39">
+      <label>النتيجة بعد التدخل (%)</label>
+      <input type="number" id="after" value="71">
+      <button class="btn" onclick="calcImpact()">حساب الفرق</button>
+      <div id="impactResult" style="margin-top:.8rem;"></div>
+    </div>
+    <div class="note">لا يُنسب التحسن إلى التدخل وحده.</div>
+  </section>
+
+  <section id="reports" class="section">
+    <h1>التقارير</h1>
+    <div class="card">
+      <button class="btn" onclick="window.print()">طباعة التقرير الحالي</button>
+    </div>
+  </section>
+
+  <section id="curriculum" class="section">
+    <h1>المناهج العمانية</h1>
+    <div class="card">
+      <p>ربط المهارات بمناهج سلطنة عُمان.</p>
+      <a href="https://ict.moe.gov.om/" target="_blank" class="btn">فتح تقنيات التعليم</a>
+    </div>
+  </section>
+
+  <section id="inclusive" class="section">
+    <h1>التعلم الشامل</h1>
+    <div class="card">
+      <label><input type="checkbox" id="largeText" onchange="applyAccess()"> تكبير النص</label><br>
+      <label><input type="checkbox" id="highContrast" onchange="applyAccess()"> تباين مرتفع</label>
+    </div>
+  </section>
+
+  <section id="lowresource" class="section">
+    <h1>وضع المدرسة منخفضة الإمكانات</h1>
+    <div class="card">
+      <button class="btn" onclick="toggleLowResource()">تفعيل / إيقاف الوضع</button>
+      <div id="lowResInfo" style="margin-top:.8rem;"></div>
+    </div>
+  </section>
+
+  <section id="roles" class="section">
+    <h1>الدور الحالي</h1>
+    <div class="card">
+      <p>تم تحديد دورك عند تسجيل الدخول ولا يمكن تغييره من داخل المنصة.</p>
+      <div id="roleInfo" style="margin-top:1rem;"></div>
+      <button class="btn outline" onclick="logout()" style="margin-top:0.8rem;">تسجيل خروج لتغيير الدور</button>
+    </div>
+  </section>
+
+  <section id="privacy" class="section">
+    <h1>الخصوصية والأخلاقيات</h1>
+    <div class="card">
+      <ul style="padding-right:1.2rem;line-height:1.8;">
+        <li>لا تشخيص قطعي.</li>
+        <li>مراجعة بشرية إلزامية.</li>
+        <li>البيانات تُحفظ محليًا.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="teacherdev" class="section">
+    <h1>تطوير المعلم</h1>
+    <div class="card">
+      <button class="btn" onclick="suggestPath()">اقتراح مسار</button>
+      <div id="pathResult" style="margin-top:.8rem;"></div>
+    </div>
+  </section>
+
+  <section id="activities" class="section">
+    <h1>بنك الأنشطة الجاهزة</h1>
+    <div class="cards">
+      <div class="card"><h3>الكسور</h3><p>أشكال مقسمة وتسمية البسط والمقام.</p><button class="btn small" onclick="useActivity('تمثيل الكسور','أشكال ورقية')">استخدام</button></div>
+      <div class="card"><h3>الفهم القرائي</h3><p>نص قصير + أسئلة الفكرة الرئيسية.</p><button class="btn small" onclick="useActivity('الفهم القرائي','اقرأ-فكر-شارك')">استخدام</button></div>
+    </div>
+  </section>
+
+  <section id="guide" class="section">
+    <h1 id="guideTitle">دليل الاستخدام</h1>
+    <div id="guideContent"></div>
+  </section>
+
+  <section id="studentProgress" class="section">
+    <h1>تقدمي الدراسي</h1>
+    <p class="subtitle">نتائج الطالب حسب المواد وتعليقات المعلمين</p>
+    <div class="card">
+      <h3>الرياضيات</h3>
+      <div class="progress"><div class="progress-bar" style="width:72%"></div></div>
+      <p>نسبة الإتقان: 72%</p>
+      <p style="margin-top:0.5rem;"><strong>تعليق المعلم:</strong> تحسن ملحوظ في تمثيل الكسور بعد النشاط البصري. يُنصح بالاستمرار في التمارين المنزلية القصيرة.</p>
+      <p><strong>توصية:</strong> مراجعة مفهوم الجزء والكل مرة إضافية.</p>
+    </div>
+    <div class="card" style="margin-top:0.8rem;">
+      <h3>اللغة العربية</h3>
+      <div class="progress"><div class="progress-bar" style="width:65%"></div></div>
+      <p>نسبة الإتقان: 65%</p>
+      <p style="margin-top:0.5rem;"><strong>تعليق المعلم:</strong> يحتاج إلى مزيد من التدريب على استخراج الفكرة الرئيسية.</p>
+      <p><strong>توصية:</strong> قراءة نصوص قصيرة يوميًا مع تلخيص بسيط.</p>
+    </div>
+    <div class="note">هذه البيانات تخص الطالب فقط ولا تظهر بيانات بقية الطلبة.</div>
+  </section>
+
+  <section id="principalView" class="section">
+    <h1>متابعة الصفوف والمعلمين</h1>
+    <div class="card">
+      <h3>الصف الخامس - شعبة أ</h3>
+      <p>متوسط الإتقان: 74% | فجوات نشطة: 3 | تدخلات جارية: 2</p>
+      <span class="badge success">مستقر</span>
+    </div>
+    <div class="card" style="margin-top:0.8rem;">
+      <h3>الصف الخامس - شعبة ب</h3>
+      <p>متوسط الإتقان: 68% | فجوات نشطة: 5 | تدخلات جارية: 1</p>
+      <span class="badge warning">يحتاج متابعة</span>
+    </div>
+    <div class="card" style="margin-top:0.8rem;">
+      <h3>تقييم المعلمين</h3>
+      <p><strong>أ. فاطمة:</strong> تستخدم المنصة بانتظام، أكملت 4 دورات تدخل، قياس أثر واضح.</p>
+      <p><strong>أ. محمد:</strong> أدخل تقويمات، يحتاج إلى تفعيل قياس الأثر بشكل أكبر.</p>
+    </div>
+  </section>
+    <h1>دليل المعلم</h1>
+    <p class="subtitle">كيف تستفيد من منصة أثَر في عملك اليومي</p>
+    <div class="card"><h3>1. إدخال التقويم</h3><p>أدخل نتائج تقويم قصير. المنصة تحسب نسبة الإتقان فورًا.</p></div>
+    <div class="card" style="margin-top:0.8rem;"><h3>2. تحليل التعثر</h3><p>في رادار التعثر صف الأخطاء الشائعة لتحصل على تحليل واقتراح تدخل.</p></div>
+    <div class="card" style="margin-top:0.8rem;"><h3>3. تصميم التدخل</h3><p>استخدم مصمم التدخل أو بنك الأنشطة ثم اطبع ورقة العمل.</p></div>
+    <div class="card" style="margin-top:0.8rem;"><h3>4. قياس الأثر</h3><p>بعد التنفيذ سجّل النتيجة الجديدة لمقارنة قبل/بعد.</p></div>
+    <div class="note">المنصة أداة مساعدة. القرار التربوي النهائي يبقى بيد المعلم.</div>
+  </section>
+
+  <section id="about" class="section">
+    <h1>عن المنصة</h1>
+    <div class="card">
+      <p><strong>أثَر | ATHAR AI</strong></p>
+      <p>رابط المنصة: <a href="https://athar-n.netlify.app" target="_blank">https://athar-n.netlify.app</a></p>
+      <p>اسم الفريق: <span id="teamName">[أدخل الاسم]</span></p>
+      <button class="btn small outline" onclick="editTeam()">تعديل</button>
+    </div>
+  </section>
+</div>
+<div id="toast"></div>
+<script src="config.js"></script>\n<script src="app.js"></script>
+</body>
+</html>
