@@ -356,7 +356,13 @@ const transporter = process.env.SMTP_HOST
         : undefined
     })
   : null;
-
+app.get('/', (req, res) => {
+  res.json({
+    ok: true,
+    service: 'athar-api',
+    message: 'خادم منصة أثر يعمل بنجاح'
+  });
+});
 app.get(
   '/api/health',
   asyncHandler(async (req, res) => {
