@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "seed:user": "node seed-user.js"
+    "seed:user": "node seed-user.js",
     "create-user": "node create-user.js",
     "check": "node --check server.js && node --check app.js && node --check create-user.js"
   },
