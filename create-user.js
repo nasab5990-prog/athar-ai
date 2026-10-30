@@ -10,7 +10,11 @@ db.exec(`CREATE TABLE IF NOT EXISTS users(
  role TEXT NOT NULL CHECK(role IN ('teacher','senior_teacher','principal','parent')),
  school_id TEXT NOT NULL,student_id TEXT,active INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 )`);
-const [emailArg,nameArg,roleArg,schoolArg,studentArg]=process.argv.slice(2);
+const emailArg = process.env.CREATE_USER_EMAIL;
+const nameArg = process.env.CREATE_USER_NAME;
+const roleArg = process.env.CREATE_USER_ROLE;
+const schoolArg = process.env.CREATE_USER_SCHOOL;
+const studentArg = process.env.CREATE_USER_STUDENT;
 const email=(emailArg||'').toLowerCase().trim(),name=(nameArg||'').trim(),role=roleArg||'',school=(schoolArg||'').trim(),student=(studentArg||'').trim()||null;
 if(!email||!name||!school||!['teacher','senior_teacher','principal','parent'].includes(role)){console.error('Usage: npm run create-user -- user@moe.om "Name" teacher SCHOOL_ID [STUDENT_ID-for-parent]');process.exit(1);}
 const domain=email.split('@')[1];
