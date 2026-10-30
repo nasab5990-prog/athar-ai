@@ -210,49 +210,113 @@ function renderStudents() {
 }
 function saveTeacherSetup() {
   const subjects = [];
-  if (document.getElementById('subjArabic')?.checked) subjects.push('أحب لغتي / اللغة العربية');
-  if (document.getElementById('subjIslamic')?.checked) subjects.push('ديني حياتي / التربية الإسلامية');
-  if (document.getElementById('subjMath')?.checked) subjects.push('الرياضيات');
-  if (document.getElementById('subjScience')?.checked) subjects.push('العلوم');
-  if (document.getElementById('subjOther')?.checked) subjects.push('مادة أخرى');
 
-  const grades = Array.from(document.querySelectorAll('.gradeCheck:checked')).map(el => el.value);
+  if (document.getElementById('subjArabic')?.checked) {
+    subjects.push('أحب لغتي / اللغة العربية');
+  }
 
-  const setup = { subjects, grades };
-  localStorage.setItem('athar_teacher_setup', JSON.stringify(setup));
+  if (document.getElementById('subjIslamic')?.checked) {
+    subjects.push('ديني حياتي / التربية الإسلامية');
+  }
+
+  if (document.getElementById('subjMath')?.checked) {
+    subjects.push('الرياضيات');
+  }
+
+  if (document.getElementById('subjScience')?.checked) {
+    subjects.push('العلوم');
+  }
+
+  if (document.getElementById('subjOther')?.checked) {
+    subjects.push('مادة أخرى');
+  }
+
+  const grades = Array.from(
+    document.querySelectorAll('.gradeCheck:checked')
+  ).map(el => el.value);
+
+  const setup = {
+    subjects,
+    grades
+  };
+
+  localStorage.setItem(
+    'athar_teacher_setup',
+    JSON.stringify(setup)
+  );
 
   const el = document.getElementById('teacherSetupResult');
+
   if (el) {
-    const setup = JSON.parse(localStorage.getItem('athar_teacher_setup') || '{}');
-    const subjects = setup.subjects?.length ? setup.subjects.join('، ') : 'لم تُحدد';
-    const grades = setup.grades?.length ? setup.grades.join('، ') : 'لم تُحدد';
-    el.innerHTML = `<div class="card"><strong>تم الحفظ</strong><br>المواد: ${subjects}<br>الصفوف: ${grades}<br><small>سيتم عرض الطلبة حسب الصفوف المحددة في قائمة الطلبة.</small></div>`;
+    const subjectsText = subjects.length
+      ? subjects.join('، ')
+      : 'لم تُحدد';
+
+    const gradesText = grades.length
+      ? grades.join('، ')
+      : 'لم تُحدد';
+
+    el.innerHTML = `
+      <div class="card">
+        <strong>تم الحفظ</strong><br>
+        المواد: ${subjectsText}<br>
+        الصفوف: ${gradesText}<br>
+        <small>
+          سيتم عرض الطلبة حسب الصفوف المحددة في قائمة الطلبة.
+        </small>
+      </div>
+    `;
   }
-    el.innerHTML = `<div class="card"><strong>تم الحفظ</strong><br>المواد: ${subjects.join('، ') || '—'}<br>الصفوف: ${grades.join('، ') || '—'}</div>`;
-  }
+
+  renderGradeCards();
   showToast('تم حفظ إعدادات المعلم');
 }
+
+function addStudent() {
   const name = document.getElementById('newName').value.trim();
   const grade = document.getElementById('newGrade').value;
-  const section = document.getElementById('newSection').value.trim() || 'أ';
-  const schoolType = document.getElementById('schoolType')?.value || '';
-  const classGender = document.getElementById('classGender')?.value || '';
-  if (!name) return showToast('أدخل اسم الطالب');
-  students.push({id: Date.now(), name, grade, section, schoolType, classGender});
-  localStorage.setItem('athar_students', JSON.stringify(students));
-  saveRecord('student', {name, grade, section});
+  const section =
+    document.getElementById('newSection').value.trim() || 'أ';
+
+  const schoolType =
+    document.getElementById('schoolType')?.value || '';
+
+  const classGender =
+    document.getElementById('classGender')?.value || '';
+
+  if (!name) {
+    showToast('أدخل اسم الطالب');
+    return;
+  }
+
+  const student = {
+    id: Date.now(),
+    name,
+    grade,
+    section,
+    schoolType,
+    classGender
+  };
+
+  students.push(student);
+
+  localStorage.setItem(
+    'athar_students',
+    JSON.stringify(students)
+  );
+
+  saveRecord('student', {
+    name,
+    grade,
+    section,
+    schoolType,
+    classGender
+  });
+
   document.getElementById('newName').value = '';
+
   renderStudents();
-  showToast('تمت إضافة ' + name);
-}
-  const name = document.getElementById('newName').value.trim();
-  const grade = document.getElementById('newGrade').value;
-  const section = document.getElementById('newSection').value.trim() || 'أ';
-  if (!name) return showToast('أدخل اسم الطالب');
-  students.push({id: Date.now(), name, grade, section});
-  localStorage.setItem('athar_students', JSON.stringify(students));
-  document.getElementById('newName').value = '';
-  renderStudents();
+
   showToast('تمت إضافة ' + name);
 }
 function removeStudent(id) {
