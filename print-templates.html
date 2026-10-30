@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>نماذج طباعة - أثَر | ATHAR AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Tajawal', sans-serif; background: #eef2f7; padding: 20px; }
+  .print-page {
+    background: white;
+    width: 210mm;
+    min-height: 297mm;
+    margin: 20px auto;
+    padding: 12mm 15mm;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    position: relative;
+    overflow: hidden;
+  }
+  .print-page::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 8mm;
+    height: 100%;
+    background: linear-gradient(180deg, #0D47A1, #00897B);
+  }
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #0D47A1;
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+  }
+  .logo-area h1 { color: #0D47A1; font-size: 26px; font-weight: 700; }
+  .logo-area .en { color: #00897B; font-size: 14px; letter-spacing: 1px; }
+  .team-info { text-align: left; font-size: 12px; color: #546E7A; }
+  .team-info strong { color: #0D47A1; }
+  .meta { background: #f8fafc; border-radius: 8px; padding: 8px 12px; margin-bottom: 14px; font-size: 13px; display: flex; gap: 20px; flex-wrap: wrap; }
+  .section { margin: 14px 0; }
+  .section h2 {
+    color: #0D47A1;
+    font-size: 15px;
+    background: #E3F2FD;
+    padding: 6px 12px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+  }
+  table { width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 12.5px; }
+  th, td { border: 1px solid #e0e7ff; padding: 7px 8px; text-align: right; }
+  th { background: #0D47A1; color: white; font-weight: 500; }
+  tr:nth-child(even) { background: #f8fafc; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .success { background: #E8F5E9; color: #2E7D32; }
+  .warning { background: #FFF3E0; color: #EF6C00; }
+  .danger { background: #FFEBEE; color: #C62828; }
+  .note { background: #FFF8E1; border-right: 4px solid #EF6C00; padding: 8px 12px; border-radius: 6px; font-size: 12px; margin-top: 8px; }
+  .footer {
+    position: absolute;
+    bottom: 10mm;
+    left: 15mm;
+    right: 15mm;
+    text-align: center;
+    font-size: 11px;
+    color: #90A4AE;
+    border-top: 1px solid #e0e7ff;
+    padding-top: 6px;
+  }
+  .btn-print {
+    display: block; margin: 20px auto; padding: 12px 28px;
+    background: #0D47A1; color: white; border: none; border-radius: 10px;
+    cursor: pointer; font-family: inherit; font-size: 15px; font-weight: 600;
+  }
+  .btn-print:hover { background: #0A2540; }
+  @media print {
+    body { background: white; padding: 0; }
+    .print-page { box-shadow: none; margin: 0; width: 100%; page-break-after: always; }
+    .btn-print { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<button class="btn-print" onclick="window.print()">طباعة النماذج / حفظ PDF</button>
+
+<!-- تقرير المعلم -->
+<div class="print-page">
+  <div class="header">
+    <div class="logo-area">
+      <h1>أثَر</h1>
+      <div class="en">ATHAR AI</div>
+    </div>
+    <div class="team-info">
+      <strong>اسم الفريق:</strong> ________________<br>
+      <strong>تقرير تربوي</strong>
+    </div>
+  </div>
+
+  <div class="meta">
+    <span><strong>المدرسة:</strong> ________________</span>
+    <span><strong>طُبع بواسطة:</strong> ________________</span>
+    <span><strong>التاريخ:</strong> ________________</span>
+    <span><strong>المعلم:</strong> ________________</span>
+    <span><strong>المادة:</strong> ________________</span>
+    <span><strong>الصف / الشعبة:</strong> ________________</span>
+  </div>
+    <span><strong>المعلم:</strong> ________________</span>
+    <span><strong>المادة:</strong> ________________</span>
+    <span><strong>الصف / الشعبة:</strong> ________________</span>
+    <span><strong>التاريخ:</strong> ________________</span>
+  </div>
+
+  <div class="section">
+    <h2>ملخص التقويم التشخيصي</h2>
+    <table>
+      <tr><th>المهارة / التقويم</th><th>عدد الطلبة</th><th>الإجابات الصحيحة</th><th>نسبة الإتقان</th></tr>
+      <tr><td>تمثيل الكسور</td><td>28</td><td>11</td><td>39%</td></tr>
+      <tr><td></td><td></td><td></td><td></td></tr>
+      <tr><td></td><td></td><td></td><td></td></tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>تحليل التعثر وخريطة الجذور</h2>
+    <p>نوع الفجوة: ________________________________________________</p>
+    <p style="margin-top:6px;">الأنماط الشائعة للأخطاء: ________________________________________________</p>
+    <p style="margin-top:6px;">المهارات السابقة المرتبطة: ________________________________________________</p>
+  </div>
+
+  <div class="section">
+    <h2>خطة التدخل</h2>
+    <p><strong>الهدف:</strong> ________________________________________________</p>
+    <p style="margin-top:6px;"><strong>الخطوات:</strong></p>
+    <ol style="padding-right:22px; line-height:1.9; margin-top:4px;">
+      <li>________________________________________________</li>
+      <li>________________________________________________</li>
+      <li>________________________________________________</li>
+    </ol>
+    <p style="margin-top:6px;"><strong>المسار الإثرائي:</strong> ________________________________________________</p>
+  </div>
+
+  <div class="section">
+    <h2>قياس الأثر</h2>
+    <table>
+      <tr><th>المؤشر</th><th>قبل التدخل</th><th>بعد التدخل</th><th>الفرق</th></tr>
+      <tr><td>نسبة الإتقان</td><td></td><td></td><td></td></tr>
+    </table>
+    <div class="note">ملاحظة منهجية: لا يُنسب التحسن إلى التدخل وحده. ينبغي مراعاة طبيعة الاختبار والعوامل الأخرى.</div>
+  </div>
+
+  <div class="footer">
+    أثَر | ATHAR AI &nbsp;•&nbsp; اسم الفريق: ________________ &nbsp;•&nbsp; القرار التربوي النهائي بيد المعلم
+  </div>
+</div>
+
+<!-- تقرير المدير -->
+<div class="print-page">
+  <div class="header">
+    <div class="logo-area">
+      <h1>أثَر</h1>
+      <div class="en">ATHAR AI</div>
+    </div>
+    <div class="team-info">
+      <strong>اسم الفريق:</strong> ________________<br>
+      <strong>تقرير متابعة مدرسية</strong>
+    </div>
+  </div>
+
+  <div class="meta">
+    <span><strong>المدرسة:</strong> ________________</span>
+    <span><strong>طُبع بواسطة:</strong> ________________</span>
+    <span><strong>التاريخ:</strong> ________________</span>
+    <span><strong>المدير:</strong> ________________</span>
+  </div>
+
+  <div class="section">
+    <h2>المؤشرات العامة</h2>
+    <table>
+      <tr><th>المؤشر</th><th>القيمة</th><th>الحالة</th></tr>
+      <tr><td>متوسط إتقان المدرسة</td><td>74%</td><td><span class="badge success">مستقر</span></td></tr>
+      <tr><td>عدد الفجوات النشطة</td><td>12</td><td><span class="badge warning">يحتاج متابعة</span></td></tr>
+      <tr><td>التدخلات الجارية</td><td>8</td><td><span class="badge success">قيد التنفيذ</span></td></tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>متابعة الصفوف والشعب</h2>
+    <table>
+      <tr><th>الصف / الشعبة</th><th>متوسط الإتقان</th><th>الفجوات</th><th>التدخلات</th><th>الحالة</th></tr>
+      <tr><td>الخامس - أ</td><td>76%</td><td>2</td><td>1</td><td><span class="badge success">مستقر</span></td></tr>
+      <tr><td>الخامس - ب</td><td>68%</td><td>4</td><td>2</td><td><span class="badge warning">متابعة</span></td></tr>
+      <tr><td></td><td></td><td></td><td></td><td></td></tr>
+      <tr><td></td><td></td><td></td><td></td><td></td></tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>ملاحظات إدارية وتوصيات</h2>
+    <p style="min-height:40px; border-bottom:1px dashed #ccc; margin:6px 0;">________________________________________________</p>
+    <p style="min-height:40px; border-bottom:1px dashed #ccc; margin:6px 0;">________________________________________________</p>
+    <p style="min-height:40px; border-bottom:1px dashed #ccc; margin:6px 0;">________________________________________________</p>
+  </div>
+
+  <div class="footer">
+    أثَر | ATHAR AI &nbsp;•&nbsp; اسم الفريق: ________________ &nbsp;•&nbsp; تقرير للمتابعة الإدارية
+  </div>
+</div>
+
+</body>
+</html>
