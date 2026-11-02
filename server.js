@@ -266,7 +266,7 @@ function ensureDemoFixtures() {
   for (const [email, name, role] of demoUsers) {
     let user = findUser.get(email);
     if (!user) {
-      const info = insertUser.run(email, name, role, schoolId, role === 'student' ? 'DEMO-STUDENT-001' : null);
+      const info = insertUser.run(email, name, role, schoolId, null);
       user = findUser.get(email);
     }
     if (!user.active || user.school_id !== schoolId || user.role !== role) throw new Error('Demo account configuration conflict.');
@@ -275,6 +275,7 @@ function ensureDemoFixtures() {
   // Demo identities are kept for role switching, but never seed learner records or scores.
   // Remove only the legacy sample learner shipped by the previous demo build.
   const legacyStudentId = 'DEMO-STUDENT-001';
+  db.prepare("UPDATE users SET student_id=NULL WHERE email='demo.student@athar.test'").run();
   db.prepare("DELETE FROM records WHERE school_id=? AND json_extract(payload,'$.student_id')=?").run(schoolId, legacyStudentId);
   db.prepare('DELETE FROM account_students WHERE school_id=? AND student_id=?').run(schoolId, legacyStudentId);
   db.prepare('DELETE FROM teacher_students WHERE school_id=? AND student_id=?').run(schoolId, legacyStudentId);
