@@ -36,3 +36,15 @@ input,select,textarea { width:100%; padding:.6rem; border:1px solid var(--border
 #toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--primary-dark); color:#fff; padding:.7rem 1.4rem; border-radius:30px; display:none; z-index:2000; }
 #loginScreen { position:fixed; inset:0; background:linear-gradient(135deg,var(--primary-dark),var(--primary)); z-index:3000; display:flex; align-items:center; justify-content:center; }
 #loginScreen.hidden { display:none !important; }
+
+#loginScreen label { font-weight:600; color:var(--text); }
+#loginScreen input { text-align:left; direction:ltr; }
+#loginScreen button:disabled { opacity:.6; cursor:wait; }
+#authMessage { margin-top:.65rem; min-height:1.3rem; font-size:.88rem; }
+[hidden] { display:none !important; }
+.menu-title:focus-visible, .sidebar a:focus-visible, button:focus-visible { outline:3px solid #80DEEA; outline-offset:2px; }
+
+.current-user-label { position:fixed; bottom:10px; left:12px; z-index:900; color:var(--text-light); font-size:.78rem; background:var(--card); border:1px solid var(--border); border-radius:20px; padding:.3rem .7rem; box-shadow:var(--shadow); }
+#demoLoginArea { text-align:right; margin-top:.8rem; }
+#loginModeNote { line-height:1.6; }
+@media print { .sidebar, .menu-btn, #toast, .current-user-label, button { display:none !important; } .main { margin:0 !important; padding:0 !important; } .section { display:block !important; page-break-inside:avoid; } }

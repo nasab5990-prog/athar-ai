@@ -1,102 +1,41 @@
 import 'dotenv/config';
-import pg from 'pg';
-
-const { Pool } = pg;
-
-if (!process.env.DATABASE_URL) {
-  throw new Error('DATABASE_URL is required.');
+import Database from 'better-sqlite3';
+import fs from 'node:fs';
+import path from 'node:path';
+const dbPath = process.env.DB_PATH || path.join(process.cwd(), 'data', 'athar.sqlite');
+fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+const db = new Database(dbPath);
+const [emailArg, nameArg, roleArg, schoolArg, ...studentArgs] = process.argv.slice(2);
+const email = (emailArg || '').trim().toLowerCase();
+const name = (nameArg || '').trim();
+const role = roleArg || '';
+const school = (schoolArg || '').trim();
+const studentIds = studentArgs.join(',').split(',').map(s => s.trim()).filter(Boolean);
+const roles = ['teacher', 'senior_teacher', 'principal', 'parent', 'student'];
+if (!email || !name || !school || !roles.includes(role) || school.toUpperCase() === 'DEMO-SCHOOL') {
+  console.error('Usage: npm run create-user -- user@moe.om "Name" teacher SCHOOL_ID (must not be DEMO-SCHOOL)');
+  console.error('For parent: append one or more STUDENT_ID values separated by commas. For student: append exactly one STUDENT_ID.');
+  process.exit(1);
 }
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  max: 2,
-  idleTimeoutMillis: 5000,
-  connectionTimeoutMillis: 10000,
-  allowExitOnIdle: true
-});
-
-const [
-  emailArgument,
-  nameArgument,
-  roleArgument,
-  schoolArgument,
-  studentArgument
-] = process.argv.slice(2);
-
-const email = String(emailArgument || '').trim().toLowerCase();
-const name = String(nameArgument || '').trim();
-const role = String(roleArgument || '').trim();
-const schoolId = String(schoolArgument || '').trim();
-const studentId = String(studentArgument || '').trim() || null;
-
-const allowedRoles = [
-  'teacher',
-  'senior_teacher',
-  'principal',
-  'parent'
-];
-
-const domain = email.split('@')[1]?.toLowerCase();
-
-if (
-  !email ||
-  !name ||
-  !schoolId ||
-  !allowedRoles.includes(role)
-) {
-  console.error(
-    'Usage: npm run create-user -- ' +
-    'user@moe.om "Name" teacher SCHOOL_ID ' +
-    '[STUDENT_ID-for-parent]'
-  );
-
-  process.exitCode = 1;
-} else if (!['moe.om', 'edu.moe.om'].includes(domain)) {
-  console.error(
-    'Only @moe.om and @edu.moe.om are allowed.'
-  );
-
-  process.exitCode = 1;
-} else if (role === 'parent' && !studentId) {
-  console.error(
-    'Parent account requires a linked STUDENT_ID.'
-  );
-
-  process.exitCode = 1;
-} else {
-  try {
-    const result = await pool.query(
-      `
-        INSERT INTO users (
-          email,
-          name,
-          role,
-          school_id,
-          student_id,
-          active
-        )
-        VALUES ($1, $2, $3, $4, $5, TRUE)
-        ON CONFLICT (email)
-        DO UPDATE SET
-          name = EXCLUDED.name,
-          role = EXCLUDED.role,
-          school_id = EXCLUDED.school_id,
-          student_id = EXCLUDED.student_id,
-          active = TRUE
-        RETURNING id, email, name, role, school_id
-      `,
-      [email, name, role, schoolId, studentId]
-    );
-
-    console.log('User account is ready:', result.rows[0]);
-  } catch (error) {
-    console.error(
-      'Could not create account:',
-      error.message
-    );
-
-    process.exitCode = 1;
-  }
+if (!['moe.om', 'edu.moe.om'].includes(email.split('@')[1])) {
+  console.error('Only @moe.om and @edu.moe.om email domains are allowed.'); process.exit(1);
 }
-
-await pool.end();
+if ((role === 'parent' && !studentIds.length) || (role === 'student' && studentIds.length !== 1) || (['principal','senior_teacher'].includes(role) && studentIds.length)) {
+  console.error('Parent requires linked students; student requires exactly one; principal and senior_teacher do not take student assignments.'); process.exit(1);
+}
+for (const studentId of studentIds) {
+  const exists = db.prepare("SELECT 1 FROM records WHERE school_id=? AND kind='student' AND json_extract(payload,'$.student_id')=?").get(school, studentId);
+  if (!exists) { console.error(`Student ${studentId} was not found in school ${school}.`); process.exit(1); }
+}
+try {
+  const info = db.prepare('INSERT INTO users(email,name,role,school_id,student_id) VALUES(?,?,?,?,?)').run(email, name, role, school, role === 'student' ? studentIds[0] : null);
+  const insertLink = db.prepare('INSERT INTO account_students(user_id,student_id,school_id) VALUES(?,?,?)');
+  const assignLink = db.prepare('INSERT INTO teacher_students(user_id,student_id,school_id) VALUES(?,?,?)');
+  db.transaction(() => {
+    if (role === 'parent' || role === 'student') for (const id of studentIds) insertLink.run(info.lastInsertRowid, id, school);
+    if (role === 'teacher') for (const id of studentIds) assignLink.run(info.lastInsertRowid, id, school);
+  })();
+  console.log(`Created ${role} account for ${email} in school ${school}.`);
+} catch (error) {
+  console.error('Could not create account:', error.message); process.exit(1);
+}

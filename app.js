@@ -1,198 +1,605 @@
-// Athar platform front-end
-// Corrected syntax and duplicated blocks from the supplied app.js.
+/* ATHAR AI v3 — centralized records, strict roles, and data-driven learning analysis. */
+let students = [];
+let assessments = [];
+let interventions = [];
+let impacts = [];
+let analyses = [];
+let currentRole = null;
+let currentUser = null;
+let loginMode = 'otp';
+let linkedStudentIds = [];
+const API_BASE = String(window.ATHAR_CONFIG?.apiBase || '').replace(/\/$/, '');
+const apiUrl = path => `${API_BASE}${path}`;
 
-const API = 'https://athar-ai-i7he.onrender.com';
-
-let students = JSON.parse(localStorage.getItem('athar_students') || '[]');
-let assessments = JSON.parse(localStorage.getItem('athar_assessments') || '[]');
-let interventions = JSON.parse(localStorage.getItem('athar_interventions') || '[]');
-let currentRole = localStorage.getItem('athar_role') || 'teacher';
-
-async function requestCode() {
-  const email = document.getElementById('loginEmail')?.value.trim().toLowerCase() || '';
-  const msg = document.getElementById('loginMsg');
-  if (!msg) return;
-  if (!email) { msg.textContent = 'أدخل البريد الإلكتروني'; return; }
-  msg.textContent = 'جاري الإرسال...';
-  try {
-    const res = await fetch(`${API}/api/auth/request-code`, {
-      method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'include', body: JSON.stringify({email})
-    });
-    const data = await res.json();
-    msg.textContent = data.message || 'تم الإرسال';
-    if (res.ok) {
-      const codeSection = document.getElementById('codeSection');
-      const btnRequest = document.getElementById('btnRequest');
-      if (codeSection) codeSection.style.display = 'block';
-      if (btnRequest) btnRequest.style.display = 'none';
-    }
-  } catch (e) { console.error(e); msg.textContent = 'تعذر الاتصال بالخادم'; }
+async function api(path, options = {}) {
+  const response = await fetch(apiUrl(path), {
+    credentials: 'include',
+    ...options,
+    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
+  });
+  const data = await response.json().catch(() => ({ message: 'استجابة غير مفهومة من الخادم.' }));
+  if (!response.ok) throw new Error(data.message || `تعذر تنفيذ الطلب (${response.status})`);
+  return data;
 }
-
-async function verifyCode() {
+function esc(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
+}
+function setAuthMessage(message, error = false) {
+  const el = document.getElementById('authMessage');
+  if (el) { el.textContent = message; el.style.color = error ? '#C62828' : '#00796B'; }
+}
+function setLoginMode(mode) {
+  loginMode = mode;
+  const otp = document.getElementById('otpLoginArea');
+  const demo = document.getElementById('demoLoginArea');
+  const modeNote = document.getElementById('loginModeNote');
+  if (otp) otp.hidden = mode === 'demo';
+  if (demo) demo.hidden = mode !== 'demo';
+  if (modeNote) modeNote.textContent = mode === 'demo'
+    ? 'بيئة اختبار معزولة ببيانات اصطناعية. لا تدخل بيانات حقيقية للطلبة.'
+    : 'الدخول الرسمي متاح للحسابات المسجلة على نطاقي الوزارة. يحدد مسؤول النظام دور الحساب.';
+  const subtitle = document.getElementById('loginSubtitle');
+  if (subtitle) subtitle.textContent = mode === 'demo' ? 'اختبار أدوار المنصة ببيانات تجريبية' : 'دخول آمن بالبريد الإلكتروني الرسمي';
+}
+async function refreshLoginMode() {
+  try {
+    const result = await api('/api/auth/mode');
+    setLoginMode(result.mode === 'demo' ? 'demo' : 'otp');
+    if (result.mode !== 'demo' && !result.otpAvailable) setAuthMessage('الدخول الرسمي غير جاهز: يلزم إعداد خدمة البريد في الخادم.', true);
+  } catch {
+    setLoginMode('otp');
+    setAuthMessage('تعذر الاتصال بالخادم. تحقق من رابط API وإعدادات النشر.', true);
+  }
+}
+async function requestLoginCode() {
+  const email = document.getElementById('loginEmail')?.value.trim().toLowerCase() || '';
+  if (!email) return setAuthMessage('أدخل بريدك الإلكتروني الرسمي.', true);
+  const btn = document.getElementById('requestCodeBtn');
+  if (btn) btn.disabled = true;
+  try {
+    const result = await api('/api/auth/request-code', { method:'POST', body:JSON.stringify({ email }) });
+    document.getElementById('otpArea').hidden = false;
+    setAuthMessage(result.message || 'تم طلب رمز التحقق.');
+  } catch (error) { setAuthMessage(error.message, true); }
+  finally { if (btn) btn.disabled = false; }
+}
+async function verifyLoginCode() {
   const email = document.getElementById('loginEmail')?.value.trim().toLowerCase() || '';
   const code = document.getElementById('loginCode')?.value.trim() || '';
-  const msg = document.getElementById('loginMsg');
-  if (!msg) return;
-  if (!code) { msg.textContent = 'أدخل رمز التحقق'; return; }
-  msg.textContent = 'جاري التحقق...';
+  if (!/^\d{6}$/.test(code)) return setAuthMessage('أدخل رمز التحقق المكوّن من 6 أرقام.', true);
+  const btn = document.getElementById('verifyCodeBtn');
+  if (btn) btn.disabled = true;
   try {
-    const res = await fetch(`${API}/api/auth/verify-code`, {
-      method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'include', body: JSON.stringify({email, code})
-    });
-    const data = await res.json();
-    if (res.ok && data.user) {
-      currentRole = data.user.role === 'senior_teacher' ? 'senior' : data.user.role;
-      localStorage.setItem('athar_user', data.user.name || email);
-      localStorage.setItem('athar_role', currentRole);
-      document.getElementById('loginScreen')?.classList.add('hidden');
-      applyRoleUI();
-      showToast('مرحبًا ' + (data.user.name || email));
-      await loadRecords();
-    } else msg.textContent = data.message || 'فشل التحقق';
-  } catch (e) { console.error(e); msg.textContent = 'تعذر الاتصال بالخادم'; }
+    const result = await api('/api/auth/verify-code', { method:'POST', body:JSON.stringify({ email, code }) });
+    await acceptLogin(result.user);
+  } catch (error) { setAuthMessage(error.message, true); }
+  finally { if (btn) btn.disabled = false; }
+}
+async function demoLogin() {
+  const accessCode = document.getElementById('demoAccessCode')?.value || '';
+  if (!accessCode) return setAuthMessage('أدخل رمز الدخول التجريبي.', true);
+  const btn = document.getElementById('demoLoginBtn');
+  if (btn) btn.disabled = true;
+  try {
+    const persona = document.getElementById('demoPersona')?.value || 'teacher';
+    const result = await api('/api/auth/demo', { method:'POST', body:JSON.stringify({ accessCode, persona }) });
+    await acceptLogin(result.user);
+    setAuthMessage(result.warning || 'تم الدخول إلى بيئة الاختبار.');
+  } catch (error) { setAuthMessage(error.message, true); }
+  finally { if (btn) btn.disabled = false; }
+}
+async function acceptLogin(user) {
+  currentUser = user;
+  currentRole = user.role;
+  linkedStudentIds = user.linkedStudentIds || [];
+  const demoNotice = document.getElementById('demoEnvironmentBanner');
+  if (demoNotice) demoNotice.hidden = !user.isDemo && user.school_id !== 'DEMO-SCHOOL';
+  document.getElementById('loginScreen')?.classList.add('hidden');
+  applyRoleUI();
+  try { await loadRecords(); }
+  catch (error) { showToast(`تم الدخول، لكن تعذّر تحميل السجلات: ${error.message}`); }
+  showToast(`مرحبًا ${user.name || user.email} — ${getRoleName(currentRole)}`);
+}
+async function restoreSession() {
+  await refreshLoginMode();
+  let result;
+  try { result = await api('/api/auth/me'); }
+  catch {
+    currentUser = null;
+    currentRole = null;
+    document.getElementById('loginScreen')?.classList.remove('hidden');
+    return;
+  }
+  currentUser = result.user;
+  currentRole = result.user.role;
+  linkedStudentIds = result.user.linkedStudentIds || [];
+  const demoNotice = document.getElementById('demoEnvironmentBanner');
+  if (demoNotice) demoNotice.hidden = !result.user.isDemo;
+  document.getElementById('loginScreen')?.classList.add('hidden');
+  applyRoleUI();
+  try { await loadRecords(); }
+  catch (error) { showToast(`تعذّر تحميل السجلات: ${error.message}`); }
+}
+async function logout() {
+  try { await api('/api/auth/logout', { method:'POST' }); } catch { /* Session may already have expired. */ }
+  currentUser = null; currentRole = null; linkedStudentIds = [];
+  const demoNotice = document.getElementById('demoEnvironmentBanner'); if (demoNotice) demoNotice.hidden = true;
+  students = []; assessments = []; interventions = []; impacts = []; analyses = [];
+  document.getElementById('loginCode') && (document.getElementById('loginCode').value = '');
+  document.getElementById('demoAccessCode') && (document.getElementById('demoAccessCode').value = '');
+  document.getElementById('loginScreen')?.classList.remove('hidden');
+  await refreshLoginMode();
 }
 
+async function syncRecord(kind, payload) {
+  if (!currentUser) throw new Error('الجلسة غير متصلة. سجّل الدخول مجددًا.');
+  return api('/api/records', { method:'POST', body:JSON.stringify({ kind, payload }) });
+}
 async function loadRecords() {
-  try {
-    const res = await fetch(`${API}/api/records`, {credentials:'include'});
-    if (!res.ok) return;
-    const data = await res.json();
-    console.log('Records loaded', data.records?.length || 0);
-  } catch (e) { console.error('loadRecords failed', e); }
+  const result = await api('/api/records');
+  const rows = result.records || [];
+  students = rows.filter(x => x.kind === 'student').map(x => ({ ...x.payload, recordId:x.id }));
+  assessments = rows.filter(x => x.kind === 'assessment').map(x => ({ ...x.payload, recordId:x.id }));
+  interventions = rows.filter(x => x.kind === 'intervention').map(x => ({ ...x.payload, recordId:x.id }));
+  impacts = rows.filter(x => x.kind === 'impact').map(x => ({ ...x.payload, recordId:x.id }));
+  analyses = rows.filter(x => x.kind === 'analysis').map(x => ({ ...x.payload, recordId:x.id }));
+  renderStudents(); renderAssess(); renderInt(); fillStudentSelects();
+  renderStudentProgress(); renderPrincipalView(); updateDashboard(); updateCycle(); updateAlerts(); updateStatus(); renderReports();
 }
 
-async function saveRecord(kind, payload) {
-  try {
-    const res = await fetch(`${API}/api/records`, {
-      method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'include', body: JSON.stringify({kind, payload})
-    });
-    if (!res.ok) console.warn('saveRecord failed', await res.text());
-  } catch (e) { console.error('saveRecord failed', e); }
+function toggleGroup(el) {
+  const group = el?.parentElement;
+  if (!group) return;
+  const wasOpen = group.classList.contains('open');
+  document.querySelectorAll('.menu-group.open').forEach(item => item.classList.remove('open'));
+  if (!wasOpen) group.classList.add('open');
 }
-
-function toggleGroup(el) { el?.parentElement?.classList.toggle('open'); }
 function toggleSidebar() {
-  const sb = document.getElementById('sidebar'); if (!sb) return;
-  if (window.innerWidth <= 900) { sb.classList.toggle('open'); document.body.classList.toggle('sidebar-open', sb.classList.contains('open')); }
-  else { sb.classList.toggle('closed'); document.body.classList.toggle('sidebar-closed', sb.classList.contains('closed')); }
+  const sidebar = document.getElementById('sidebar');
+  if (!sidebar) return;
+  if (window.innerWidth <= 900) {
+    sidebar.classList.toggle('open');
+    document.body.classList.toggle('sidebar-open', sidebar.classList.contains('open'));
+  } else {
+    sidebar.classList.toggle('closed');
+    document.body.classList.toggle('sidebar-closed', sidebar.classList.contains('closed'));
+  }
 }
+const roleSections = {
+  teacher: ['dashboard','students','assessment','radar','assistant','intervention','activities','impact','reports','inclusive','lowresource','privacy','teacherdev','curriculum','guide','about'],
+  senior_teacher: ['dashboard','students','assessment','radar','assistant','intervention','activities','impact','reports','principalView','inclusive','lowresource','privacy','teacherdev','curriculum','guide','about'],
+  principal: ['dashboard','students','assessment','radar','assistant','intervention','activities','impact','reports','principalView','roles','inclusive','lowresource','privacy','teacherdev','curriculum','guide','about'],
+  parent: ['dashboard','studentProgress','guide','privacy','about'],
+  student: ['dashboard','studentProgress','guide','privacy','about']
+};
+function canOpenSection(id) { return (roleSections[currentRole] || []).includes(id); }
 function show(id) {
-  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  if (!canOpenSection(id)) return showToast('هذه الصفحة غير متاحة لدور حسابك.');
+  document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
   document.getElementById(id)?.classList.add('active');
-  document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
-  document.querySelector(`.sidebar a[data-section="${id}"]`)?.classList.add('active');
-  window.scrollTo({top:0, behavior:'smooth'});
-  if (window.innerWidth <= 900) { document.getElementById('sidebar')?.classList.remove('open'); document.body.classList.remove('sidebar-open'); }
+  document.querySelectorAll('.sidebar a[data-section]').forEach(link => link.classList.toggle('active', link.dataset.section === id));
+  window.scrollTo({ top:0, behavior:'smooth' });
+  if (window.innerWidth <= 900) {
+    document.getElementById('sidebar')?.classList.remove('open');
+    document.body.classList.remove('sidebar-open');
+  }
   if (id === 'students') renderStudents();
   if (id === 'assessment') renderAssess();
   if (id === 'intervention') renderInt();
+  if (id === 'studentProgress') renderStudentProgress();
+  if (id === 'principalView') renderPrincipalView();
+  if (id === 'roles' && currentRole === 'principal') loadSchoolUsers();
+  if (id === 'reports') renderReports();
 }
-function showToast(msg) {
-  const t = document.getElementById('toast'); if (!t) return;
-  t.textContent = msg; t.style.display = 'block'; setTimeout(() => t.style.display = 'none', 2500);
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.sidebar a[data-section]').forEach(link => link.addEventListener('click', event => {
+    event.preventDefault(); show(link.dataset.section);
+  }));
+  restoreSession();
+});
+function showToast(message) {
+  const toast = document.getElementById('toast');
+  if (!toast) return;
+  toast.textContent = message;
+  toast.style.display = 'block';
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(() => { toast.style.display = 'none'; }, 2800);
 }
-function toggleDark() { document.body.classList.toggle('dark'); localStorage.setItem('athar_dark', document.body.classList.contains('dark')); }
-function togglePresentation() { document.body.classList.toggle('presentation'); showToast(document.body.classList.contains('presentation') ? 'وضع العرض مفعّل' : 'وضع العرض متوقف'); }
+function toggleDark() {
+  document.body.classList.toggle('dark');
+  localStorage.setItem('athar_dark', document.body.classList.contains('dark'));
+}
+if (localStorage.getItem('athar_dark') === 'true') document.body.classList.add('dark');
+function togglePresentation() {
+  document.body.classList.toggle('presentation');
+  showToast(document.body.classList.contains('presentation') ? 'وضع العرض مفعّل' : 'وضع العرض متوقف');
+}
+function getRoleName(role) {
+  return ({ teacher:'المعلم', senior_teacher:'المعلم الأول', principal:'المدير', parent:'ولي الأمر', student:'الطالب' })[role] || 'مستخدم';
+}
+function applyRoleUI() {
+  const allowed = roleSections[currentRole] || [];
+  document.querySelectorAll('.sidebar a[data-section]').forEach(link => {
+    link.style.display = allowed.includes(link.dataset.section) ? '' : 'none';
+  });
+  document.querySelectorAll('.menu-group').forEach(group => {
+    const visible = [...group.querySelectorAll('a[data-section]')].some(link => link.style.display !== 'none');
+    group.style.display = visible ? '' : 'none';
+  });
+  const roleInfo = document.getElementById('roleInfo');
+  if (roleInfo) roleInfo.innerHTML = `<div class="card"><strong>${esc(getRoleName(currentRole))}</strong><p>${esc(({ teacher:'إدارة طلبة الفصول والتقويمات والتدخلات المسندة إليك.', senior_teacher:'متابعة سجلات المدرسة والتدخلات ومؤشرات الصفوف.', principal:'إدارة حسابات المدرسة ومتابعة المؤشرات والسجلات.', parent:'متابعة الأبناء المرتبطين بحسابك فقط.', student:'متابعة تقدمك ونتائجك الفردية فقط.' })[currentRole] || '')}</p></div>`;
+  const accountAdmin = document.getElementById('accountAdmin');
+  if (accountAdmin) accountAdmin.hidden = currentRole !== 'principal';
+  document.getElementById('currentUserLabel') && (document.getElementById('currentUserLabel').textContent = `${currentUser?.name || ''} • ${getRoleName(currentRole)}`);
+  const dataAdmin = document.getElementById('teacherDataAdmin');
+  if (dataAdmin) dataAdmin.hidden = ['parent','student'].includes(currentRole);
+  const progressTitle = document.getElementById('progressPageTitle');
+  if (progressTitle) progressTitle.textContent = currentRole === 'student' ? 'تقدمي الدراسي' : 'متابعة الأبناء';
+  const progressLabel = document.getElementById('progressStudentLabel');
+  if (progressLabel) progressLabel.textContent = currentRole === 'student' ? 'سجلك الدراسي' : 'اختيار الابن';
+}
 
-function renderGradeCards() {
-  const el = document.getElementById('gradeCards'); if (!el) return;
-  const setup = JSON.parse(localStorage.getItem('athar_teacher_setup') || '{}');
-  const grades = setup.grades?.length ? setup.grades : [...new Set(students.map(s => s.grade))];
-  if (!grades.length) { el.innerHTML = '<p style="color:var(--text-light);">لم يتم تحديد صفوف بعد.</p>'; return; }
-  el.innerHTML = grades.map(g => {
-    const count = students.filter(s => s.grade === g).length;
-    return `<div class="card" style="padding:0.8rem; cursor:pointer;" onclick="filterByGrade('${g}')"><strong>${g}</strong><div style="font-size:0.85rem; color:var(--text-light); margin-top:0.3rem;">${count} طالب</div><div style="font-size:0.75rem; color:var(--primary); margin-top:0.4rem;">اضغط للعرض</div></div>`;
+function fillStudentSelects() {
+  const selectors = ['assessmentStudent','interventionStudent','impactStudent','analysisStudent','assistantStudent','progressStudent','accountStudentIds'];
+  for (const id of selectors) {
+    const select = document.getElementById(id);
+    if (!select) continue;
+    const previous = id === 'accountStudentIds' ? [...select.selectedOptions].map(o => o.value) : select.value;
+    const includeAll = ['assessmentStudent','interventionStudent','impactStudent','analysisStudent','assistantStudent'].includes(id);
+    select.innerHTML = includeAll ? '<option value="">تقويم/تدخل صفي (دون ربط بطالب)</option>' : '';
+    for (const student of students) {
+      const option = document.createElement('option');
+      option.value = student.student_id;
+      option.textContent = `${student.name} — ${student.grade || ''} ${student.section || ''}`;
+      select.appendChild(option);
+      if (id === 'accountStudentIds' && previous.includes(option.value)) option.selected = true;
+    }
+    if (id !== 'accountStudentIds' && previous && [...select.options].some(o => o.value === previous)) select.value = previous;
+  }
+  if (currentRole === 'student' || currentRole === 'parent') {
+    const progress = document.getElementById('progressStudent');
+    if (progress) {
+      progress.innerHTML = '';
+      const visible = students.filter(s => linkedStudentIds.includes(s.student_id));
+      for (const s of visible) {
+        const option = document.createElement('option'); option.value = s.student_id; option.textContent = s.name; progress.appendChild(option);
+      }
+      if (currentRole === 'student' && linkedStudentIds[0]) progress.value = linkedStudentIds[0];
+      progress.disabled = currentRole === 'student';
+    }
+  }
+}
+
+async function renderStudents() {
+  const el = document.getElementById('studentsList');
+  const countEl = document.getElementById('studentCount');
+  if (!el) return;
+  const grade = document.getElementById('filterGrade')?.value || '';
+  const section = document.getElementById('filterSection')?.value.trim() || '';
+  const filtered = students.filter(student => (!grade || student.grade === grade) && (!section || student.section === section));
+  if (countEl) countEl.textContent = String(filtered.length);
+  el.innerHTML = filtered.length ? filtered.map(student => `<div class="student-row" style="padding:.65rem 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:.6rem;align-items:center"><div><strong>${esc(student.name)}</strong><div class="subtitle">${esc(student.grade || '—')} • شعبة ${esc(student.section || '—')}</div></div><button class="btn small outline" onclick="removeStudent('${esc(student.student_id)}')">حذف</button></div>`).join('') : '<p class="note">لا توجد سجلات طلبة مطابقة. أضف طالبًا لتبدأ.</p>';
+}
+function makeId() {
+  return globalThis.crypto?.randomUUID ? crypto.randomUUID() : `stu-${Date.now()}-${Math.random().toString(36).slice(2,10)}`;
+}
+async function addStudent() {
+  const name = document.getElementById('newName')?.value.trim() || '';
+  const grade = document.getElementById('newGrade')?.value || '';
+  const section = document.getElementById('newSection')?.value.trim() || 'أ';
+  if (!name) return showToast('أدخل اسم الطالب.');
+  try {
+    const payload = { student_id:makeId(), name, grade, section };
+    const result = await syncRecord('student', payload);
+    students.unshift({ ...result.payload, recordId:result.id });
+    document.getElementById('newName').value = '';
+    fillStudentSelects(); await renderStudents(); updateDashboard(); updateStatus();
+    showToast('تم حفظ الطالب في قاعدة بيانات المدرسة.');
+  } catch (error) { showToast(error.message); }
+}
+async function removeStudent(studentId) {
+  const student = students.find(s => s.student_id === studentId);
+  if (!student?.recordId) return showToast('تعذر تحديد سجل الطالب.');
+  if (!confirm(`حذف سجل الطالب ${student.name}؟ سيتم رفض الحذف إذا كان الحساب مرتبطًا به.`)) return;
+  try {
+    await api(`/api/records/${student.recordId}`, { method:'DELETE' });
+    await loadRecords(); showToast('تم حذف السجل.');
+  } catch (error) { showToast(error.message); }
+}
+async function saveAssessment() {
+  const skill = document.getElementById('assessName')?.value.trim() || '';
+  const total = Number(document.getElementById('total')?.value || 0);
+  const correct = Number(document.getElementById('correct')?.value || 0);
+  const studentId = document.getElementById('assessmentStudent')?.value || null;
+  if (!skill || total <= 0 || correct < 0 || correct > total) return showToast('تحقق من المهارة وعدد الإجابات؛ يجب ألا تتجاوز الصحيحة الإجمالي.');
+  const student = students.find(s => s.student_id === studentId);
+  const payload = { student_id:studentId, student_name:student?.name || null, skill, name:skill, total, correct, pct:Math.round(correct / total * 100), date:new Date().toISOString() };
+  try {
+    const result = await syncRecord('assessment', payload);
+    assessments.unshift({ ...result.payload, recordId:result.id });
+    const el = document.getElementById('assessResult');
+    if (el) el.innerHTML = `<strong>نسبة الإتقان: ${payload.pct}%</strong><p class="note">${student ? `الطالب: ${esc(student.name)}` : 'تقويم صفي غير مرتبط بطالب محدد'} — حُفظ على الخادم.</p>`;
+    renderAssess(); updateDashboard(); updateCycle(); updateAlerts();
+    showToast('تم حفظ التقويم مركزيًا.');
+  } catch (error) { showToast(error.message); }
+}
+function renderAssess() {
+  const el = document.getElementById('assessList');
+  if (!el) return;
+  el.innerHTML = assessments.slice(0, 20).map(a => `<div class="card" style="margin-top:.6rem"><strong>${esc(a.skill || a.name)}</strong> — ${Number(a.pct)}%<small> • ${esc(a.student_name || 'تقويم صفي')} • ${esc(formatDate(a.date))}</small></div>`).join('') || '<p class="note">لا توجد تقويمات محفوظة بعد.</p>';
+  fillStudentSelects();
+}
+function formatDate(value) {
+  if (!value) return 'دون تاريخ';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString('ar-OM');
+}
+function escapeLine(value) { return esc(value).replace(/\n/g, '<br>'); }
+function renderAnalysis(analysis, destinationId) {
+  const el = document.getElementById(destinationId);
+  if (!el) return;
+  window.atharLastAnalysis = true;
+  const score = analysis.targetScore === null ? 'لا توجد نتيجة مرتبطة بعد' : `آخر إتقان: ${analysis.targetScore}%`;
+  const trend = analysis.trend === null ? '' : ` • التغير: ${analysis.trend > 0 ? '+' : ''}${analysis.trend}`;
+  const hasWeakRoots = analysis.likelyRoots.length > 0;
+  const rootsToShow = hasWeakRoots ? analysis.likelyRoots : analysis.prerequisiteEvidence;
+  const rootsTitle = hasWeakRoots ? 'جذور تعثر محتملة وفق النتائج' : 'المهارات السابقة التي يُنصح بالتحقق منها';
+  el.innerHTML = `<div class="card"><p><span class="badge ${analysis.targetScore !== null && analysis.targetScore < 50 ? 'danger' : 'info'}">${esc(analysis.level)}</span> <strong>${esc(analysis.skill)}</strong></p><p>${esc(score + trend)}</p><h4>${rootsTitle}</h4><ul>${rootsToShow.map(item => `<li>${esc(item.skill)}${item.score === null ? ' — تحتاج إلى تقويم تشخيصي' : ` — متوسط الإتقان ${item.score}%`}</li>`).join('') || '<li>لا تتوفر خريطة مهارات كافية لهذه المهارة.</li>'}</ul><h4>الأدلة</h4><ul>${analysis.evidence.map(item => `<li>${esc(item)}</li>`).join('') || '<li>لا توجد بيانات تقويم مرتبطة بالمهارة بعد.</li>'}</ul><h4>التوصيات المقترحة</h4><ol>${analysis.recommendations.map(item => `<li>${esc(item)}</li>`).join('')}</ol>${analysis.nextSkills.length ? `<p><strong>المهارات اللاحقة:</strong> ${analysis.nextSkills.map(esc).join('، ')}</p>` : ''}<p class="note">${esc(analysis.disclaimer)}</p><button class="btn small" type="button" data-use-analysis>نقل التوصيات إلى التدخل</button></div>`;
+  el.querySelector('[data-use-analysis]')?.addEventListener('click', () => useActivity(analysis.skill, analysis.recommendations.join('\n')));
+}
+async function analyzeErrors() {
+  const skill = document.getElementById('analysisSkill')?.value.trim() || document.getElementById('assessName')?.value.trim() || 'تمثيل الكسور';
+  const studentId = document.getElementById('analysisStudent')?.value || '';
+  const observedErrors = document.getElementById('errorInput')?.value.trim() || '';
+  try {
+    const result = await api('/api/analysis', { method:'POST', body:JSON.stringify({ skill, student_id:studentId, observedErrors }) });
+    analyses.unshift({ student_id:studentId || null, skill:result.analysis.skill, result:result.analysis, date:new Date().toISOString(), recordId:result.id });
+    renderAnalysis(result.analysis, 'analysisResult'); updateCycle();
+    showToast('اكتمل التحليل باستخدام نتائج التقويم وخريطة المهارات.');
+  } catch (error) { showToast(error.message); }
+}
+async function askAssistant() {
+  const question = document.getElementById('assistantInput')?.value.trim() || '';
+  const studentId = document.getElementById('assistantStudent')?.value || '';
+  if (!question) return showToast('اكتب سؤالك أو المهارة التي تريد تحليلها.');
+  try {
+    const result = await api('/api/analysis', { method:'POST', body:JSON.stringify({ skill:question, question, student_id:studentId }) });
+    analyses.unshift({ student_id:studentId || null, skill:result.analysis.skill, result:result.analysis, date:new Date().toISOString(), recordId:result.id });
+    renderAnalysis(result.analysis, 'assistantReply'); updateCycle();
+    showToast('أُعد الرد بالاستناد إلى بيانات المدرسة المتاحة.');
+  } catch (error) { showToast(error.message); }
+}
+async function saveIntervention() {
+  const skill = document.getElementById('intSkill')?.value.trim() || '';
+  const goal = document.getElementById('intGoal')?.value.trim() || '';
+  const steps = document.getElementById('intSteps')?.value.trim() || '';
+  const enrichment = document.getElementById('intEnrich')?.value.trim() || '';
+  const studentId = document.getElementById('interventionStudent')?.value || null;
+  const student = students.find(s => s.student_id === studentId);
+  if (!skill || !goal || !steps) return showToast('أكمل المهارة والهدف وخطوات التدخل.');
+  try {
+    const payload = { student_id:studentId, student_name:student?.name || null, skill, goal, steps, enrichment, status:'active', date:new Date().toISOString() };
+    const result = await syncRecord('intervention', payload);
+    interventions.unshift({ ...result.payload, recordId:result.id });
+    renderInt(); updateDashboard(); updateCycle(); updateAlerts();
+    showToast('تم حفظ التدخل على قاعدة بيانات المدرسة.');
+  } catch (error) { showToast(error.message); }
+}
+function renderInt() {
+  const el = document.getElementById('intList');
+  if (!el) return;
+  el.innerHTML = interventions.slice(0, 15).map(i => `<div class="card" style="margin-top:.6rem"><strong>${esc(i.skill)}</strong><p>${esc(i.student_name || 'تدخل صفي')} • ${esc(formatDate(i.date))}</p><p>${esc(i.goal || '')}</p></div>`).join('') || '<p class="note">لا توجد تدخلات مسجلة بعد.</p>';
+  fillStudentSelects();
+}
+function printWorksheet() {
+  const skill = document.getElementById('intSkill')?.value || '';
+  const goal = document.getElementById('intGoal')?.value || '';
+  const steps = document.getElementById('intSteps')?.value || '';
+  const win = window.open('', '_blank');
+  if (!win) return showToast('اسمح بفتح نافذة الطباعة.');
+  win.document.write(`<html lang="ar" dir="rtl"><meta charset="utf-8"><title>ورقة تدخل — أثَر</title><body style="font-family:Arial,sans-serif;padding:2rem"><h2>ورقة تدخل تعليمية — منصة أثَر</h2><h3>${esc(skill)}</h3><p><strong>الهدف:</strong> ${esc(goal)}</p><p><strong>الخطوات:</strong><br>${escapeLine(steps)}</p></body></html>`);
+  win.document.close(); win.focus(); win.print();
+}
+async function calcImpact() {
+  const before = Number(document.getElementById('before')?.value);
+  const after = Number(document.getElementById('after')?.value);
+  const studentId = document.getElementById('impactStudent')?.value || null;
+  if (!Number.isFinite(before) || !Number.isFinite(after) || before < 0 || after < 0 || before > 100 || after > 100) return showToast('أدخل نسبتين من 0 إلى 100.');
+  const student = students.find(s => s.student_id === studentId);
+  const payload = { student_id:studentId, student_name:student?.name || null, before, after, difference:Number((after-before).toFixed(1)), date:new Date().toISOString() };
+  try {
+    const result = await syncRecord('impact', payload);
+    impacts.unshift({ ...result.payload, recordId:result.id });
+    const el = document.getElementById('impactResult');
+    if (el) el.innerHTML = `<div class="card"><strong>الفرق: ${payload.difference > 0 ? '+' : ''}${payload.difference} نقطة مئوية</strong><p>${esc(student?.name || 'تقويم صفي')}</p><span class="badge ${payload.difference > 0 ? 'success' : 'warning'}">${payload.difference > 0 ? 'تحسن مسجل' : payload.difference === 0 ? 'لا تغير' : 'انخفاض يحتاج مراجعة'}</span></div>`;
+    updateDashboard(); updateCycle(); updateAlerts(); showToast('تم حفظ قياس الأثر مركزيًا.');
+  } catch (error) { showToast(error.message); }
+}
+function applyAccess() {
+  document.body.style.fontSize = document.getElementById('largeText')?.checked ? '1.15rem' : '';
+  document.body.style.filter = document.getElementById('highContrast')?.checked ? 'contrast(1.3)' : '';
+}
+function toggleLowResource() {
+  document.body.classList.toggle('low-resource');
+  const active = document.body.classList.contains('low-resource');
+  const el = document.getElementById('lowResInfo');
+  if (el) el.innerHTML = active ? '<span class="badge success">مفعّل</span> وضع مبسط لتقليل المؤثرات.' : '<span class="badge info">متوقف</span>';
+  showToast(active ? 'تم تفعيل الوضع المبسط.' : 'تم إيقاف الوضع المبسط.');
+}
+function suggestPath() {
+  const el = document.getElementById('pathResult');
+  if (el) el.innerHTML = `<div class="card"><strong>مسار تطوير مقترح</strong><p>تحليل نتائج التقويم ← تحديد المهارات السابقة ← اختيار تدخل قصير ← قياس أثره.</p></div>`;
+}
+function useActivity(skill, steps) {
+  if (document.getElementById('intSkill')) document.getElementById('intSkill').value = skill;
+  if (document.getElementById('intSteps')) document.getElementById('intSteps').value = steps;
+  show('intervention'); showToast('تم نقل النشاط إلى مصمم التدخلات.');
+}
+function editTeam() {
+  const name = prompt('اسم الفريق:');
+  if (name) { document.getElementById('teamName').textContent = name; localStorage.setItem('athar_team', name); }
+}
+if (localStorage.getItem('athar_team') && document.getElementById('teamName')) document.getElementById('teamName').textContent = localStorage.getItem('athar_team');
+function latestAssessmentRows(rows = assessments) {
+  const latest = new Map();
+  for (const assessment of rows) {
+    const key = `${assessment.student_id || 'class'}|${assessment.skill || assessment.name || 'skill'}`;
+    if (!latest.has(key)) latest.set(key, assessment);
+  }
+  return [...latest.values()];
+}
+function updateDashboard() {
+  const currentAssessments = latestAssessmentRows();
+  const avg = currentAssessments.length ? Math.round(currentAssessments.reduce((sum, a) => sum + Number(a.pct || 0), 0) / currentAssessments.length) : null;
+  const gaps = currentAssessments.filter(a => Number(a.pct) < 70).length;
+  const stat = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+  stat('avgMastery', avg === null ? '—' : `${avg}%`);
+  stat('gapCount', String(gaps)); stat('interventionCount', String(interventions.length)); stat('activeStudentCount', String(students.length));
+  const bar = document.getElementById('avgMasteryBar');
+  if (bar) bar.style.width = `${avg ?? 0}%`;
+  stat('dashboardScope', currentRole === 'parent' ? 'بيانات الأبناء المرتبطين بحسابك' : currentRole === 'student' ? 'بياناتك الفردية' : `مدرسة ${currentUser?.school_id || ''}`);
+}
+function updateCycle() {
+  const hasAssessment = assessments.length > 0;
+  const hasIntervention = interventions.length > 0;
+  const hasImpact = impacts.length > 0;
+  const hasAnalysis = analyses.length > 0 || Boolean(window.atharLastAnalysis);
+  const steps = [hasAssessment, hasAnalysis, hasIntervention, hasImpact].filter(Boolean).length;
+  const bar = document.getElementById('cycleBar');
+  const text = document.getElementById('cycleText');
+  if (bar) bar.style.width = `${Math.round(steps/4*100)}%`;
+  if (text) text.textContent = `تقويم ${hasAssessment?'✓':'—'} | تحليل ${hasAnalysis?'✓':'—'} | تدخل ${hasIntervention?'✓':'—'} | قياس ${hasImpact?'✓':'—'}`;
+}
+function updateAlerts() {
+  const el = document.getElementById('smartAlerts');
+  if (!el) return;
+  const messages = [];
+  if (!students.length) messages.push('أضف سجلات الطلبة لبدء المتابعة.');
+  if (!assessments.length) messages.push('لا توجد تقويمات؛ أضف تقويمًا تشخيصيًا.');
+  if (assessments.length && !interventions.length) messages.push('توجد تقويمات دون تدخلات مسجلة.');
+  if (interventions.length && !impacts.length) messages.push('توجد تدخلات لم يسجل لها قياس أثر بعد.');
+  el.innerHTML = messages.length ? messages.map(message => `<div class="note" style="margin:.3rem 0">${esc(message)}</div>`).join('') : '<span class="badge success">اكتملت السجلات الحالية للدورة.</span>';
+}
+function updateStatus() {
+  const el = document.getElementById('dataStatus');
+  if (el) el.textContent = `سجلات الخادم — طلبة: ${students.length} | تقويمات: ${assessments.length} | تدخلات: ${interventions.length} | قياس أثر: ${impacts.length}`;
+}
+function renderStudentProgress() {
+  const el = document.getElementById('studentProgressContent');
+  if (!el) return;
+  const select = document.getElementById('progressStudent');
+  const allowedIds = currentRole === 'student' ? linkedStudentIds.slice(0,1) : linkedStudentIds;
+  const selectedId = select?.value || allowedIds[0] || '';
+  const student = students.find(s => s.student_id === selectedId && allowedIds.includes(s.student_id));
+  if (!student) { el.innerHTML = '<p class="note">لا توجد بيانات مرتبطة بهذا الحساب. راجع إدارة المدرسة لربط الحساب بسجل الطالب الصحيح.</p>'; return; }
+  const personal = assessments.filter(a => a.student_id === student.student_id);
+  const latest = new Map();
+  personal.forEach(a => { const key = a.skill || a.name; if (!latest.has(key)) latest.set(key, a); });
+  const interventionRows = interventions.filter(i => i.student_id === student.student_id);
+  const impactRows = impacts.filter(i => i.student_id === student.student_id);
+  el.innerHTML = `<div class="card"><h3>${esc(student.name)}</h3><p>${esc(student.grade || '')} • شعبة ${esc(student.section || '')}</p></div>${[...latest.values()].map(a => `<div class="card" style="margin-top:.7rem"><strong>${esc(a.skill || a.name)}</strong><div class="progress"><div class="progress-bar" style="width:${Math.max(0,Math.min(100,Number(a.pct)||0))}%"></div></div><p>نسبة الإتقان المسجلة: ${Number(a.pct)}%</p></div>`).join('') || '<p class="note">لا توجد تقويمات فردية مرتبطة بهذا الطالب بعد.</p>'}<div class="card" style="margin-top:.7rem"><h3>توصيات وتدخلات المعلم</h3>${interventionRows.map(i => `<p><strong>${esc(i.skill)}</strong><br>${esc(i.goal || '')}<br><span class="note">${esc(i.steps || '')}</span></p>`).join('') || '<p>لا توجد تدخلات مسجلة لهذا الطالب.</p>'}</div><div class="card" style="margin-top:.7rem"><h3>قياس الأثر</h3>${impactRows.map(i => `<p>${Number(i.before)}% ← ${Number(i.after)}% (${Number(i.difference)>0?'+':''}${Number(i.difference)} نقطة)</p>`).join('') || '<p>لا توجد قياسات أثر مسجلة لهذا الطالب.</p>'}</div>`;
+}
+function renderPrincipalView() {
+  const el = document.getElementById('principalData');
+  if (!el) return;
+  if (!['principal','senior_teacher'].includes(currentRole)) { el.innerHTML = ''; return; }
+  if (!students.length) { el.innerHTML = '<p class="note">لا توجد سجلات طلبة في قاعدة بيانات المدرسة بعد.</p>'; return; }
+  const groups = new Map();
+  for (const student of students) {
+    const key = `${student.grade || 'غير محدد'} / ${student.section || '—'}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(student);
+  }
+  el.innerHTML = [...groups.entries()].map(([name, group]) => {
+    const ids = new Set(group.map(s => s.student_id));
+    const groupAssessments = latestAssessmentRows(assessments.filter(a => ids.has(a.student_id)));
+    const average = groupAssessments.length ? Math.round(groupAssessments.reduce((sum,a)=>sum+Number(a.pct||0),0)/groupAssessments.length) : null;
+    const gaps = groupAssessments.filter(a => Number(a.pct) < 70).length;
+    const groupInterventions = interventions.filter(i => ids.has(i.student_id)).length;
+    return `<div class="card" style="margin-top:.7rem"><h3>${esc(name)}</h3><p>عدد الطلبة: ${group.length} • متوسط الإتقان: ${average === null ? 'لا توجد بيانات' : `${average}%`} • نتائج دون 70%: ${gaps} • التدخلات: ${groupInterventions}</p></div>`;
   }).join('');
 }
-function filterByGrade(grade) { const sel = document.getElementById('filterGrade'); if (sel) { sel.value = grade; renderStudents(); showToast('عرض صف ' + grade); } }
-function renderStudents() {
-  const el = document.getElementById('studentsList'); const countEl = document.getElementById('studentCount'); if (!el) return;
-  const setup = JSON.parse(localStorage.getItem('athar_teacher_setup') || '{}'); const teacherGrades = setup.grades || [];
-  const gradeFilter = document.getElementById('filterGrade')?.value || ''; const sectionFilter = (document.getElementById('filterSection')?.value || '').trim();
-  let filtered = students;
-  if (teacherGrades.length && !gradeFilter) filtered = filtered.filter(s => teacherGrades.includes(s.grade));
-  if (gradeFilter) filtered = filtered.filter(s => s.grade === gradeFilter);
-  if (sectionFilter) filtered = filtered.filter(s => s.section === sectionFilter);
-  if (countEl) countEl.textContent = filtered.length;
-  el.innerHTML = filtered.length ? filtered.map(s => `<div style="padding:0.6rem 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;"><div><strong>${s.name}</strong><div style="font-size:0.82rem; color:var(--text-light);">${s.grade} - شعبة ${s.section}${s.classGender ? ' • ' + (s.classGender==='mixed'?'مختلط':s.classGender==='boys'?'بنين':'بنات') : ''}</div></div><button class="btn small outline" onclick="removeStudent(${s.id})">حذف</button></div>`).join('') : '<p style="color:var(--text-light);">لا يوجد طلبة مطابقون.</p>';
-  renderGradeCards();
+function renderReports() {
+  const el = document.getElementById('reportSummary');
+  if (!el) return;
+  const currentAssessments = latestAssessmentRows();
+  el.innerHTML = `<p>الطلبة: ${students.length} • التقويمات: ${assessments.length} • التدخلات: ${interventions.length} • قياسات الأثر: ${impacts.length}</p><p>متوسط أحدث نتائج المهارات المسجلة: ${currentAssessments.length ? `${Math.round(currentAssessments.reduce((sum,a)=>sum+Number(a.pct||0),0)/currentAssessments.length)}%` : 'لا توجد بيانات'}</p>`;
 }
-function saveTeacherSetup() {
-  const subjects = [];
-  if (document.getElementById('subjArabic')?.checked) subjects.push('أحب لغتي / اللغة العربية');
-  if (document.getElementById('subjIslamic')?.checked) subjects.push('ديني حياتي / التربية الإسلامية');
-  if (document.getElementById('subjMath')?.checked) subjects.push('الرياضيات');
-  if (document.getElementById('subjScience')?.checked) subjects.push('العلوم');
-  if (document.getElementById('subjOther')?.checked) subjects.push('مادة أخرى');
-  const grades = Array.from(document.querySelectorAll('.gradeCheck:checked')).map(el => el.value);
-  localStorage.setItem('athar_teacher_setup', JSON.stringify({subjects, grades}));
-  const el = document.getElementById('teacherSetupResult');
-  if (el) el.innerHTML = `<div class="card"><strong>تم الحفظ</strong><br>المواد: ${subjects.length ? subjects.join('، ') : 'لم تُحدد'}<br>الصفوف: ${grades.length ? grades.join('، ') : 'لم تُحدد'}<br><small>سيتم عرض الطلبة حسب الصفوف المحددة في قائمة الطلبة.</small></div>`;
-  renderGradeCards(); showToast('تم حفظ إعدادات المعلم');
+async function loadSchoolUsers() {
+  const el = document.getElementById('usersList');
+  if (!el) return;
+  try {
+    const result = await api('/api/users');
+    el.innerHTML = (result.users || []).map(user => {
+      const linked = user.linkedStudentIds || [];
+      const assigned = user.assignedStudentIds || [];
+      const relation = linked.length ? `الطلبة المرتبطون بالحساب: ${linked.map(esc).join('، ')}` : assigned.length ? `الطلبة المسندون للمعلم: ${assigned.map(esc).join('، ')}` : 'لا يوجد ربط فردي بطالب';
+      const manageable = ['teacher','parent','student'].includes(user.role);
+      const selectedIds = user.role === 'teacher' ? assigned : linked;
+      const assignmentEditor = manageable ? `<label for="userLinks-${Number(user.id)}">تعديل ربط الطلبة</label><select id="userLinks-${Number(user.id)}" multiple size="4" style="min-height:85px">${students.map(student => `<option value="${esc(student.student_id)}" ${selectedIds.includes(student.student_id) ? 'selected' : ''}>${esc(student.name)} — ${esc(student.grade || '')} ${esc(student.section || '')}</option>`).join('')}</select><button class="btn small" onclick="saveUserLinks(${Number(user.id)},'${user.role}')">حفظ الربط</button>` : '';
+      return `<div class="card" style="margin-top:.5rem"><strong>${esc(user.name)}</strong><p>${esc(user.email)} • ${esc(getRoleName(user.role))}</p><p class="note">${relation}</p>${assignmentEditor}</div>`;
+    }).join('') || '<p class="note">لا توجد حسابات إضافية.</p>';
+  } catch (error) { el.textContent = error.message; }
 }
-function addStudent() {
-  const name = document.getElementById('newName')?.value.trim() || ''; const grade = document.getElementById('newGrade')?.value || ''; const section = document.getElementById('newSection')?.value.trim() || 'أ';
-  const schoolType = document.getElementById('schoolType')?.value || ''; const classGender = document.getElementById('classGender')?.value || '';
-  if (!name) return showToast('أدخل اسم الطالب');
-  const student = {id: Date.now(), name, grade, section, schoolType, classGender}; students.push(student);
-  localStorage.setItem('athar_students', JSON.stringify(students)); saveRecord('student', {name, grade, section, schoolType, classGender});
-  const nameInput = document.getElementById('newName'); if (nameInput) nameInput.value = ''; renderStudents(); showToast('تمت إضافة ' + name);
+async function saveUserLinks(userId, role) {
+  const select = document.getElementById(`userLinks-${userId}`);
+  if (!select) return;
+  const studentIds = [...select.selectedOptions].map(option => option.value);
+  const endpoint = role === 'teacher' ? `/api/users/${userId}/assignments` : `/api/users/${userId}/student-links`;
+  try {
+    await api(endpoint, { method:'PUT', body:JSON.stringify({ studentIds }) });
+    await loadSchoolUsers();
+    showToast('تم تحديث ربط الطلبة بالحساب.');
+  } catch (error) { showToast(error.message); }
 }
-function removeStudent(id) { students = students.filter(s => s.id !== id); localStorage.setItem('athar_students', JSON.stringify(students)); renderStudents(); showToast('تم الحذف'); }
-function saveAssessment() {
-  const name = document.getElementById('assessName')?.value || ''; const total = +document.getElementById('total')?.value || 0; const correct = +document.getElementById('correct')?.value || 0;
-  if (!name || total <= 0) return showToast('أكمل البيانات');
-  const pct = Math.round(correct / total * 100); const item = {name,total,correct,pct,date:new Date().toLocaleDateString('ar')}; assessments.unshift(item);
-  localStorage.setItem('athar_assessments', JSON.stringify(assessments)); saveRecord('assessment', item);
-  const result = document.getElementById('assessResult'); if (result) result.innerHTML = `<strong>نسبة الإتقان: ${pct}%</strong>`;
-  renderAssess(); updateCycle(); updateAlerts(); showToast('تم الحفظ');
+async function createAccount() {
+  if (currentUser?.school_id === 'DEMO-SCHOOL') return showToast('هذه بيئة اختبار معزولة؛ لا يمكن إنشاء حسابات رسمية منها.');
+  const email = document.getElementById('accountEmail')?.value.trim() || '';
+  const name = document.getElementById('accountName')?.value.trim() || '';
+  const role = document.getElementById('accountRole')?.value || '';
+  const select = document.getElementById('accountStudentIds');
+  const studentIds = select ? [...select.selectedOptions].map(option => option.value) : [];
+  try {
+    await api('/api/users', { method:'POST', body:JSON.stringify({ email, name, role, studentIds }) });
+    document.getElementById('accountEmail').value = '';
+    document.getElementById('accountName').value = '';
+    if (select) [...select.options].forEach(option => option.selected = false);
+    await loadSchoolUsers(); showToast('تم إنشاء الحساب. يمكنه الدخول بعد إعداد البريد الرسمي.');
+  } catch (error) { showToast(error.message); }
 }
-function renderAssess() { const el = document.getElementById('assessList'); if (el) el.innerHTML = assessments.slice(0,5).map(a => `<div class="card" style="margin-top:.6rem;"><strong>${a.name}</strong> — ${a.pct}% <small>(${a.date})</small></div>`).join(''); }
-function analyzeErrors() {
-  const t = (document.getElementById('errorInput')?.value || '').toLowerCase(); let html = '<div class="card">';
-  if (t.includes('بسط') || t.includes('مقام') || t.includes('كسر')) html += '<p><span class="badge danger">فجوة</span> تمثيل الكسور</p><p>اقتراح: نشاط ورقي بأشكال بصرية.</p>';
-  else if (t.includes('فهم') || t.includes('قراءة')) html += '<p><span class="badge warning">فجوة</span> الفهم القرائي</p><p>اقتراح: نصوص قصيرة + اقرأ-فكر-شارك.</p>';
-  else html += '<p><span class="badge info">عام</span> يُنصح بتقويم إضافي.</p>';
-  html += '<button class="btn small" onclick="show(\'intervention\')">إنشاء تدخل</button></div>'; const el = document.getElementById('analysisResult'); if (el) el.innerHTML = html; showToast('تم التحليل');
+async function exportData() {
+  try {
+    const result = await api('/api/records');
+    const blob = new Blob([JSON.stringify({ exportedAt:new Date().toISOString(), records:result.records }, null, 2)], { type:'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'athar-school-records.json'; anchor.click(); URL.revokeObjectURL(url);
+  } catch (error) { showToast(error.message); }
 }
-function askAssistant() {
-  const q = (document.getElementById('assistantInput')?.value || '').toLowerCase(); let reply='يمكنني مساعدتك في تحليل الفجوات. صف المشكلة بمزيد من التفاصيل.';
-  if (q.includes('كسر') || q.includes('بسط')) reply='<strong>اقتراح:</strong> نشاط ورقي بأشكال مقسمة وتسمية البسط والمقام.'; else if (q.includes('قراءة') || q.includes('فهم')) reply='<strong>اقتراح:</strong> نصوص قصيرة واستراتيجية اقرأ-فكر-شارك.';
-  const el=document.getElementById('assistantReply'); if(el) el.innerHTML=`<div class="card">${reply}</div>`; showToast('تم الرد');
+async function importData(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  try {
+    const parsed = JSON.parse(await file.text());
+    let records = Array.isArray(parsed.records) ? parsed.records : [];
+    if (!records.length && (Array.isArray(parsed.students) || Array.isArray(parsed.assessments) || Array.isArray(parsed.interventions))) {
+      const ids = new Map();
+      records = (parsed.students || []).map(s => { const student_id = String(s.student_id || s.id || makeId()); ids.set(String(s.id), student_id); return { kind:'student', payload:{ student_id, name:s.name, grade:s.grade || '', section:s.section || '' } }; });
+      for (const a of parsed.assessments || []) records.push({ kind:'assessment', payload:{ ...a, skill:a.skill || a.name || 'تقويم مستورد', student_id:a.student_id || ids.get(String(a.studentId || a.student_id)) || null } });
+      for (const i of parsed.interventions || []) records.push({ kind:'intervention', payload:{ ...i, student_id:i.student_id || ids.get(String(i.studentId || i.student_id)) || null } });
+    }
+    const cleanRecords = records.filter(record => ['student','assessment','intervention','impact'].includes(record.kind) && record.payload)
+      .map(record => ({ kind:record.kind, payload:{ ...record.payload } }));
+    let count = 0;
+    for (let index = 0; index < cleanRecords.length; index += 100) {
+      const batch = cleanRecords.slice(index, index + 100);
+      const result = await api('/api/records/bulk', { method:'POST', body:JSON.stringify({ records:batch }) });
+      count += Number(result.count || 0);
+    }
+    await loadRecords(); showToast(`تم استيراد ${count} سجلًا إلى الخادم.`);
+  } catch (error) { showToast(`تعذر الاستيراد: ${error.message}`); }
+  finally { event.target.value = ''; }
 }
-function saveIntervention() {
-  const data={skill:document.getElementById('intSkill')?.value || '',goal:document.getElementById('intGoal')?.value || '',steps:document.getElementById('intSteps')?.value || '',date:new Date().toLocaleDateString('ar')};
-  interventions.unshift(data); localStorage.setItem('athar_interventions',JSON.stringify(interventions)); saveRecord('intervention',data); renderInt(); updateCycle(); updateAlerts(); showToast('تم حفظ التدخل');
-}
-function renderInt(){const el=document.getElementById('intList');if(el)el.innerHTML=interventions.slice(0,4).map(i=>`<div class="card" style="margin-top:.6rem;"><strong>${i.skill}</strong><br><small>${i.date}</small></div>`).join('');}
-function printWorksheet(){const w=window.open('','_blank');if(!w)return;w.document.write(`<html dir="rtl"><body style="font-family:Tajawal,sans-serif;padding:2rem;"><h2>ورقة عمل — ${document.getElementById('intSkill')?.value || ''}</h2><p>${(document.getElementById('intSteps')?.value || '').replace(/\n/g,'<br>')}</p></body></html>`);w.document.close();w.print();}
-function calcImpact(){const b=+document.getElementById('before')?.value||0;const a=+document.getElementById('after')?.value||0;const diff=a-b;const el=document.getElementById('impactResult');if(el)el.innerHTML=`<div class="card"><strong>الفرق: ${diff>0?'+':''}${diff}%</strong></div>`;saveRecord('impact',{before:b,after:a,difference:diff});updateCycle();updateAlerts();}
-function getRoleName(role){const names={teacher:'معلم',senior:'معلم أول',senior_teacher:'معلم أول',supervisor:'مشرف / معلم أول',principal:'مدير',parent:'ولي أمر / طالب'};return names[role]||role;}
-function applyRoleUI(){
-  const isParent=currentRole==='parent',isPrincipal=currentRole==='principal',isSupervisor=currentRole==='supervisor';
-  document.querySelectorAll('.sidebar a[data-section]').forEach(a=>{const sec=a.dataset.section;let showLink=true;if(isParent)showLink=['dashboard','studentProgress','guide','about'].includes(sec);else if(isPrincipal)showLink=['dashboard','principalView','reports','roles','about'].includes(sec);else if(isSupervisor)showLink=!['students','assessment'].includes(sec);a.style.display=showLink?'':'none';});
-  const guideTitle=document.getElementById('guideTitle'),guideContent=document.getElementById('guideContent');
-  if(guideTitle&&guideContent){if(isParent){guideTitle.textContent='دليل ولي الأمر / الطالب';guideContent.innerHTML='<div class="card"><h3>كيف تتابع تقدم الطالب</h3><p>يمكنك الاطلاع على نتائج الطالب حسب كل مادة، وقراءة تعليقات المعلمين والتوصيات.</p></div>';}else if(isPrincipal){guideTitle.textContent='دليل المدير';guideContent.innerHTML='<div class="card"><h3>متابعة الصفوف</h3><p>راجع مؤشرات كل صف وشعبة، وتابع تقييم استخدام المعلمين للمنصة.</p></div>';}else{guideTitle.textContent='دليل المعلم';guideContent.innerHTML='<div class="card"><h3>1. إدخال التقويم</h3><p>أدخل نتائج تقويم قصير.</p></div><div class="card" style="margin-top:0.8rem;"><h3>2. تحليل التعثر</h3><p>صف الأخطاء في رادار التعثر.</p></div><div class="card" style="margin-top:0.8rem;"><h3>3. تصميم التدخل</h3><p>استخدم المصمم أو بنك الأنشطة.</p></div><div class="card" style="margin-top:0.8rem;"><h3>4. قياس الأثر</h3><p>سجّل النتيجة بعد التدخل.</p></div>';}}
-  const info=document.getElementById('roleInfo');if(info){const texts={teacher:'واجهة المعلم: إدخال التقويمات، تحليل التعثر، تصميم التدخلات، وقياس الأثر.',senior:'واجهة المعلم الأول: مراجعة الخطط والتدخلات والتقارير.',supervisor:'واجهة المشرف: مراجعة الخطط والتدخلات والتقارير.',principal:'واجهة المدير: متابعة الصفوف والمؤشرات وتقييم استخدام المعلمين.',parent:'واجهة ولي الأمر/الطالب: الاطلاع على تقدم الطالب فقط حسب المواد وتعليقات المعلمين.'};info.innerHTML=`<div class="card"><strong>${getRoleName(currentRole)}</strong><br>${texts[currentRole]||''}</div>`;}
-}
-function applyAccess(){document.body.style.fontSize=document.getElementById('largeText')?.checked?'1.15rem':'';document.body.style.filter=document.getElementById('highContrast')?.checked?'contrast(1.3)':'';}
-function toggleLowResource(){document.body.classList.toggle('low-resource');const on=document.body.classList.contains('low-resource');const el=document.getElementById('lowResInfo');if(el)el.innerHTML=on?'<span class="badge success">مفعّل</span>':'<span class="badge info">متوقف</span>';showToast(on?'تم تفعيل الوضع':'تم إيقاف الوضع');}
-function suggestPath(){const el=document.getElementById('pathResult');if(el)el.innerHTML='<div class="card"><strong>مسار مقترح:</strong> استراتيجيات تدريس الكسور والفهم القرائي</div>';}
-function useActivity(skill,steps){const skillEl=document.getElementById('intSkill'),stepsEl=document.getElementById('intSteps');if(skillEl)skillEl.value=skill;if(stepsEl)stepsEl.value=steps;show('intervention');showToast('تم نقل النشاط');}
-function editTeam(){const n=prompt('اسم الفريق:');if(n){const el=document.getElementById('teamName');if(el)el.textContent=n;localStorage.setItem('athar_team',n);}}
-function exportData(){const blob=new Blob([JSON.stringify({students,assessments,interventions},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='athar-data.json';a.click();URL.revokeObjectURL(a.href);showToast('تم التصدير');}
-function importData(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(d.students)students=d.students;if(d.assessments)assessments=d.assessments;if(d.interventions)interventions=d.interventions;localStorage.setItem('athar_students',JSON.stringify(students));localStorage.setItem('athar_assessments',JSON.stringify(assessments));localStorage.setItem('athar_interventions',JSON.stringify(interventions));showToast('تم الاستيراد');renderStudents();renderAssess();renderInt();}catch{showToast('خطأ في الملف');}};r.readAsText(f);}
-function updateCycle(){let steps=0;if(assessments.length)steps++;if(document.getElementById('analysisResult')?.innerHTML)steps++;if(interventions.length)steps++;if(document.getElementById('impactResult')?.innerHTML)steps++;const pct=Math.round(steps/4*100);const bar=document.getElementById('cycleBar'),txt=document.getElementById('cycleText');if(bar)bar.style.width=pct+'%';if(txt)txt.textContent=`تقويم ${assessments.length?'✓':'—'} | تحليل ${steps>1?'✓':'—'} | تدخل ${interventions.length?'✓':'—'} | قياس ${steps>3?'✓':'—'}`;}
-function updateAlerts(){const el=document.getElementById('smartAlerts');if(!el)return;const alerts=[];if(assessments.length&&!interventions.length)alerts.push('لديك تقويم ولم يُسجل تدخل بعد.');if(interventions.length&&!document.getElementById('impactResult')?.innerHTML)alerts.push('يوجد تدخل لم يُقاس أثره بعد.');el.innerHTML=alerts.length?alerts.map(a=>`<div class="note" style="margin:.3rem 0;">${a}</div>`).join(''):'<span class="badge success">لا توجد تنبيهات</span>';}
-
-// Keep legacy HTML handlers available globally.
-Object.assign(window,{requestCode,verifyCode,loadRecords,saveRecord,toggleGroup,toggleSidebar,show,showToast,toggleDark,togglePresentation,filterByGrade,renderStudents,saveTeacherSetup,addStudent,removeStudent,saveAssessment,renderAssess,analyzeErrors,askAssistant,saveIntervention,renderInt,printWorksheet,calcImpact,applyRoleUI,applyAccess,toggleLowResource,suggestPath,useActivity,editTeam,exportData,importData,updateCycle,updateAlerts});
-
-document.addEventListener('DOMContentLoaded',()=>{
-  document.querySelectorAll('.sidebar a[data-section]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();show(a.dataset.section);}));
-  if(localStorage.getItem('athar_dark')==='true')document.body.classList.add('dark');
-  const team=localStorage.getItem('athar_team'),teamEl=document.getElementById('teamName');if(team&&teamEl)teamEl.textContent=team;
-  // Do not bypass OTP solely because stale localStorage contains a previous demo user.
-  renderStudents();renderGradeCards();renderAssess();renderInt();updateCycle();updateAlerts();applyRoleUI();
-});
+function showRole() { applyRoleUI(); }
+function updateStatusAfterLogin() { updateStatus(); updateDashboard(); renderReports(); }
+function toggleThemeOnLoad() { if (localStorage.getItem('athar_dark') === 'true') document.body.classList.add('dark'); }
+toggleThemeOnLoad();
