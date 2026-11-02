@@ -18,6 +18,17 @@ preview has passed the acceptance checks below.
 - No SQLite backup was available when this migration began. Historical data
   must not be represented as migrated or recovered.
 
+## Preview implementation status
+
+- [x] Initial PostgreSQL schema and migration runner added.
+- [x] PostgreSQL pool and transaction helper added.
+- [x] PostgreSQL Express session-store adapter added (`db/session-store.js`).
+- [ ] Replace synchronous SQLite access in `server.js` with async PostgreSQL queries.
+- [ ] Convert `create-user.js` and `seed-user.js`.
+- [ ] Run syntax checks and API integration tests against a separate preview database.
+
+The session adapter is groundwork only until `server.js` imports and uses it.
+
 ## Required PostgreSQL design
 
 1. Use the Supabase Session Pooler connection string from `DATABASE_URL`.
