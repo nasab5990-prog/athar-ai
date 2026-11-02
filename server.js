@@ -272,23 +272,12 @@ function ensureDemoFixtures() {
     if (!user.active || user.school_id !== schoolId || user.role !== role) throw new Error('Demo account configuration conflict.');
     users[role] = user;
   }
-  const studentId = 'DEMO-STUDENT-001';
-  const studentExists = studentExistsInSchool(studentId, schoolId);
-  if (!studentExists) {
-    const add = db.prepare('INSERT INTO records(school_id,owner_id,kind,payload) VALUES(?,?,?,?)');
-    db.transaction(() => {
-      add.run(schoolId, users.teacher.id, 'student', JSON.stringify({ student_id:studentId, name:'طالب تجريبي', grade:'الخامس', section:'أ' }));
-      add.run(schoolId, users.teacher.id, 'assessment', JSON.stringify({ student_id:studentId, student_name:'طالب تجريبي', skill:'الجزء والكل', name:'الجزء والكل', total:10, correct:6, pct:60, date:new Date().toISOString() }));
-      add.run(schoolId, users.teacher.id, 'assessment', JSON.stringify({ student_id:studentId, student_name:'طالب تجريبي', skill:'معرفة البسط والمقام', name:'معرفة البسط والمقام', total:10, correct:6, pct:60, date:new Date().toISOString() }));
-      add.run(schoolId, users.teacher.id, 'assessment', JSON.stringify({ student_id:studentId, student_name:'طالب تجريبي', skill:'تمثيل الكسور', name:'تمثيل الكسور', total:10, correct:5, pct:50, date:new Date().toISOString() }));
-      add.run(schoolId, users.teacher.id, 'intervention', JSON.stringify({ student_id:studentId, student_name:'طالب تجريبي', skill:'تمثيل الكسور', goal:'تمييز البسط والمقام وتمثيل الكسر بصريًا', steps:'استخدام شرائط الكسور ثم أسئلة تحقق قصيرة', enrichment:'مقارنة الكسور المتكافئة', status:'active', date:new Date().toISOString() }));
-      add.run(schoolId, users.teacher.id, 'impact', JSON.stringify({ student_id:studentId, student_name:'طالب تجريبي', before:50, after:65, difference:15, date:new Date().toISOString() }));
-    })();
-  }
-  const link = db.prepare('INSERT OR IGNORE INTO account_students(user_id,student_id,school_id) VALUES(?,?,?)');
-  link.run(users.parent.id, studentId, schoolId);
-  link.run(users.student.id, studentId, schoolId);
-  db.prepare('INSERT OR IGNORE INTO teacher_students(user_id,student_id,school_id) VALUES(?,?,?)').run(users.teacher.id, studentId, schoolId);
+  // Demo identities are kept for role switching, but never seed learner records or scores.
+  // Remove only the legacy sample learner shipped by the previous demo build.
+  const legacyStudentId = 'DEMO-STUDENT-001';
+  db.prepare("DELETE FROM records WHERE school_id=? AND json_extract(payload,'$.student_id')=?").run(schoolId, legacyStudentId);
+  db.prepare('DELETE FROM account_students WHERE school_id=? AND student_id=?').run(schoolId, legacyStudentId);
+  db.prepare('DELETE FROM teacher_students WHERE school_id=? AND student_id=?').run(schoolId, legacyStudentId);
   return users;
 }
 
