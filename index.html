@@ -87,10 +87,17 @@
     </div>
   </div>
 
-  <div style="margin-top:1.5rem;padding:0 .5rem;">
-    <button class="btn outline" onclick="toggleDark()" style="width:100%;border-color:#fff;color:#fff;">🌙 وضع داكن</button>
-    <button class="btn outline" onclick="logout()" style="width:100%;border-color:#fff;color:#fff;margin-top:.4rem;">🚪 تسجيل خروج</button>
-  </div>
+  <div class="sidebar-actions">
+  <button class="btn sidebar-action theme-action"
+          type="button" onclick="toggleDark()">
+    🌙 وضع داكن
+  </button>
+
+  <button class="btn sidebar-action logout-action"
+          type="button" onclick="logout()">
+    🚪 تسجيل الخروج
+  </button>
+</div>
 </aside>
 <div class="main">
   <section id="dashboard" class="section active">
