@@ -76,13 +76,11 @@ async function verifyLoginCode() {
   finally { if (btn) btn.disabled = false; }
 }
 async function demoLogin() {
-  const accessCode = document.getElementById('demoAccessCode')?.value || '';
-  if (!accessCode) return setAuthMessage('أدخل رمز الدخول التجريبي.', true);
   const btn = document.getElementById('demoLoginBtn');
   if (btn) btn.disabled = true;
   try {
     const persona = document.getElementById('demoPersona')?.value || 'teacher';
-    const result = await api('/api/auth/demo', { method:'POST', body:JSON.stringify({ accessCode, persona }) });
+    const result = await api('/api/auth/demo', { method:'POST', body:JSON.stringify({ persona }) });
     await acceptLogin(result.user);
     setAuthMessage(result.warning || 'تم الدخول إلى بيئة الاختبار.');
   } catch (error) { setAuthMessage(error.message, true); }
