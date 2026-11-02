@@ -294,6 +294,26 @@ async function addStudent() {
     showToast('تم حفظ الطالب في قاعدة بيانات المدرسة.');
   } catch (error) { showToast(error.message); }
 }
+async function bulkAddStudents() {
+  const grade = document.getElementById('bulkGrade')?.value || '';
+  const section = document.getElementById('bulkSection')?.value || '';
+  const raw = document.getElementById('bulkStudentNames')?.value || '';
+  const names = [...new Set(raw.split(/\\r?\\n/).map(name => name.trim()).filter(Boolean))];
+  const resultEl = document.getElementById('bulkImportResult');
+  if (!grade || !section || !names.length) return showToast('اختاري الصف والشعبة وأدخلي اسمًا واحدًا على الأقل.');
+  if (names.length > 100) return showToast('الحد الأقصى 100 طالب في الدفعة الواحدة.');
+  const records = names.map(name => ({ kind:'student', payload:{ student_id:makeId(), name, grade, section } }));
+  try {
+    const result = await api('/api/records/bulk', { method:'POST', body:JSON.stringify({ records }) });
+    await loadRecords();
+    document.getElementById('bulkStudentNames').value = '';
+    if (resultEl) resultEl.textContent = `تم حفظ ${result.count} طالبًا بنجاح.`;
+    showToast(`تم حفظ ${result.count} طالبًا في قاعدة بيانات المدرسة.`);
+  } catch (error) {
+    if (resultEl) resultEl.textContent = error.message;
+    showToast(error.message);
+  }
+}
 async function removeStudent(studentId) {
   const student = students.find(s => s.student_id === studentId);
   if (!student?.recordId) return showToast('تعذر تحديد سجل الطالب.');
