@@ -83,3 +83,12 @@ Do not change Render environment variables, deploy this branch to the current
 production service, delete SQLite files, or merge into `main` as part of
 preparation. Configure a separate preview service only after the code is
 ready and reviewed. Never commit `DATABASE_URL`, passwords, or other secrets.
+
+
+## Latest conversion work
+
+- [x] `create-user.js` now uses parameterized PostgreSQL queries and a transaction.
+- [x] `seed-user.js` now uses PostgreSQL upsert and a transaction.
+- [ ] `server.js` still contains SQLite initialization and synchronous SQLite queries; do not deploy this branch as a PostgreSQL server yet.
+- [ ] Run dependency installation, syntax checks, schema migration, and endpoint integration tests against an isolated preview database.
+- [ ] Verify session persistence, demo persona isolation, role-based access, record CRUD/bulk atomicity, and analysis behavior.
