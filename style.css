@@ -123,3 +123,48 @@ body.dark .sidebar-actions .theme-action{background:linear-gradient(135deg,#159A
 body.dark .sidebar-actions .theme-action:hover{background:linear-gradient(135deg,#20B3A7,#18838C)}
 body.dark .sidebar-actions .logout-action{background:rgba(180,73,73,.24);color:#FFE8E8}
 body.dark .sidebar-actions .logout-action:hover{background:#B44949}
+/* أزرار الشريط الجانبي */
+.sidebar-actions {
+  margin-top: 1.5rem;
+  padding: 0 .5rem;
+  display: grid;
+  gap: .55rem;
+}
+
+.sidebar-actions .sidebar-action {
+  width: 100%;
+  min-height: 48px;
+  margin: 0;
+  border-radius: 12px;
+  font-weight: 800;
+}
+
+.sidebar-actions .theme-action {
+  background: linear-gradient(135deg, #3978C8, #2457A7);
+  border: 1px solid rgba(255,255,255,.22);
+  color: #fff;
+}
+
+.sidebar-actions .theme-action:hover {
+  background: linear-gradient(135deg, #4B8BDD, #2C66B5);
+}
+
+.sidebar-actions .logout-action {
+  background: rgba(180,73,73,.16);
+  border: 1px solid rgba(255,190,190,.5);
+  color: #FFE8E8;
+}
+
+.sidebar-actions .logout-action:hover {
+  background: #B44949;
+  color: #fff;
+}
+
+body.dark .sidebar-actions .theme-action {
+  background: linear-gradient(135deg, #159A91, #176E78);
+}
+
+body.dark .sidebar-actions .logout-action {
+  background: rgba(180,73,73,.24);
+  color: #FFE8E8;
+}
