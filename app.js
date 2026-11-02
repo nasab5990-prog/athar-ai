@@ -124,7 +124,6 @@ async function logout() {
   const demoNotice = document.getElementById('demoEnvironmentBanner'); if (demoNotice) demoNotice.hidden = true;
   students = []; assessments = []; interventions = []; impacts = []; analyses = [];
   document.getElementById('loginCode') && (document.getElementById('loginCode').value = '');
-  document.getElementById('demoAccessCode') && (document.getElementById('demoAccessCode').value = '');
   document.getElementById('loginScreen')?.classList.remove('hidden');
   await refreshLoginMode();
 }
