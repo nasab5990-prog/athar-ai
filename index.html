@@ -199,6 +199,8 @@
         </select></div>
       </div>
       <label for="bulkStudentNames">أسماء الطلبة (كل اسم في سطر مستقل)</label>
+      <textarea id="bulkStudentNames" rows="7" maxlength="12000" placeholder="أحمد محمد\nسارة علي\nخالد سعيد" style="width:100%;min-height:150px;resize:vertical;margin:.5rem 0 1rem;padding:.8rem;border:1px solid var(--border);border-radius:12px;font:inherit;line-height:1.8;" aria-describedby="bulkNamesHelp"></textarea>
+      <p id="bulkNamesHelp" class="note">اكتبي أو الصقي اسمًا واحدًا في كل سطر. يمكنك إدخال حتى 100 اسم.</p>
       <button class="btn" type="button" onclick="bulkAddStudents()">حفظ أسماء المجموعة</button>
       <div id="bulkImportResult" class="note" aria-live="polite"></div>
     </div>
