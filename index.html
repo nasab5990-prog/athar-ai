@@ -128,13 +128,14 @@
       <div style="display:grid; grid-template-columns:1fr 1fr 1fr auto; gap:0.6rem; align-items:end;">
         <div>
           <label>اسم الطالب</label>
-          <input type="text" id="newName" placeholder="مثال: أحمد محمد">
+          <input type="text" id="newName" placeholder="أدخل اسم الطالب">
         </div>
         <div>
           <label>الصف</label>
           <select id="newGrade">
             <option value="الرابع">الرابع</option>
-            <option value="الخامس" selected>الخامس</option>
+            <option value="" selected disabled>اختر الصف</option>
+            <option value="الخامس">الخامس</option>
             <option value="السادس">السادس</option>
             <option value="السابع">السابع</option>
             <option value="الثامن">الثامن</option>
@@ -142,7 +143,7 @@
         </div>
         <div>
           <label>الشعبة</label>
-          <input type="text" id="newSection" placeholder="أ" value="أ">
+          <input type="text" id="newSection" placeholder="أدخل الشعبة">
         </div>
         <button class="btn" onclick="addStudent()">إضافة</button>
       </div>
@@ -173,7 +174,7 @@
       <label>الطالب (اختياري — اتركه فارغًا للتقويم الصفي)</label>
       <select id="assessmentStudent"><option value="">تقويم صفي (دون ربط بطالب)</option></select>
       <label>اسم التقويم / المهارة</label>
-      <input type="text" id="assessName" placeholder="مثال: تمثيل الكسور">
+      <input type="text" id="assessName" placeholder="أدخل اسم المهارة">
       <label>إجمالي الأسئلة أو البنود</label>
       <input type="number" id="total" min="1" placeholder="مثال: 10">
       <label>الإجابات الصحيحة</label>
@@ -194,19 +195,13 @@
       <label>الطالب (اختياري لتحليل فردي)</label>
       <select id="analysisStudent"><option value="">بيانات التقويمات المتاحة في نطاق صلاحيتك</option></select>
       <textarea id="errorInput" rows="3" placeholder="صف الخطأ كما ظهر في إجابات الطلبة..."></textarea>
-      <button class="btn small outline" onclick="document.getElementById('errorInput').value='يخلط الطلاب بين البسط والمقام'">مثال: الكسور</button>
       <button class="btn" onclick="analyzeErrors()">تحليل</button>
       <div id="analysisResult" style="margin-top:.8rem;"></div>
     </div>
-    <div class="card" style="margin-top:1rem;">
-      <h3>خريطة جذور المهارات (مثال: الكسور)</h3>
-      <div style="display:flex;flex-wrap:wrap;gap:.6rem;margin-top:.6rem;">
-        <div class="card" style="flex:1;min-width:140px;text-align:center;padding:.8rem;"><strong>الجزء والكل</strong><br><span class="badge info">مهارة سابقة</span></div>
-        <div style="align-self:center;">←</div>
-        <div class="card" style="flex:1;min-width:140px;text-align:center;padding:.8rem;background:#FFEBEE;"><strong>تمثيل الكسور</strong><br><span class="badge danger">فجوة محتملة</span></div>
-        <div style="align-self:center;">←</div>
-        <div class="card" style="flex:1;min-width:140px;text-align:center;padding:.8rem;"><strong>العمليات على الكسور</strong><br><span class="badge warning">مهارة لاحقة</span></div>
-      </div>
+    <div class="card empty-state" style="margin-top:1rem;">
+      <div class="empty-state-icon">⌁</div>
+      <h3>خريطة جذور التعلم</h3>
+      <p>ستظهر هنا العلاقات بين المهارات والفجوات المحتملة بعد إدخال تقويمات فعلية وتحليلها.</p>
     </div>
   </section>
 
