@@ -13,7 +13,7 @@ export function registerPostgresDataRoutes(app, { requireAuth, requireRole }) {
 
   app.post('/api/records', requireAuth, requireRole('teacher', 'senior_teacher', 'principal'), async (req, res, next) => {
     try {
-      if (!canCreateEducationalRecords(req.user.role) || req.user.school_id === 'DEMO-SCHOOL')
+      if (!canCreateEducationalRecords(req.user) || req.user.school_id === 'DEMO-SCHOOL')
         return res.status(403).json({ message: 'لا يمكن إضافة سجلات في هذه البيئة أو بهذا الدور.' });
       const kind = clean(req.body?.kind, 40);
       const payload = req.body?.payload;
@@ -80,7 +80,7 @@ export function registerPostgresDataRoutes(app, { requireAuth, requireRole }) {
 
   app.post('/api/users', requireAuth, requireRole('principal'), async (req, res, next) => {
     try {
-      if (!canManageSchoolUsers(req.user.role) || req.user.school_id === 'DEMO-SCHOOL')
+      if (!canManageSchoolUsers(req.user) || req.user.school_id === 'DEMO-SCHOOL')
         return res.status(403).json({ message: 'إدارة الحسابات غير متاحة في بيئة الاختبار.' });
       const email = clean(req.body?.email, 254).toLowerCase();
       const domain = email.split('@')[1];
