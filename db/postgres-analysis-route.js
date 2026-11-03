@@ -22,7 +22,7 @@ function mappedSkill(skill) {
     .sort((a,b) => b.length-a.length)[0]?.item || null;
 }
 
-function calculate(assessments, skill, studentId, observedErrors) {
+export function calculateLearningAnalysis(assessments, skill, studentId, observedErrors) {
   const mapped = mappedSkill(skill);
   const title = mapped?.title || skill;
   const target = normalize(title);
@@ -84,7 +84,7 @@ export function registerPostgresAnalysisRoute(app,{requireAuth,requireRole}) {
       if(studentId && !(await findStudentAccessibleTo(req.user,studentId)))
         return res.status(403).json({message:'الطالب غير تابع لنطاق صلاحياتك أو غير موجود في المدرسة.'});
       const assessments=await records.listAssessmentsForAnalysis(req.user);
-      const result=calculate(assessments,skill,studentId,clean(req.body?.observedErrors,1000));
+      const result=calculateLearningAnalysis(assessments,skill,studentId,clean(req.body?.observedErrors,1000));
       const saved=await records.insertRecord({schoolId:req.user.school_id,ownerId:req.user.id,kind:'analysis',
         payload:{student_id:studentId||null,skill:result.skill,result,date:new Date().toISOString()}});
       await (await import('./auth.js')).writeAudit(req.user.id,'learning.analysis',result.skill);
