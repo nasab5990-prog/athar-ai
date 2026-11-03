@@ -7,7 +7,7 @@
     "start": "node server.js",
     "create-user": "node create-user.js",
     "db:migrate": "node migrate.js",
-    "check": "node --check server.js && node --check app.js && node --check create-user.js && node --check seed-user.js && node --check db/postgres.js && node --check db/session-store.js && node --check db/auth.js && node --check db/authorization.js && node --check db/records.js && node --check migrate.js && node --check db/role-policy.js && node --check test/role-policy.test.js && node --check test/postgres.integration.test.js && node --check test/demo-school-isolation.test.js",
+    "check": "node --check server.js && node --check server-postgres.js && node --check db/postgres-auth-routes.js && node --check db/postgres-data-routes.js && node --check app.js && node --check create-user.js && node --check seed-user.js && node --check db/postgres.js && node --check db/session-store.js && node --check db/auth.js && node --check db/authorization.js && node --check db/records.js && node --check migrate.js && node --check db/role-policy.js && node --check test/role-policy.test.js && node --check test/postgres.integration.test.js && node --check test/demo-school-isolation.test.js",
     "test": "node --test"
   },
   "dependencies": {
