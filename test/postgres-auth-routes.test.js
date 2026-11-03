@@ -17,7 +17,7 @@ test('demo authentication creates a session, exposes current user and destroys s
     saveUninitialized:false,
     cookie:{httpOnly:true,secure:true,sameSite:'none',maxAge:8*60*60*1000}
   }));
-  registerPostgresAuthRoutes(app,{auth,access,demoEnabled:true,sessionSecret:'integration-test-session-secret-at-least-32-chars'});
+  registerPostgresAuthRoutes(app,{auth,access,demoEnabled:true,sessionSecret:'integration-test-session-secret-at-least-32-chars',cookieClearOptions:{path:'/',secure:true,sameSite:'none'}});
   const server=app.listen(0);
   const base=await new Promise(resolve=>server.once('listening',()=>resolve(`http://127.0.0.1:${server.address().port}`)));
   let cookie='';
@@ -45,6 +45,11 @@ test('demo authentication creates a session, exposes current user and destroys s
     assert.equal((await response.json()).user.role,'teacher');
     response=await fetch(`${base}/api/auth/logout`,{method:'POST',headers:{cookie,'x-forwarded-proto':'https'}});
     assert.equal(response.status,200);
+    const clearedCookie=response.headers.get('set-cookie')||'';
+    assert.match(clearedCookie,/athar\\.sid=;/i);
+    assert.match(clearedCookie,/; Path=\\//i);
+    assert.match(clearedCookie,/; Secure/i);
+    assert.match(clearedCookie,/; SameSite=None/i);
     response=await fetch(`${base}/api/auth/me`,{headers:{cookie,'x-forwarded-proto':'https'}});
     assert.equal(response.status,401);
   } finally {
