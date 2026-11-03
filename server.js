@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import session from 'express-session';
 import { sessionStore } from './db/session-store.js';
+import { pool, withTransaction } from './db/postgres.js';
 import Database from 'better-sqlite3';
 import nodemailer from 'nodemailer';
 import rateLimit from 'express-rate-limit';
@@ -139,19 +140,23 @@ function emailAllowed(email) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return false;
   return allowedDomains.has((email.split('@')[1] || '').toLowerCase());
 }
-function audit(userId, event, details = '') {
-  db.prepare('INSERT INTO audit_log(user_id,event,details) VALUES(?,?,?)').run(userId || null, event, safeText(details, 500));
+async function auditPg(userId, event, details = '') {
+  await pool.query('INSERT INTO audit_log(user_id,event,details) VALUES($1,$2,$3)',[userId || null,event,safeText(details,500)]);
 }
-function requireAuth(req, res, next) {
-  const sessionUser = req.session.user;
-  if (!sessionUser?.id) return res.status(401).json({ message: 'يلزم تسجيل الدخول.' });
-  const fresh = db.prepare('SELECT id,email,name,role,school_id,student_id,active FROM users WHERE id=?').get(sessionUser.id);
-  if (!fresh || !fresh.active) {
-    req.session.destroy(() => {});
-    return res.status(401).json({ message: 'الحساب غير نشط.' });
-  }
-  req.user = fresh;
-  next();
+async function requireAuth(req,res,next) {
+  try {
+    if (!req.session.user?.id) return res.status(401).json({message:'يلزم تسجيل الدخول.'});
+    const result=await pool.query('SELECT id,email,name,role,school_id,student_id,active FROM users WHERE id=$1',[req.session.user.id]);
+    const fresh=result.rows[0];
+    if (!fresh || !fresh.active) { req.session.destroy(()=>{}); return res.status(401).json({message:'الحساب غير نشط.'}); }
+    req.user=fresh; next();
+  } catch(error) { next(error); }
+}
+async function linkedStudentIdsPg(user) {
+ const r=await pool.query('SELECT student_id FROM account_students WHERE user_id=$1 AND school_id=$2 ORDER BY student_id',[user.id,user.school_id]); return r.rows.map(x=>x.student_id);
+}
+async function assignedStudentIdsPg(user) {
+ const r=await pool.query('SELECT student_id FROM teacher_students WHERE user_id=$1 AND school_id=$2 ORDER BY student_id',[user.id,user.school_id]); return r.rows.map(x=>x.student_id);
 }
 function requireRole(...roles) {
   return (req, res, next) => {
@@ -198,113 +203,45 @@ function findStudentOwnedBy(user, studentId) {
 app.get('/api/health', (req, res) => res.json({ ok: true, service: 'athar-api', version: '3.0.0' }));
 app.get('/api/auth/mode', (req, res) => res.json({ mode: demoEnabled ? 'demo' : 'otp', otpAvailable: Boolean(transporter) }));
 
-app.post('/api/auth/request-code', loginLimiter, async (req, res) => {
-  const email = safeText(req.body?.email, 254).toLowerCase();
-  if (!emailAllowed(email)) return res.status(400).json({ message: 'استخدم البريد الرسمي ضمن @moe.om أو @edu.moe.om.' });
-  if (!transporter) return res.status(503).json({ message: 'الدخول بالبريد غير مفعّل بعد؛ لم يتم إعداد خدمة البريد في الخادم.' });
-  const user = db.prepare('SELECT id,active FROM users WHERE email=?').get(email);
-  // Do not reveal whether an email is registered.
-  if (user?.active) {
-    const code = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
-    db.prepare(`INSERT INTO otp_codes(email,code_hash,expires_at,attempts,created_at) VALUES(?,?,?,?,?)
-      ON CONFLICT(email) DO UPDATE SET code_hash=excluded.code_hash,expires_at=excluded.expires_at,attempts=0,created_at=excluded.created_at`)
-      .run(email, hashOtp(email, code), Date.now() + 10 * 60 * 1000, 0, Date.now());
-    try {
-      await transporter.sendMail({
-        from: process.env.MAIL_FROM || process.env.SMTP_USER,
-        to: email,
-        subject: 'رمز التحقق — أثَر',
-        text: `رمز التحقق للدخول إلى منصة أثَر هو: ${code}\nصالح لمدة 10 دقائق. لا تشارك الرمز مع أحد.`
-      });
-    } catch (error) {
-      db.prepare('DELETE FROM otp_codes WHERE email=?').run(email);
-      console.error('OTP email delivery failed:', error);
-      return res.status(502).json({ message: 'تعذر إرسال رمز التحقق. تحقق من إعدادات البريد في الخادم.' });
-    }
-  }
-  res.json({ message: 'إذا كان البريد مسجلًا ومفعّلًا، فسيصلك رمز تحقق خلال لحظات.' });
+app.post('/api/auth/request-code',loginLimiter,async(req,res)=>{
+ const email=safeText(req.body?.email,254).toLowerCase();
+ if(!emailAllowed(email)) return res.status(400).json({message:'استخدم البريد الرسمي ضمن @moe.om أو @edu.moe.om.'});
+ if(!transporter) return res.status(503).json({message:'الدخول بالبريد غير مفعّل بعد؛ لم يتم إعداد خدمة البريد في الخادم.'});
+ const found=await pool.query('SELECT id,active FROM users WHERE email=$1',[email]); const user=found.rows[0];
+ if(user?.active){
+  const code=String(crypto.randomInt(0,1000000)).padStart(6,'0');
+  await pool.query('INSERT INTO otp_codes(email,code_hash,expires_at,attempts,created_at) VALUES($1,$2,$3,0,$4) ON CONFLICT(email) DO UPDATE SET code_hash=EXCLUDED.code_hash,expires_at=EXCLUDED.expires_at,attempts=0,created_at=EXCLUDED.created_at',[email,hashOtp(email,code),Date.now()+600000,Date.now()]);
+  try { await transporter.sendMail({from:process.env.MAIL_FROM||process.env.SMTP_USER,to:email,subject:'رمز التحقق — أثَر',text:'رمز التحقق للدخول إلى منصة أثَر هو: '+code+'\nصالح لمدة 10 دقائق. لا تشارك الرمز مع أحد.'}); }
+  catch(error){ await pool.query('DELETE FROM otp_codes WHERE email=$1',[email]); console.error('OTP email delivery failed:',error); return res.status(502).json({message:'تعذر إرسال رمز التحقق. تحقق من إعدادات البريد في الخادم.'}); }
+ }
+ res.json({message:'إذا كان البريد مسجلًا ومفعّلًا، فسيصلك رمز تحقق خلال لحظات.'});
 });
-
-app.post('/api/auth/verify-code', loginLimiter, (req, res) => {
-  const email = safeText(req.body?.email, 254).toLowerCase();
-  const code = safeText(req.body?.code, 6);
-  if (!emailAllowed(email) || !/^\d{6}$/.test(code)) return res.status(400).json({ message: 'البريد أو رمز التحقق غير صالح.' });
-  const row = db.prepare('SELECT * FROM otp_codes WHERE email=?').get(email);
-  if (!row || row.expires_at < Date.now() || row.attempts >= 5) {
-    db.prepare('DELETE FROM otp_codes WHERE email=?').run(email);
-    return res.status(401).json({ message: 'انتهت صلاحية الرمز أو لم يعد صالحًا. اطلب رمزًا جديدًا.' });
-  }
-  const match = safeHexEqual(row.code_hash, hashOtp(email, code));
-  if (!match) {
-    db.prepare('UPDATE otp_codes SET attempts=attempts+1 WHERE email=?').run(email);
-    return res.status(401).json({ message: 'رمز التحقق غير صحيح.' });
-  }
-  db.prepare('DELETE FROM otp_codes WHERE email=?').run(email);
-  const user = db.prepare('SELECT id,email,name,role,school_id,student_id,active FROM users WHERE email=? AND active=1').get(email);
-  if (!user) return res.status(401).json({ message: 'الحساب غير مفعّل. راجع مسؤول النظام.' });
-  req.session.regenerate(err => {
-    if (err) return res.status(500).json({ message: 'تعذر إنشاء جلسة آمنة.' });
-    req.session.user = { id: user.id };
-    audit(user.id, 'login', user.role);
-    res.json({ user: { ...user, roleName: roleNames[user.role], linkedStudentIds: linkedStudentIds(user), assignedStudentIds: assignedStudentIds(user) } });
-  });
+app.post('/api/auth/verify-code',loginLimiter,async(req,res)=>{
+ const email=safeText(req.body?.email,254).toLowerCase(), code=safeText(req.body?.code,6);
+ if(!emailAllowed(email)||!/^\d{6}$/.test(code)) return res.status(400).json({message:'البريد أو رمز التحقق غير صالح.'});
+ const found=await pool.query('SELECT * FROM otp_codes WHERE email=$1',[email]), row=found.rows[0];
+ if(!row||Number(row.expires_at)<Date.now()||row.attempts>=5){await pool.query('DELETE FROM otp_codes WHERE email=$1',[email]);return res.status(401).json({message:'انتهت صلاحية الرمز أو لم يعد صالحًا. اطلب رمزًا جديدًا.'});}
+ if(!safeHexEqual(row.code_hash,hashOtp(email,code))){await pool.query('UPDATE otp_codes SET attempts=attempts+1 WHERE email=$1',[email]);return res.status(401).json({message:'رمز التحقق غير صحيح.'});}
+ await pool.query('DELETE FROM otp_codes WHERE email=$1',[email]);
+ const ur=await pool.query('SELECT id,email,name,role,school_id,student_id,active FROM users WHERE email=$1 AND active=TRUE',[email]), user=ur.rows[0];
+ if(!user) return res.status(401).json({message:'الحساب غير مفعّل. راجع مسؤول النظام.'});
+ req.session.regenerate(async err=>{if(err)return res.status(500).json({message:'تعذر إنشاء جلسة آمنة.'});req.session.user={id:user.id};try{await auditPg(user.id,'login',user.role);res.json({user:{...user,roleName:roleNames[user.role],linkedStudentIds:await linkedStudentIdsPg(user),assignedStudentIds:await assignedStudentIdsPg(user)}});}catch(e){console.error(e);res.status(500).json({message:'تعذر إكمال تسجيل الدخول.'});}});
 });
-
-function ensureDemoFixtures() {
-  const schoolId = 'DEMO-SCHOOL';
-  const demoUsers = [
-    ['demo.teacher@athar.test', 'معلّم تجريبي', 'teacher'],
-    ['demo.senior@athar.test', 'معلم أول تجريبي', 'senior_teacher'],
-    ['demo.principal@athar.test', 'مدير تجريبي', 'principal'],
-    ['demo.parent@athar.test', 'ولي أمر تجريبي', 'parent'],
-    ['demo.student@athar.test', 'طالب تجريبي', 'student']
-  ];
-  const findUser = db.prepare('SELECT id,email,name,role,school_id,student_id,active FROM users WHERE email=?');
-  const insertUser = db.prepare('INSERT INTO users(email,name,role,school_id,student_id,active) VALUES(?,?,?,?,?,1)');
-  const users = {};
-  for (const [email, name, role] of demoUsers) {
-    let user = findUser.get(email);
-    if (!user) {
-      const info = insertUser.run(email, name, role, schoolId, null);
-      user = findUser.get(email);
-    }
-    if (!user.active || user.school_id !== schoolId || user.role !== role) throw new Error('Demo account configuration conflict.');
-    users[role] = user;
-  }
-  // Demo identities are kept for role switching, but never seed learner records or scores.
-  // Remove only the legacy sample learner shipped by the previous demo build.
-  const legacyStudentId = 'DEMO-STUDENT-001';
-  db.prepare("UPDATE users SET student_id=NULL WHERE email='demo.student@athar.test'").run();
-  db.prepare("DELETE FROM records WHERE school_id=? AND json_extract(payload,'$.student_id')=?").run(schoolId, legacyStudentId);
-  db.prepare('DELETE FROM account_students WHERE school_id=? AND student_id=?').run(schoolId, legacyStudentId);
-  db.prepare('DELETE FROM teacher_students WHERE school_id=? AND student_id=?').run(schoolId, legacyStudentId);
-  return users;
+async function ensureDemoFixtures(){
+ const schoolId='DEMO-SCHOOL';
+ const list=[['demo.teacher@athar.test','معلّم تجريبي','teacher'],['demo.senior@athar.test','معلم أول تجريبي','senior_teacher'],['demo.principal@athar.test','مدير تجريبي','principal'],['demo.parent@athar.test','ولي أمر تجريبي','parent'],['demo.student@athar.test','طالب تجريبي','student']];
+ return withTransaction(async client=>{const users={};for(const [email,name,role] of list){const r=await client.query('INSERT INTO users(email,name,role,school_id,student_id,active) VALUES($1,$2,$3,$4,NULL,TRUE) ON CONFLICT(email) DO UPDATE SET email=EXCLUDED.email RETURNING id,email,name,role,school_id,student_id,active',[email,name,role,schoolId]);const u=r.rows[0];if(!u.active||u.school_id!==schoolId||u.role!==role)throw new Error('Demo account configuration conflict.');users[role]=u;}await client.query("UPDATE users SET student_id=NULL WHERE email='demo.student@athar.test' AND school_id=$1",[schoolId]);return users;});
 }
-
-app.post('/api/auth/demo', loginLimiter, (req, res) => {
-  if (!demoEnabled) return res.status(404).json({ message: 'وضع الاختبار غير مفعّل.' });
-  const role = safeText(req.body?.persona || 'teacher', 32);
-  const allowedDemoRoles = new Set(['teacher', 'senior_teacher', 'principal', 'parent', 'student']);
-  if (!allowedDemoRoles.has(role)) return res.status(400).json({ message: 'شخصية الاختبار غير معروفة.' });
-  let users;
-  try { users = ensureDemoFixtures(); }
-  catch (error) { console.error('Demo fixture error:', error); return res.status(500).json({ message: 'تعذر تجهيز حسابات الاختبار.' }); }
-  const user = users[role];
-  if (!user?.active) return res.status(403).json({ message: 'حساب الاختبار غير نشط.' });
-  req.session.regenerate(err => {
-    if (err) return res.status(500).json({ message: 'تعذر إنشاء جلسة آمنة.' });
-    req.session.user = { id: user.id };
-    audit(user.id, 'demo.login', role);
-    res.json({ user: { ...user, roleName: roleNames[user.role], linkedStudentIds: linkedStudentIds(user), assignedStudentIds: assignedStudentIds(user), isDemo:true }, warning: 'وضع اختبار فقط مع بيانات اصطناعية في مدرسة معزولة. لا تستخدم بيانات حقيقية.' });
-  });
+app.post('/api/auth/demo',loginLimiter,async(req,res)=>{
+ if(!demoEnabled)return res.status(404).json({message:'وضع الاختبار غير مفعّل.'});
+ const role=safeText(req.body?.persona||'teacher',32), allowed=new Set(['teacher','senior_teacher','principal','parent','student']);
+ if(!allowed.has(role))return res.status(400).json({message:'شخصية الاختبار غير معروفة.'});
+ let users;try{users=await ensureDemoFixtures();}catch(e){console.error('Demo fixture error:',e);return res.status(500).json({message:'تعذر تجهيز حسابات الاختبار.'});}
+ const user=users[role];if(!user?.active)return res.status(403).json({message:'حساب الاختبار غير نشط.'});
+ req.session.regenerate(async err=>{if(err)return res.status(500).json({message:'تعذر إنشاء جلسة آمنة.'});req.session.user={id:user.id};try{await auditPg(user.id,'demo.login',role);res.json({user:{...user,roleName:roleNames[user.role],linkedStudentIds:await linkedStudentIdsPg(user),assignedStudentIds:await assignedStudentIdsPg(user),isDemo:true},warning:'وضع اختبار فقط مع بيانات اصطناعية في مدرسة معزولة. لا تستخدم بيانات حقيقية.'});}catch(e){console.error(e);res.status(500).json({message:'تعذر إكمال تسجيل الدخول التجريبي.'});}});
 });
-
-app.get('/api/auth/me', requireAuth, (req, res) => res.json({ user: { ...req.user, roleName: roleNames[req.user.role], linkedStudentIds: linkedStudentIds(req.user), assignedStudentIds: assignedStudentIds(req.user), isDemo:req.user.school_id === 'DEMO-SCHOOL' } }));
-app.post('/api/auth/logout', requireAuth, (req, res) => {
-  audit(req.user.id, 'logout');
-  req.session.destroy(() => { res.clearCookie('athar.sid'); res.json({ ok: true }); });
-});
-
+app.get('/api/auth/me',requireAuth,async(req,res)=>{res.json({user:{...req.user,roleName:roleNames[req.user.role],linkedStudentIds:await linkedStudentIdsPg(req.user),assignedStudentIds:await assignedStudentIdsPg(req.user),isDemo:req.user.school_id==='DEMO-SCHOOL'}});});
+app.post('/api/auth/logout',requireAuth,async(req,res)=>{await auditPg(req.user.id,'logout');req.session.destroy(()=>{res.clearCookie('athar.sid');res.json({ok:true});});});
 app.get('/api/records', requireAuth, (req, res) => {
   const rows = getRecordsForUser(req.user);
   res.json({ records: rows.map(row => ({ ...row, payload: JSON.parse(row.payload) })) });
