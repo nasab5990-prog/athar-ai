@@ -55,7 +55,7 @@ const authMiddleware = registerPostgresAuthRoutes(app, {
   }
 });
 
-registerPostgresDataRoutes(app, authMiddleware);
+registerPostgresDataRoutes(app, { ...authMiddleware, writeAudit: auth.writeAudit });
 registerPostgresAnalysisRoute(app, authMiddleware);
 
 app.get('/api/health', async (req, res, next) => {
