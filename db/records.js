@@ -157,6 +157,7 @@ export async function listSchoolUsers(schoolId) {
 
 /** Creates a school account and its student/teacher links atomically. */
 export async function createSchoolUser({ email, name, role, schoolId, studentIds = [] }) {
+  if (schoolId === 'DEMO-SCHOOL') return { status: 'demo_school_forbidden' };
   const allowedRoles = ['teacher', 'senior_teacher', 'principal', 'parent', 'student'];
   if (!allowedRoles.includes(role) || !email || !name || !schoolId) return { status: 'invalid_user' };
   if ((role === 'student' && studentIds.length !== 1) ||
