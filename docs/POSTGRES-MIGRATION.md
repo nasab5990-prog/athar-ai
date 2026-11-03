@@ -100,3 +100,10 @@ The repository returns PostgreSQL `BIGINT` IDs as strings in the standard `pg` d
 - [ ] Preserve the exact current authorization semantics during route conversion, including principal-only user administration, teacher ownership/assignment checks, and school isolation. Capability helpers are preparatory and must not replace route-level checks until each route is mapped and tested.
 - [ ] `npm run check` has not been run in this work session; no database migration or integration test was performed.
 
+## Role policy and automated checks
+
+- [x] Extracted pure role capability rules into `db/role-policy.js` so they can be tested without opening a database connection.
+- [x] Updated `db/authorization.js` to re-export the shared role policy rather than maintaining a second copy.
+- [x] Added `test/role-policy.test.js` covering all five roles, the demo-school user-management restriction, and missing-user inputs.
+- [x] Added `npm test` using Node's built-in test runner and included the policy/test files in `npm run check`.
+- [ ] Tests and syntax checks have not yet been executed in this session. These are isolated policy tests, not database or route integration tests.
