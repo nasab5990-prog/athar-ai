@@ -248,3 +248,22 @@ test('PostgreSQL OTP repository creates, increments and deletes a one-time code'
   }
   assert.equal(await findOtp(email), null);
 });
+
+test('PostgreSQL OTP verification claims attempts atomically and rejects expired codes', async () => {
+  const { saveOtp, claimOtpAttempt, deleteOtp } = await import('../db/auth.js');
+  const email = `claim-otp-${randomUUID()}@example.test`;
+  const now = Date.now();
+  try {
+    await saveOtp({ email, codeHash: 'c'.repeat(64), expiresAt: now + 60_000, createdAt: now });
+    for (let attempt = 1; attempt <= 5; attempt += 1) {
+      const claimed = await claimOtpAttempt(email, now);
+      assert.equal(Number(claimed?.attempts), attempt);
+    }
+    assert.equal(await claimOtpAttempt(email, now), null);
+    await saveOtp({ email, codeHash: 'd'.repeat(64), expiresAt: now - 1, createdAt: now });
+    assert.equal(await claimOtpAttempt(email, now), null);
+  } finally {
+    await deleteOtp(email);
+  }
+});
+
