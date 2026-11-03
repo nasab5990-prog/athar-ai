@@ -48,10 +48,15 @@ export async function findOtp(email) {
 }
 
 export async function incrementOtpAttempts(email) {
-  await pool.query(
-    'UPDATE otp_codes SET attempts = attempts + 1 WHERE email = $1',
-    [email]
+  const result = await pool.query(
+    `UPDATE otp_codes
+     SET attempts = attempts + 1
+     WHERE email = $1
+       AND attempts < 5
+       AND expires_at > $2`,
+    [email, Date.now()]
   );
+  return result.rowCount === 1;
 }
 
 export async function deleteOtp(email) {
