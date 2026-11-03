@@ -223,9 +223,16 @@ test('PostgreSQL OTP repository creates, increments and deletes a one-time code'
     assert.equal(Number(otp.attempts), 0);
     assert.equal(Number(otp.expires_at), now + 10 * 60 * 1000);
 
-    await incrementOtpAttempts(email);
+    assert.equal(await incrementOtpAttempts(email), true);
     otp = await findOtp(email);
     assert.equal(Number(otp.attempts), 1);
+
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      assert.equal(await incrementOtpAttempts(email), true);
+    }
+    assert.equal(await incrementOtpAttempts(email), false);
+    otp = await findOtp(email);
+    assert.equal(Number(otp.attempts), 5);
 
     await saveOtp({
       email,
