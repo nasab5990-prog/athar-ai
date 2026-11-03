@@ -255,10 +255,15 @@ test('PostgreSQL OTP verification claims attempts atomically and rejects expired
   const now = Date.now();
   try {
     await saveOtp({ email, codeHash: 'c'.repeat(64), expiresAt: now + 60_000, createdAt: now });
-    for (let attempt = 1; attempt <= 5; attempt += 1) {
-      const claimed = await claimOtpAttempt(email, now);
-      assert.equal(Number(claimed?.attempts), attempt);
-    }
+    const concurrentClaims = await Promise.all(
+      Array.from({ length: 10 }, () => claimOtpAttempt(email, now))
+    );
+    const successfulClaims = concurrentClaims.filter(Boolean);
+    assert.equal(successfulClaims.length, 5);
+    assert.deepEqual(
+      successfulClaims.map(row => Number(row.attempts)).sort((a, b) => a - b),
+      [1, 2, 3, 4, 5]
+    );
     assert.equal(await claimOtpAttempt(email, now), null);
     await saveOtp({ email, codeHash: 'd'.repeat(64), expiresAt: now - 1, createdAt: now });
     assert.equal(await claimOtpAttempt(email, now), null);
