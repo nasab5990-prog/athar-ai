@@ -73,10 +73,11 @@ export function calculateLearningAnalysis(assessments, skill, studentId, observe
     : targetScore<70 ? (mapped?.strategies || ['ابدأ بتقويم تشخيصي قصير يحدد نوع الخطأ.','قسّم المهارة إلى خطوات أصغر، ثم قدّم نموذجًا محلولًا.','استخدم سؤال تحقق مستقلًا بعد النشاط.'])
     : ['قدّم نشاطًا تطبيقيًا للتحقق من ثبات الإتقان.','انتقل تدريجيًا إلى المهارات اللاحقة دون إلغاء المراجعة.'];
   const evidence = [];
-  if(targetScore!==null) evidence.push(`متوسط أحدث النتائج الممثلة للمهارة ${targetScore}%.`);
+  if(targetScore!==null) evidence.push(`آخر نتيجة مسجلة للمهارة ${targetScore}%.`);
   if(trend!==null) evidence.push(`التغير عن التقويم السابق ${trend>0?'+':''}${trend} نقطة مئوية.`);
   if(likelyRoots.length) evidence.push(`ظهرت فجوة في مهارات سابقة: ${likelyRoots.map(x=>`${x.skill} (${x.score}%)`).join('، ')}.`);
-  else if(prerequisiteEvidence.some(item=>item.score!==null)) evidence.push('لا توجد نتائج منخفضة في المهارات السابقة ضمن السجلات المتاحة.');
+  else if(prerequisiteEvidence.length) evidence.push('لا توجد نتائج منخفضة مسجلة للمهارات السابقة ضمن البيانات المتاحة؛ يُنصح بالتأكد منها بتقويم تشخيصي عند الحاجة.');
+  if(!studentId && scores.length) evidence.push(`احتُسب متوسط المهارة من أحدث نتيجة لكل طالب/مجموعة؛ عدد السجلات الممثلة: ${scores.length}.`);
   if(observedErrors) evidence.push(`ملاحظة المعلم: ${observedErrors}`);
   return {skill:title,level,targetScore,trend,sampleSize:scores.length,likelyRoots,prerequisiteEvidence,nextSkills:mapped?.next||[],evidence,recommendations,
     disclaimer:'تحليل مساند مبني على السجلات المتاحة وخريطة مهارات أولية؛ لا يمثل تشخيصًا نهائيًا، ويعتمد القرار على مراجعة المعلم.'};
