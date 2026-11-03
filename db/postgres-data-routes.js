@@ -4,7 +4,7 @@ import { canCreateEducationalRecords, canManageSchoolUsers } from './role-policy
 const allowedKinds = new Set(['student', 'assessment', 'intervention', 'impact']);
 const clean = (value, max = 300) => String(value ?? '').trim().slice(0, max);
 
-export function registerPostgresDataRoutes(app, { requireAuth, requireRole }) {
+export function registerPostgresDataRoutes(app, { requireAuth, requireRole, writeAudit }) {
   app.get('/api/records', requireAuth, async (req, res, next) => {
     try {
       res.json({ records: await records.listRecordsForUser(req.user) });
@@ -32,6 +32,7 @@ export function registerPostgresDataRoutes(app, { requireAuth, requireRole }) {
       const created = await records.insertRecord({
         schoolId: req.user.school_id, ownerId: req.user.id, kind, payload
       });
+      await writeAudit(req.user.id, 'record.create', kind);
       res.status(201).json({ record: created });
     } catch (error) { next(error); }
   });
@@ -68,6 +69,7 @@ export function registerPostgresDataRoutes(app, { requireAuth, requireRole }) {
       const created = await records.insertRecordsBatch({
         schoolId: req.user.school_id, ownerId: req.user.id, records: items
       });
+      await writeAudit(req.user.id, 'record.bulk_create', `count:${created.length}`);
       res.status(201).json({ records: created, count: created.length });
     } catch (error) { next(error); }
   });
@@ -83,6 +85,7 @@ export function registerPostgresDataRoutes(app, { requireAuth, requireRole }) {
       if (result.status === 'not_found') return res.status(404).json({ message: 'السجل غير موجود.' });
       if (result.status === 'forbidden') return res.status(403).json({ message: 'لا يمكنك حذف سجل لا تملكه.' });
       if (result.status === 'linked') return res.status(409).json({ message: 'لا يمكن حذف طالب مرتبط بحساب ولي أمر أو طالب.' });
+      await writeAudit(req.user.id, 'record.delete', req.params.id);
       res.json({ ok: true });
     } catch (error) { next(error); }
   });
@@ -106,7 +109,10 @@ export function registerPostgresDataRoutes(app, { requireAuth, requireRole }) {
         schoolId: req.user.school_id,
         studentIds: Array.isArray(req.body?.studentIds) ? req.body.studentIds.map(id => clean(id, 80)) : []
       });
-      if (result.status === 'created') return res.status(201).json({ user: result.user });
+      if (result.status === 'created') {
+        await writeAudit(req.user.id, 'school_user.create', `${result.user.role}:${result.user.id}`);
+        return res.status(201).json({ user: result.user });
+      }
       const status = result.status === 'student_not_found' ? 404 : 400;
       res.status(status).json({ message: 'تعذر إنشاء الحساب؛ تحقق من الدور والطلبة المرتبطين.' });
     } catch (error) { next(error); }
@@ -123,6 +129,7 @@ export function registerPostgresDataRoutes(app, { requireAuth, requireRole }) {
       });
       if (result.status === 'not_found') return res.status(404).json({ message: 'المعلم غير موجود.' });
       if (result.status === 'student_not_found') return res.status(400).json({ message: 'يوجد طالب غير مسجل في المدرسة.' });
+      await writeAudit(req.user.id, 'teacher.assignments.replace', `${req.params.id}:${studentIds.length}`);
       res.json({ ok: true });
     } catch (error) { next(error); }
   });
@@ -139,6 +146,7 @@ export function registerPostgresDataRoutes(app, { requireAuth, requireRole }) {
       if (result.status === 'not_found') return res.status(404).json({ message: 'الحساب غير موجود أو دوره غير مطابق.' });
       if (result.status === 'student_not_found') return res.status(400).json({ message: 'يوجد طالب غير مسجل في المدرسة.' });
       if (result.status === 'invalid_links') return res.status(400).json({ message: 'عدد روابط الطلبة غير صالح لهذا الدور.' });
+      await writeAudit(req.user.id, 'account.student_links.replace', `${req.params.id}:${studentIds.length}`);
       res.json({ ok: true });
     } catch (error) { next(error); }
   });
