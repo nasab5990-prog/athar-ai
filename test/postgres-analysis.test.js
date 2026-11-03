@@ -48,3 +48,15 @@ test('learning analysis handles improvement and avoids inventing trend without t
   ],'الفكرة الرئيسة','S-1','');
   assert.equal(single.trend,null);
 });
+
+
+test('learning analysis follows repository order rather than user-entered assessment dates', () => {
+  const result = calculateLearningAnalysis([
+    { student_id:'S-1', skill:'الفكرة الرئيسة', pct:82, date:'2026-10-01' },
+    { student_id:'S-1', skill:'الفكرة الرئيسة', pct:60, date:'2026-10-25' },
+    { student_id:'S-1', skill:'المفردات والسياق', pct:80, date:'2026-10-02' }
+  ],'الفكرة الرئيسة','S-1','');
+  assert.equal(result.targetScore,82);
+  assert.equal(result.trend,22);
+  assert.ok(result.evidence.some(item=>item.includes('لا توجد نتائج منخفضة')));
+});
