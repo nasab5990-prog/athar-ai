@@ -36,7 +36,8 @@ export function calculateLearningAnalysis(assessments, skill, studentId, observe
     return candidate && target && (candidate.includes(target) || target.includes(candidate));
   };
   let selected = assessments.filter(row => (!studentId || String(row.student_id) === String(studentId)) && matches(row));
-  selected.sort((a,b) => String(b.date || b.created_at || '').localeCompare(String(a.date || a.created_at || '')));
+  // Repository supplies assessments in id DESC order, matching the original SQLite query.
+  // Keep that order: assessment dates can be entered late or corrected by staff.
   const latest = new Map();
   for (const row of selected) {
     const key = row.student_id || `class:${row.grade || ''}:${row.section || ''}`;
@@ -56,7 +57,7 @@ export function calculateLearningAnalysis(assessments, skill, studentId, observe
       if (studentId && String(row.student_id)!==String(studentId)) return false;
       const value = normalize(row.skill || row.name || '');
       return value && (value.includes(needle) || needle.includes(value));
-    }).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
+    }); // Keep repository id DESC order, as in the original SQLite implementation.
     const perStudent = new Map();
     for (const row of rows) {
       const key = row.student_id || `class:${row.grade||''}:${row.section||''}`;
@@ -75,6 +76,7 @@ export function calculateLearningAnalysis(assessments, skill, studentId, observe
   if(targetScore!==null) evidence.push(`متوسط أحدث النتائج الممثلة للمهارة ${targetScore}%.`);
   if(trend!==null) evidence.push(`التغير عن التقويم السابق ${trend>0?'+':''}${trend} نقطة مئوية.`);
   if(likelyRoots.length) evidence.push(`ظهرت فجوة في مهارات سابقة: ${likelyRoots.map(x=>`${x.skill} (${x.score}%)`).join('، ')}.`);
+  else if(prerequisiteEvidence.some(item=>item.score!==null)) evidence.push('لا توجد نتائج منخفضة في المهارات السابقة ضمن السجلات المتاحة.');
   if(observedErrors) evidence.push(`ملاحظة المعلم: ${observedErrors}`);
   return {skill:title,level,targetScore,trend,sampleSize:scores.length,likelyRoots,prerequisiteEvidence,nextSkills:mapped?.next||[],evidence,recommendations,
     disclaimer:'تحليل مساند مبني على السجلات المتاحة وخريطة مهارات أولية؛ لا يمثل تشخيصًا نهائيًا، ويعتمد القرار على مراجعة المعلم.'};
