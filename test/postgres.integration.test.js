@@ -76,6 +76,60 @@ test('PostgreSQL session store module can initialize against the test database',
   await new Promise((resolve, reject) => sessionStore.close(error => error ? reject(error) : resolve()));
 });
 
+test('PostgreSQL repositories preserve demo identities without creating fake student data', async () => {
+  const { ensureDemoUsers, findActiveUserByEmail } = await import('../db/auth.js');
+  const { listRecordsForUser } = await import('../db/records.js');
+  const users = await ensureDemoUsers();
+  assert.deepEqual(
+    Object.keys(users).sort(),
+    ['parent', 'principal', 'senior_teacher', 'student', 'teacher'].sort()
+  );
+
+  for (const role of Object.keys(users)) {
+    const user = users[role];
+    assert.equal(user.role, role);
+    assert.equal(user.school_id, 'DEMO-SCHOOL');
+    assert.equal(user.active, true);
+    const found = await findActiveUserByEmail(user.email);
+    assert.equal(String(found.id), String(user.id));
+    assert.deepEqual(await listRecordsForUser(user), []);
+  }
+
+  const repeated = await ensureDemoUsers();
+  for (const role of Object.keys(users)) {
+    assert.equal(String(repeated[role].id), String(users[role].id));
+  }
+});
+
+test('PostgreSQL record batch writes are atomic and return JSONB as objects', async () => {
+  const { insertRecordsBatch, listRecordsForUser } = await import('../db/records.js');
+  const { ensureDemoUsers } = await import('../db/auth.js');
+  const { teacher } = await ensureDemoUsers();
+  const marker = randomUUID();
+
+  const created = await insertRecordsBatch({
+    schoolId: teacher.school_id,
+    ownerId: teacher.id,
+    records: [
+      { kind: 'assessment', payload: { student_id: marker, score: 7 } },
+      { kind: 'student', payload: { student_id: marker, name: 'Integration-only learner' } }
+    ]
+  });
+
+  try {
+    assert.equal(created.length, 2);
+    const rows = await listRecordsForUser(teacher);
+    const inserted = rows.filter(row => row.payload?.student_id === marker);
+    assert.equal(inserted.length, 2);
+    assert.ok(inserted.every(row => typeof row.payload === 'object' && !Array.isArray(row.payload)));
+  } finally {
+    await pool.query(
+      "DELETE FROM records WHERE school_id = $1 AND payload->>'student_id' = $2",
+      [teacher.school_id, marker]
+    );
+  }
+});
+
 test.after(async () => {
   await pool?.end();
 });
