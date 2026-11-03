@@ -89,3 +89,14 @@ The repository returns PostgreSQL `BIGINT` IDs as strings in the standard `pg` d
 - [ ] Add tests for inactive users, OTP expiry and five-attempt lockout, demo-account conflicts, school isolation, and audit writes before integration.
 - [ ] Review the schema's `audit_log.user_id` relationship and retention policy before production use; audit rows currently do not declare a foreign key to users.
 
+
+## Authorization and session readiness
+
+- [x] Reviewed the current middleware: `requireAuth` reloads the active user from SQLite on every request; role checks are centralized in `requireRole`; school scoping and student ownership/assignment checks are separate helpers.
+- [x] Added `db/authorization.js` with PostgreSQL equivalents for linked/assigned student lookup, school-scoped student existence, teacher ownership/assignment access, and role capability predicates.
+- [x] Confirmed `db/session-store.js` already defines a PostgreSQL session store. It is not enabled in `server.js`.
+- [x] Expanded `npm run check` to include the new PostgreSQL auth, authorization, and records modules.
+- [ ] Do not enable the PostgreSQL session store independently: session IDs currently resolve to SQLite user IDs. Switch the session store and `requireAuth` user lookup together after PostgreSQL users are established.
+- [ ] Preserve the exact current authorization semantics during route conversion, including principal-only user administration, teacher ownership/assignment checks, and school isolation. Capability helpers are preparatory and must not replace route-level checks until each route is mapped and tested.
+- [ ] `npm run check` has not been run in this work session; no database migration or integration test was performed.
+
