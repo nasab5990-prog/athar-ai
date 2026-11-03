@@ -3,7 +3,7 @@ import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import session from 'express-session';
-import SQLiteStoreFactory from 'connect-sqlite3';
+import { sessionStore } from './db/session-store.js';
 import Database from 'better-sqlite3';
 import nodemailer from 'nodemailer';
 import rateLimit from 'express-rate-limit';
@@ -90,7 +90,6 @@ for (const row of db.prepare("SELECT id,role,school_id,student_id FROM users WHE
   db.prepare('INSERT OR IGNORE INTO account_students(user_id,student_id,school_id) VALUES(?,?,?)').run(row.id, row.student_id, row.school_id);
 }
 
-const SQLiteStore = SQLiteStoreFactory(session);
 app.set('trust proxy', 1);
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors({
@@ -106,7 +105,7 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'development-only-change-this-secret-before-deploying',
   resave: false,
   saveUninitialized: false,
-  store: new SQLiteStore({ db: 'sessions.sqlite', dir: path.dirname(dbPath) }),
+  store: sessionStore,
   cookie: {
     httpOnly: true,
     secure: production,
