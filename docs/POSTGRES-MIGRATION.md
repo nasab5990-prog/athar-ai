@@ -23,11 +23,11 @@ preview has passed the acceptance checks below.
 - [x] Initial PostgreSQL schema and migration runner added.
 - [x] PostgreSQL pool and transaction helper added.
 - [x] PostgreSQL Express session-store adapter added (`db/session-store.js`).
-- [ ] Replace synchronous SQLite access in `server.js` with async PostgreSQL queries.
-- [ ] Convert `create-user.js` and `seed-user.js`.
+- [ ] Replace synchronous SQLite business-data access in `server.js` with async PostgreSQL queries.
+- [x] Convert `create-user.js` and `seed-user.js` to PostgreSQL transactions.
 - [ ] Run syntax checks and API integration tests against a separate preview database.
 
-The session adapter is groundwork only until `server.js` imports and uses it.
+`server.js` now imports and uses the PostgreSQL session adapter. Business data (users, OTP, audit, records, links, and analysis) still uses SQLite; this is an intermediate preview state and must not be deployed.
 
 ## Required PostgreSQL design
 
@@ -92,3 +92,10 @@ ready and reviewed. Never commit `DATABASE_URL`, passwords, or other secrets.
 - [ ] `server.js` still contains SQLite initialization and synchronous SQLite queries; do not deploy this branch as a PostgreSQL server yet.
 - [ ] Run dependency installation, syntax checks, schema migration, and endpoint integration tests against an isolated preview database.
 - [ ] Verify session persistence, demo persona isolation, role-based access, record CRUD/bulk atomicity, and analysis behavior.
+
+
+## Latest session integration
+
+- [x] `server.js` uses `db/session-store.js` for Express sessions on the preview branch.
+- [ ] PostgreSQL is not yet the source of truth for business data; SQLite remains active for all existing routes.
+- [ ] Do not deploy until all SQLite route queries and startup initialization have been converted and tested.
