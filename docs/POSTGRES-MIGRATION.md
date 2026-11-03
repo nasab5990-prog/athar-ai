@@ -69,3 +69,12 @@ A mixed configuration is unsafe: PostgreSQL user IDs cannot be assumed to match 
 ## Deployment safety
 
 Do not change Render environment variables, deploy this branch to the current production service, run a migration against the user's existing Supabase project, delete SQLite files, or merge into `main` as part of preparation. Historical data is not assumed to exist in the new PostgreSQL database.
+
+## Records repository preview
+
+- [x] Added `db/records.js` with parameterized PostgreSQL operations for role-scoped record listing, student-record lookup, single insert, atomic batch insert, and guarded student-record deletion.
+- [ ] The repository is deliberately not imported by `server.js`. The server still authenticates users and reads/writes business data through SQLite; calling this repository from the current routes would mix independent user IDs and school data stores.
+- [ ] Before wiring it in, migrate authentication/user identity and the authorization helpers in the same coordinated change. Then convert the records routes to await these repository functions and preserve the current API response shapes and Arabic validation messages.
+- [ ] Add integration tests for role visibility, school isolation, teacher ownership, assigned learners, parent/student links, duplicate student IDs, atomic batch rollback, and linked-student deletion.
+
+The repository returns PostgreSQL `BIGINT` IDs as strings in the standard `pg` driver. The API boundary must preserve this safely (do not coerce IDs to JavaScript numbers unless they are within the safe integer range). JSONB payloads are returned as objects by `pg`, so the old SQLite `JSON.parse(row.payload)` mapping must not be copied unchanged.
