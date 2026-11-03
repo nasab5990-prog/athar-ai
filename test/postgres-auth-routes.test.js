@@ -46,7 +46,7 @@ test('demo authentication creates a session, exposes current user and destroys s
     response=await fetch(`${base}/api/auth/logout`,{method:'POST',headers:{cookie,'x-forwarded-proto':'https'}});
     assert.equal(response.status,200);
     const clearedCookie=response.headers.get('set-cookie')||'';
-    assert.match(clearedCookie,/athar\\.sid=;/i);
+    assert.match(clearedCookie,/athar\.sid=;/i);
     assert.match(clearedCookie,/; Path=\//i);
     assert.match(clearedCookie,/; Secure/i);
     assert.match(clearedCookie,/; SameSite=None/i);
