@@ -45,12 +45,22 @@ export function registerPostgresDataRoutes(app, { requireAuth, requireRole }) {
           items.some(item => !allowedKinds.has(clean(item?.kind, 40)) ||
             !item?.payload || typeof item.payload !== 'object' || Array.isArray(item.payload)))
         return res.status(400).json({ message: 'قائمة السجلات غير صالحة (1 إلى 100 سجل).' });
+      const batchStudents = new Map();
+      for (const item of items.filter(item => item.kind === 'student')) {
+        const studentId = clean(item.payload.student_id, 80);
+        if (!studentId || batchStudents.has(studentId))
+          return res.status(400).json({ message: 'معرّف الطالب مفقود أو مكرر في الدفعة.' });
+        batchStudents.set(studentId, item);
+      }
       for (const item of items.filter(item => item.kind !== 'student')) {
         const studentId = clean(item.payload.student_id, 80);
-        const student = studentId ? await records.findStudentRecord(req.user.school_id, studentId) : null;
-        if (!student)
-          return res.status(400).json({ message: 'تأكد من إضافة الطلبة قبل سجلاتهم المرتبطة.' });
-        if (req.user.role === 'teacher' && String(student.owner_id) !== String(req.user.id)) {
+        if (!studentId)
+          return res.status(400).json({ message: 'يجب تحديد الطالب لكل سجل مرتبط.' });
+        let student = await records.findStudentRecord(req.user.school_id, studentId);
+        const isNewBatchStudent = !student && batchStudents.has(studentId);
+        if (!student && !isNewBatchStudent)
+          return res.status(400).json({ message: 'تأكد من وجود الطالب ضمن المدرسة أو إضافته في الدفعة نفسها.' });
+        if (req.user.role === 'teacher' && !isNewBatchStudent && String(student.owner_id) !== String(req.user.id)) {
           const assigned = await (await import('./authorization.js')).findStudentAccessibleTo(req.user, studentId);
           if (!assigned) return res.status(403).json({ message: 'أحد الطلبة غير ضمن نطاق صلاحياتك.' });
         }
