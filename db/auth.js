@@ -47,6 +47,20 @@ export async function findOtp(email) {
   return rows[0] || null;
 }
 
+/** Atomically claims one verification attempt only while the code is valid. */
+export async function claimOtpAttempt(email, now = Date.now()) {
+  const { rows } = await pool.query(
+    `UPDATE otp_codes
+     SET attempts = attempts + 1
+     WHERE email = $1
+       AND attempts < 5
+       AND expires_at > $2
+     RETURNING email, code_hash, expires_at, attempts, created_at`,
+    [email, now]
+  );
+  return rows[0] || null;
+}
+
 export async function incrementOtpAttempts(email) {
   const result = await pool.query(
     `UPDATE otp_codes
