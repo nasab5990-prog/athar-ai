@@ -14,7 +14,7 @@ const equal = (a,b) => {
 };
 const limiter = rateLimit({windowMs:15*60*1000,limit:10,standardHeaders:true,legacyHeaders:false});
 
-export function registerPostgresAuthRoutes(app,{auth,access,demoEnabled=false,otpSecret,sessionSecret,mailConfig={}}) {
+export function registerPostgresAuthRoutes(app,{auth,access,demoEnabled=false,otpSecret,sessionSecret,mailConfig={},cookieClearOptions={path:'/'}}) {
   const transporter = mailConfig.host ? nodemailer.createTransport({
     host:mailConfig.host, port:Number(mailConfig.port||587), secure:mailConfig.secure===true,
     auth:mailConfig.user?{user:mailConfig.user,pass:mailConfig.pass}:undefined
@@ -81,7 +81,7 @@ export function registerPostgresAuthRoutes(app,{auth,access,demoEnabled=false,ot
   app.get('/api/auth/me',requireAuth,async(req,res)=>res.json({user:await present(req.user,{isDemo:req.user.school_id==='DEMO-SCHOOL'})}));
   app.post('/api/auth/logout',requireAuth,async(req,res)=>{
     await audit(req.user.id,'logout');
-    req.session.destroy(error=>{if(error)return res.status(500).json({message:'تعذر إنهاء الجلسة.'});res.clearCookie('athar.sid');res.json({ok:true});});
+    req.session.destroy(error=>{if(error)return res.status(500).json({message:'تعذر إنهاء الجلسة.'});res.clearCookie('athar.sid',cookieClearOptions);res.json({ok:true});});
   });
   return {requireAuth,requireRole:(...allowed)=>(req,res,next)=>allowed.includes(req.user?.role)?next():res.status(403).json({message:'ليس لديك صلاحية لتنفيذ هذا الإجراء.'})};
 }
