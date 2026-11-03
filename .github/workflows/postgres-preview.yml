@@ -1,0 +1,40 @@
+name: PostgreSQL preview checks
+
+on:
+  push:
+    branches: [migration/postgres-preview]
+  pull_request:
+    branches: [migration/postgres-preview]
+
+jobs:
+  postgres-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: athar_test
+          POSTGRES_PASSWORD: athar_test_only
+          POSTGRES_DB: athar_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U athar_test -d athar_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://athar_test:athar_test_only@localhost:5432/athar_test
+      SESSION_SECRET: ci-session-secret-at-least-32-characters-long
+      OTP_SECRET: ci-otp-secret-at-least-32-characters-long
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm install
+      - run: npm run check
+      - run: npm run db:migrate
+      - run: npm test
