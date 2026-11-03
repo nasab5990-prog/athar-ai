@@ -168,7 +168,7 @@ async function ensureDemoFixtures() {
   return users;
 }
 app.post('/api/auth/demo',loginLimiter,asyncRoute(async(req,res)=>{
-  if (!demoEnabled || production) return res.status(404).json({ message:'وضع الاختبار غير مفعّل.' });
+  if (!demoEnabled) return res.status(404).json({ message:'وضع الاختبار غير مفعّل.' });
   const role=safeText(req.body?.persona || 'teacher',32);
   if (!['teacher','senior_teacher','principal','parent','student'].includes(role)) return res.status(400).json({ message:'شخصية الاختبار غير معروفة.' });
   const users=await ensureDemoFixtures(), user=users[role];
