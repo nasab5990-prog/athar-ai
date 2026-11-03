@@ -116,3 +116,14 @@ The repository returns PostgreSQL `BIGINT` IDs as strings in the standard `pg` d
 - [ ] The workflow has been committed but its run result has not yet been inspected. Do not treat tests as passing until the GitHub Actions run completes successfully.
 - [ ] This workflow tests database schema/repository foundations only. API route tests and the coordinated PostgreSQL authentication/session/authorization conversion remain pending because `server.js` still runs on SQLite.
 - [ ] The workflow is restricted to `migration/postgres-preview`; it does not target `main` and does not connect to Render or the user's Supabase project.
+
+
+## User-approved target architecture (2026-11-03)
+
+- [x] User approved PostgreSQL as the primary application database after the full preview test suite passes.
+- [x] SQLite source files and existing local data must be retained; do not delete or overwrite them as part of this migration.
+- [ ] Approval does not authorize switching the production service, changing Render, running migrations on the user's Supabase project, or merging to `main`. Those remain separate acceptance decisions.
+- [ ] The PostgreSQL server must first pass syntax checks, repository tests, and HTTP-level tests for auth/demo login, session persistence, role permissions, records, user administration, and analysis.
+- [ ] A backup/export and an explicit data migration plan are required before any historical SQLite data is copied. The new PostgreSQL database is not assumed to contain historical records.
+- [x] Added `test/demo-school-isolation.test.js` to verify that the PostgreSQL account repository refuses to provision accounts in `DEMO-SCHOOL` and creates no user row (commit `53388d5`).
+- [ ] The new regression test has been committed but has not yet been observed passing in CI.
