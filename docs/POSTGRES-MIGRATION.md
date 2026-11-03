@@ -127,3 +127,11 @@ The repository returns PostgreSQL `BIGINT` IDs as strings in the standard `pg` d
 - [ ] A backup/export and an explicit data migration plan are required before any historical SQLite data is copied. The new PostgreSQL database is not assumed to contain historical records.
 - [x] Added `test/demo-school-isolation.test.js` to verify that the PostgreSQL account repository refuses to provision accounts in `DEMO-SCHOOL` and creates no user row (commit `53388d5`).
 - [ ] The new regression test has been committed but has not yet been observed passing in CI.
+
+### Audit-log retention decision
+
+- Keep audit events independent of the lifetime of a user row. The current schema intentionally leaves `audit_log.user_id` without a foreign key so a future account cleanup cannot cascade-delete historical audit evidence.
+- The current preview API has no user-deletion route. Do not add one as part of this migration.
+- Before introducing account deletion, choose an explicit retention workflow: preferably deactivate accounts and retain their identity; if permanent erasure is legally required, preserve only the minimum permitted actor snapshot in the audit event and detach the user reference transactionally. Do not silently erase audit history.
+- Audit details must remain limited to operational identifiers/counts; never write OTP values, session IDs, credentials, or sensitive learner data into audit details.
+- This is a documented retention decision, not a claim that audit retention has been legally approved for production. Confirm applicable school/data-retention policy before production rollout.
