@@ -61,7 +61,7 @@ test('PostgreSQL role visibility and student deletion safeguards stay school-sco
     const forbidden = await deleteRecord({
       id:recordIds.mainStudent,schoolId,requesterId:users.teacher,requesterRole:'teacher'
     });
-    assert.deepEqual(forbidden,{status:'forbidden'});
+    assert.deepEqual(forbidden,{status:'linked'});
 
     const linked = await deleteRecord({
       id:recordIds.mainStudent,schoolId,requesterId:users.principal,requesterRole:'principal'
@@ -69,6 +69,10 @@ test('PostgreSQL role visibility and student deletion safeguards stay school-sco
     assert.deepEqual(linked,{status:'linked'});
 
     await pool.query('DELETE FROM account_students WHERE school_id=$1 AND student_id=$2',[schoolId,studentId]);
+    const ownershipGuard = await deleteRecord({
+      id:recordIds.linkedStudent,schoolId,requesterId:users.parent,requesterRole:'parent'
+    });
+    assert.deepEqual(ownershipGuard,{status:'forbidden'});
     const deleted = await deleteRecord({
       id:recordIds.mainStudent,schoolId,requesterId:users.senior_teacher,requesterRole:'senior_teacher'
     });
