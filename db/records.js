@@ -106,7 +106,7 @@ export async function insertRecordsBatch({ schoolId, ownerId, records }) {
  * student records and teacher assignments, but refuses while account links exist.
  * The caller must enforce role/ownership before calling this function.
  */
-export async function deleteRecord({ id, schoolId }) {
+export async function deleteRecord({ id, schoolId, requesterId, requesterRole }) {
   return withTransaction(async client => {
     const { rows } = await client.query(
       `SELECT id, owner_id, kind, payload FROM records
@@ -115,6 +115,11 @@ export async function deleteRecord({ id, schoolId }) {
     );
     const record = rows[0];
     if (!record) return { status: 'not_found' };
+
+    const isSchoolManager = requesterRole === 'principal' || requesterRole === 'senior_teacher';
+    if (!isSchoolManager && String(record.owner_id) !== String(requesterId)) {
+      return { status: 'forbidden' };
+    }
 
     if (record.kind === 'student') {
       const studentId = record.payload?.student_id;
@@ -125,7 +130,7 @@ export async function deleteRecord({ id, schoolId }) {
       if (links[0].count > 0) return { status: 'linked' };
 
       await client.query(
-        'DELETE FROM records WHERE school_id = $1 AND payload->>\'student_id\' = $2',
+        "DELETE FROM records WHERE school_id = $1 AND payload->>'student_id' = $2",
         [schoolId, studentId]
       );
       await client.query(
