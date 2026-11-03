@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "create-user": "node create-user.js",
-    "check": "node --check server.js && node --check database.js && node --check db-setup.js && node --check db-verify.js && node --check create-user.js && node --check seed-user.js",
+    "check": "node --check server.js && node --check database.js && node --check db-setup.js && node --check db-verify.js && node --check app.js && node --check create-user.js && node --check seed-user.js",
     "db:setup": "node db-setup.js",
     "db:verify": "node db-verify.js"
   },
