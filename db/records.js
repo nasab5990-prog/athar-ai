@@ -139,3 +139,142 @@ export async function deleteRecord({ id, schoolId }) {
     return { status: 'deleted', kind: record.kind, ownerId: record.owner_id };
   });
 }
+
+
+/** Lists school users and their linked/assigned student IDs for the principal UI. */
+export async function listSchoolUsers(schoolId) {
+  const { rows } = await pool.query(
+    `SELECT u.id, u.email, u.name, u.role, u.school_id, u.active, u.created_at,
+       COALESCE((SELECT jsonb_agg(a.student_id ORDER BY a.student_id)
+         FROM account_students a WHERE a.user_id = u.id AND a.school_id = u.school_id), '[]'::jsonb) AS "linkedStudentIds",
+       COALESCE((SELECT jsonb_agg(t.student_id ORDER BY t.student_id)
+         FROM teacher_students t WHERE t.user_id = u.id AND t.school_id = u.school_id), '[]'::jsonb) AS "assignedStudentIds"
+     FROM users u WHERE u.school_id = $1 ORDER BY u.name`,
+    [schoolId]
+  );
+  return rows;
+}
+
+/** Creates a school account and its student/teacher links atomically. */
+export async function createSchoolUser({ email, name, role, schoolId, studentIds = [] }) {
+  return withTransaction(async client => {
+    for (const studentId of studentIds) {
+      const { rowCount } = await client.query(
+        `SELECT 1 FROM records WHERE school_id = $1 AND kind = 'student'
+         AND payload->>'student_id' = $2 LIMIT 1`,
+        [schoolId, studentId]
+      );
+      if (!rowCount) return { status: 'student_not_found' };
+    }
+    const inserted = await client.query(
+      `INSERT INTO users(email, name, role, school_id, student_id)
+       VALUES($1, $2, $3, $4, $5) RETURNING id, email, name, role, school_id, active`,
+      [email, name, role, schoolId, role === 'student' ? (studentIds[0] || null) : null]
+    );
+    const user = inserted.rows[0];
+    for (const studentId of studentIds) {
+      if (role === 'parent' || role === 'student') {
+        await client.query(
+          'INSERT INTO account_students(user_id, student_id, school_id) VALUES($1, $2, $3)',
+          [user.id, studentId, schoolId]
+        );
+      } else if (role === 'teacher') {
+        await client.query(
+          'INSERT INTO teacher_students(user_id, student_id, school_id) VALUES($1, $2, $3)',
+          [user.id, studentId, schoolId]
+        );
+      }
+    }
+    return {
+      status: 'created',
+      user: {
+        ...user,
+        linkedStudentIds: ['parent', 'student'].includes(role) ? studentIds : [],
+        assignedStudentIds: role === 'teacher' ? studentIds : []
+      }
+    };
+  });
+}
+
+/** Replaces a teacher's student assignments atomically after validating school membership. */
+export async function replaceTeacherAssignments({ userId, schoolId, studentIds }) {
+  return withTransaction(async client => {
+    const target = await client.query(
+      `SELECT id FROM users WHERE id = $1 AND school_id = $2 AND role = 'teacher' FOR UPDATE`,
+      [userId, schoolId]
+    );
+    if (!target.rowCount) return { status: 'not_found' };
+    for (const studentId of studentIds) {
+      const student = await client.query(
+        `SELECT 1 FROM records WHERE school_id = $1 AND kind = 'student'
+         AND payload->>'student_id' = $2 LIMIT 1`,
+        [schoolId, studentId]
+      );
+      if (!student.rowCount) return { status: 'student_not_found' };
+    }
+    await client.query('DELETE FROM teacher_students WHERE user_id = $1 AND school_id = $2', [userId, schoolId]);
+    for (const studentId of studentIds) {
+      await client.query(
+        'INSERT INTO teacher_students(user_id, student_id, school_id) VALUES($1, $2, $3)',
+        [userId, studentId, schoolId]
+      );
+    }
+    return { status: 'updated' };
+  });
+}
+
+/** Replaces parent/student links atomically; student accounts require exactly one link. */
+export async function replaceAccountStudentLinks({ userId, schoolId, role, studentIds }) {
+  return withTransaction(async client => {
+    const target = await client.query(
+      `SELECT id FROM users WHERE id = $1 AND school_id = $2 AND role = ANY($3::text[]) FOR UPDATE`,
+      [userId, schoolId, ['parent', 'student']]
+    );
+    if (!target.rowCount) return { status: 'not_found' };
+    for (const studentId of studentIds) {
+      const student = await client.query(
+        `SELECT 1 FROM records WHERE school_id = $1 AND kind = 'student'
+         AND payload->>'student_id' = $2 LIMIT 1`,
+        [schoolId, studentId]
+      );
+      if (!student.rowCount) return { status: 'student_not_found' };
+    }
+    await client.query('DELETE FROM account_students WHERE user_id = $1 AND school_id = $2', [userId, schoolId]);
+    for (const studentId of studentIds) {
+      await client.query(
+        'INSERT INTO account_students(user_id, student_id, school_id) VALUES($1, $2, $3)',
+        [userId, studentId, schoolId]
+      );
+    }
+    await client.query(
+      'UPDATE users SET student_id = $1 WHERE id = $2 AND school_id = $3',
+      [role === 'student' ? studentIds[0] : null, userId, schoolId]
+    );
+    return { status: 'updated' };
+  });
+}
+
+/** Loads assessment history visible to an instructional user for the analysis service. */
+export async function listAssessmentsForAnalysis(user) {
+  if (user.role === 'principal' || user.role === 'senior_teacher') {
+    const { rows } = await pool.query(
+      `SELECT payload FROM records WHERE school_id = $1 AND kind = 'assessment'
+       ORDER BY id DESC LIMIT 1000`,
+      [user.school_id]
+    );
+    return rows.map(row => row.payload);
+  }
+  if (user.role !== 'teacher') return [];
+  const { rows: assignments } = await pool.query(
+    'SELECT student_id FROM teacher_students WHERE user_id = $1 AND school_id = $2',
+    [user.id, user.school_id]
+  );
+  const assignedIds = assignments.map(row => row.student_id);
+  const { rows } = await pool.query(
+    `SELECT payload FROM records WHERE school_id = $1 AND kind = 'assessment'
+     AND (owner_id = $2 OR payload->>'student_id' = ANY($3::text[]))
+     ORDER BY id DESC LIMIT 800`,
+    [user.school_id, user.id, assignedIds]
+  );
+  return rows.map(row => row.payload);
+}
