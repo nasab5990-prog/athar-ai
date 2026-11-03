@@ -24,12 +24,12 @@ test('PostgreSQL role visibility and student deletion safeguards stay school-sco
     const inserted = await pool.query(
       `INSERT INTO records(school_id,owner_id,kind,payload)
        VALUES($1,$2,'student',$3::jsonb),($1,$4,'assessment',$5::jsonb),
-             ($1,$6,'student',$7::jsonb),($2,$6,'student',$8::jsonb)
+             ($1,$6,'student',$7::jsonb),($8,$6,'student',$9::jsonb)
        RETURNING id,kind,payload,school_id`,
       [schoolId,users.teacher,JSON.stringify({student_id:studentId,name:'Test Learner'}),
        users.teacher,JSON.stringify({student_id:studentId,pct:64}),
        users.teacher,JSON.stringify({student_id:linkedStudentId,name:'Linked Learner'}),
-       JSON.stringify({student_id:`FOREIGN-${suffix}`})]
+       otherSchool,JSON.stringify({student_id:`FOREIGN-${suffix}`})]
     );
     for (const row of inserted.rows) {
       if (row.payload.student_id === studentId && row.kind === 'student') recordIds.mainStudent = row.id;
