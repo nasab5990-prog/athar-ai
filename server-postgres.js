@@ -15,6 +15,8 @@ const app = express();
 const production = process.env.NODE_ENV === 'production';
 const origins = (process.env.FRONTEND_ORIGIN || 'https://nasab5990-prog.github.io')
   .split(',').map(value => value.trim()).filter(Boolean);
+const sameSite = process.env.COOKIE_SAMESITE || (production ? 'none' : 'lax');
+const cookieClearOptions = { path: '/', secure: production, sameSite };
 
 if (production && (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32 ||
     !process.env.OTP_SECRET || process.env.OTP_SECRET.length < 32)) {
@@ -36,8 +38,7 @@ app.use(session({
   saveUninitialized: false,
   store: sessionStore,
   cookie: {
-    httpOnly: true, secure: production,
-    sameSite: process.env.COOKIE_SAMESITE || (production ? 'none' : 'lax'),
+    httpOnly: true, secure: production, sameSite,
     maxAge: 8 * 60 * 60 * 1000
   }
 }));
@@ -47,6 +48,7 @@ const authMiddleware = registerPostgresAuthRoutes(app, {
   demoEnabled: process.env.DEMO_LOGIN_ENABLED === 'true',
   otpSecret: process.env.OTP_SECRET,
   sessionSecret: process.env.SESSION_SECRET,
+  cookieClearOptions,
   mailConfig: {
     host: process.env.SMTP_HOST, port: process.env.SMTP_PORT,
     secure: process.env.SMTP_SECURE === 'true',
