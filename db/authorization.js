@@ -1,4 +1,5 @@
 import { pool } from './postgres.js';
+export { canManageSchoolUsers, canCreateEducationalRecords, canRunLearningAnalysis } from './role-policy.js';
 
 export async function listLinkedStudentIds(user) {
   const { rows } = await pool.query(
@@ -54,14 +55,3 @@ export async function findStudentAccessibleTo(user, studentId) {
   return null;
 }
 
-export function canManageSchoolUsers(user) {
-  return user?.role === 'principal' && user.school_id !== 'DEMO-SCHOOL';
-}
-
-export function canCreateEducationalRecords(user) {
-  return ['teacher', 'senior_teacher', 'principal'].includes(user?.role);
-}
-
-export function canRunLearningAnalysis(user) {
-  return ['teacher', 'senior_teacher', 'principal'].includes(user?.role);
-}
