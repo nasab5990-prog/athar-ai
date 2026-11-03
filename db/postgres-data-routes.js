@@ -38,7 +38,7 @@ export function registerPostgresDataRoutes(app, { requireAuth, requireRole }) {
 
   app.post('/api/records/bulk', requireAuth, requireRole('teacher', 'senior_teacher', 'principal'), async (req, res, next) => {
     try {
-      if (!canCreateEducationalRecords(req.user.role) || req.user.school_id === 'DEMO-SCHOOL')
+      if (!canCreateEducationalRecords(req.user) || req.user.school_id === 'DEMO-SCHOOL')
         return res.status(403).json({ message: 'لا يمكن إضافة سجلات في هذه البيئة أو بهذا الدور.' });
       const items = req.body?.records;
       if (!Array.isArray(items) || items.length < 1 || items.length > 100 ||
