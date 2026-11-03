@@ -1,6 +1,12 @@
 import pg from 'pg';
 
-const { Pool } = pg;
+const { Pool, types } = pg;
+
+// Keep IDs compatible with the frontend's numeric identifiers where safe.
+types.setTypeParser(20, value => {
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) ? parsed : value;
+});
 
 if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL is required for PostgreSQL mode.');
