@@ -10,20 +10,20 @@ const allowedRoles = ['teacher', 'senior_teacher', 'principal', 'parent'];
 
 try {
   if (!email) throw new Error('SEED_USER_EMAIL غير موجود.');
-  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || !['moe.om', 'edu.moe.om'].includes(email.split('@')[1])) {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !['moe.om', 'edu.moe.om'].includes(email.split('@')[1])) {
     throw new Error('يجب استخدام بريد ينتهي بـ @moe.om أو @edu.moe.om');
   }
   if (!allowedRoles.includes(role)) throw new Error(`الدور غير صحيح. الأدوار المتاحة: ${allowedRoles.join(', ')}`);
   if (role === 'parent' && !studentId) throw new Error('يجب تحديد SEED_STUDENT_ID عند إضافة ولي أمر.');
-  if (role === 'parent') {
-    const exists = await pool.query(
-      "SELECT 1 FROM records WHERE school_id=$1 AND kind='student' AND payload->>'student_id'=$2 LIMIT 1",
-      [schoolId, studentId]
-    );
-    if (!exists.rowCount) throw new Error('الطالب المحدد غير موجود في المدرسة.');
-  }
 
   const id = await withTransaction(async client => {
+    if (role === 'parent') {
+      const exists = await client.query(
+        "SELECT 1 FROM records WHERE school_id=$1 AND kind='student' AND payload->>'student_id'=$2 LIMIT 1",
+        [schoolId, studentId]
+      );
+      if (!exists.rowCount) throw new Error('الطالب المحدد غير موجود في المدرسة.');
+    }
     const result = await client.query(`
       INSERT INTO users(email,name,role,school_id,student_id,active)
       VALUES($1,$2,$3,$4,$5,TRUE)
@@ -34,6 +34,7 @@ try {
     `, [email, name, role, schoolId, studentId]);
     const userId = result.rows[0].id;
     if (role === 'parent') {
+      await client.query('DELETE FROM account_students WHERE user_id=$1 AND school_id=$2', [userId, schoolId]);
       await client.query('INSERT INTO account_students(user_id,student_id,school_id) VALUES($1,$2,$3) ON CONFLICT DO NOTHING', [userId, studentId, schoolId]);
     }
     return userId;
