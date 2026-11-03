@@ -329,3 +329,54 @@ test('PostgreSQL HTTP record routes enforce teacher student scope and audit writ
     await pool.query('DELETE FROM users WHERE school_id = ANY($1::text[])', [[schoolId, otherSchool]]);
   }
 });
+
+
+test('PostgreSQL HTTP records are isolated for parent and school leadership roles', async () => {
+  const express = (await import('express')).default;
+  const { registerPostgresDataRoutes } = await import('../db/postgres-data-routes.js');
+  const { writeAudit } = await import('../db/auth.js');
+  const suffix = randomUUID(), schoolId = `VISIBILITY-${suffix}`, otherSchool = `VISIBILITY-OTHER-${suffix}`;
+  const app = express(); app.use(express.json());
+  let activeUser;
+  const requireAuth = (req,res,next) => { req.user=activeUser; next(); };
+  const requireRole = (...roles) => (req,res,next) => roles.includes(req.user?.role) ? next() : res.status(403).json({message:'forbidden'});
+  registerPostgresDataRoutes(app,{requireAuth,requireRole,writeAudit});
+  const server=app.listen(0);
+  const base=await new Promise(resolve=>server.once('listening',()=>resolve(`http://127.0.0.1:${server.address().port}`)));
+  let principalId,parentId,teacherId;
+  const studentA=`A-${suffix}`,studentB=`B-${suffix}`;
+  try {
+    const insertUser=async(email,role)=> (await pool.query(
+      `INSERT INTO users(email,name,role,school_id) VALUES($1,$2,$3,$4) RETURNING id`,
+      [email,email,role,schoolId])).rows[0].id;
+    principalId=await insertUser(`principal-${suffix}@example.test`,'principal');
+    parentId=await insertUser(`parent-${suffix}@example.test`,'parent');
+    teacherId=await insertUser(`teacher-${suffix}@example.test`,'teacher');
+    await pool.query(
+      `INSERT INTO records(school_id,owner_id,kind,payload)
+       VALUES($1,$2,'student',$3::jsonb),($1,$4,'student',$5::jsonb),($6,$4,'student',$7::jsonb),
+             ($1,$4,'assessment',$8::jsonb),($1,$4,'assessment',$9::jsonb)`,
+      [schoolId,teacherId,JSON.stringify({student_id:studentA}),teacherId,
+       JSON.stringify({student_id:studentB}),otherSchool,JSON.stringify({student_id:`X-${suffix}`}),
+       JSON.stringify({student_id:studentA,pct:88}),JSON.stringify({student_id:studentB,pct:61})]);
+    await pool.query('INSERT INTO account_students(user_id,student_id,school_id) VALUES($1,$2,$3)',[parentId,studentA,schoolId]);
+    const get=()=>fetch(`${base}/api/records`);
+    activeUser={id:parentId,role:'parent',school_id:schoolId};
+    let response=await get(),body=await response.json();
+    assert.equal(response.status,200);
+    assert.deepEqual(body.records.map(x=>x.payload.student_id).sort(),[studentA,studentA].sort());
+    activeUser={id:principalId,role:'principal',school_id:schoolId};
+    response=await get(); body=await response.json();
+    assert.equal(response.status,200);
+    assert.ok(body.records.every(x=>x.school_id===undefined)); // response is school-scoped by repository
+    assert.equal(body.records.length,4);
+    activeUser={id:parentId,role:'parent',school_id:schoolId};
+    response=await fetch(`${base}/api/users`);
+    assert.equal(response.status,403);
+  } finally {
+    await new Promise(resolve=>server.close(resolve));
+    await pool.query('DELETE FROM account_students WHERE school_id=$1',[schoolId]);
+    await pool.query('DELETE FROM records WHERE school_id = ANY($1::text[])',[[schoolId,otherSchool]]);
+    await pool.query('DELETE FROM users WHERE school_id=$1',[schoolId]);
+  }
+});
