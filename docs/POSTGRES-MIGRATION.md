@@ -107,3 +107,12 @@ The repository returns PostgreSQL `BIGINT` IDs as strings in the standard `pg` d
 - [x] Added `test/role-policy.test.js` covering all five roles, the demo-school user-management restriction, and missing-user inputs.
 - [x] Added `npm test` using Node's built-in test runner and included the policy/test files in `npm run check`.
 - [ ] Tests and syntax checks have not yet been executed in this session. These are isolated policy tests, not database or route integration tests.
+
+## Disposable PostgreSQL CI test environment
+
+- [x] Added a GitHub Actions workflow that provisions a fresh PostgreSQL 16 service container for pushes and pull requests targeting this preview branch only.
+- [x] The workflow installs dependencies, runs syntax checks, applies the schema migration to that disposable service, then runs automated tests.
+- [x] Added database integration coverage for user creation, school-scoped record queries, invalid-role constraints, JSONB object constraints, and PostgreSQL session-store initialization.
+- [ ] The workflow has been committed but its run result has not yet been inspected. Do not treat tests as passing until the GitHub Actions run completes successfully.
+- [ ] This workflow tests database schema/repository foundations only. API route tests and the coordinated PostgreSQL authentication/session/authorization conversion remain pending because `server.js` still runs on SQLite.
+- [ ] The workflow is restricted to `migration/postgres-preview`; it does not target `main` and does not connect to Render or the user's Supabase project.
