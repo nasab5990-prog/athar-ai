@@ -16,8 +16,13 @@ const skillMap = [
 
 function mappedSkill(skill) {
   const key = normalize(skill);
+  if (!key) return null;
+  // Prefer an exact alias before fuzzy matching; short umbrella terms such as
+  // "الكسور" must not be captured by a more advanced skill like operations.
+  const exact = skillMap.find(item => item.keys.some(candidate => normalize(candidate) === key));
+  if (exact) return exact;
   return skillMap.flatMap(item => item.keys
-    .filter(candidate => key.includes(normalize(candidate)) || normalize(candidate).includes(key))
+    .filter(candidate => key.includes(normalize(candidate)))
     .map(candidate => ({ item, length: normalize(candidate).length })))
     .sort((a,b) => b.length-a.length)[0]?.item || null;
 }
