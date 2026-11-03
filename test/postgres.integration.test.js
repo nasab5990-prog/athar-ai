@@ -202,3 +202,42 @@ test('PostgreSQL school-user and assignment repositories keep links school-scope
     await pool.query('DELETE FROM users WHERE school_id = $1', [schoolId]);
   }
 });
+
+
+test('PostgreSQL OTP repository creates, increments and deletes a one-time code', async () => {
+  const {
+    saveOtp, findOtp, incrementOtpAttempts, deleteOtp
+  } = await import('../db/auth.js');
+  const email = `otp-${randomUUID()}@example.test`;
+  const now = Date.now();
+  try {
+    await saveOtp({
+      email,
+      codeHash: 'a'.repeat(64),
+      expiresAt: now + 10 * 60 * 1000,
+      createdAt: now
+    });
+    let otp = await findOtp(email);
+    assert.equal(otp.email, email);
+    assert.equal(otp.code_hash, 'a'.repeat(64));
+    assert.equal(Number(otp.attempts), 0);
+    assert.equal(Number(otp.expires_at), now + 10 * 60 * 1000);
+
+    await incrementOtpAttempts(email);
+    otp = await findOtp(email);
+    assert.equal(Number(otp.attempts), 1);
+
+    await saveOtp({
+      email,
+      codeHash: 'b'.repeat(64),
+      expiresAt: now + 20 * 60 * 1000,
+      createdAt: now + 1
+    });
+    otp = await findOtp(email);
+    assert.equal(otp.code_hash, 'b'.repeat(64));
+    assert.equal(Number(otp.attempts), 0);
+  } finally {
+    await deleteOtp(email);
+  }
+  assert.equal(await findOtp(email), null);
+});
