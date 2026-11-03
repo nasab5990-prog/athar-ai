@@ -13,7 +13,7 @@ try {
   if (!email || !name || !school || !roles.includes(role) || school.toUpperCase() === 'DEMO-SCHOOL') {
     throw new Error('Usage: npm run create-user -- user@moe.om "Name" teacher SCHOOL_ID (must not be DEMO-SCHOOL)');
   }
-  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || !['moe.om', 'edu.moe.om'].includes(email.split('@')[1])) {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !['moe.om', 'edu.moe.om'].includes(email.split('@')[1])) {
     throw new Error('Only @moe.om and @edu.moe.om email domains are allowed.');
   }
   if ((role === 'parent' && !studentIds.length) || (role === 'student' && studentIds.length !== 1) || (['principal','senior_teacher'].includes(role) && studentIds.length)) {
