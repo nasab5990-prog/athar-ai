@@ -157,6 +157,14 @@ export async function listSchoolUsers(schoolId) {
 
 /** Creates a school account and its student/teacher links atomically. */
 export async function createSchoolUser({ email, name, role, schoolId, studentIds = [] }) {
+  const allowedRoles = ['teacher', 'senior_teacher', 'principal', 'parent', 'student'];
+  if (!allowedRoles.includes(role) || !email || !name || !schoolId) return { status: 'invalid_user' };
+  if ((role === 'student' && studentIds.length !== 1) ||
+      (role === 'parent' && studentIds.length < 1) ||
+      (['principal', 'senior_teacher'].includes(role) && studentIds.length > 0) ||
+      (role !== 'teacher' && !['parent', 'student'].includes(role) && studentIds.length > 0)) {
+    return { status: 'invalid_links' };
+  }
   return withTransaction(async client => {
     for (const studentId of studentIds) {
       const { rowCount } = await client.query(
@@ -227,10 +235,13 @@ export async function replaceTeacherAssignments({ userId, schoolId, studentIds }
 export async function replaceAccountStudentLinks({ userId, schoolId, role, studentIds }) {
   return withTransaction(async client => {
     const target = await client.query(
-      `SELECT id FROM users WHERE id = $1 AND school_id = $2 AND role = ANY($3::text[]) FOR UPDATE`,
+      `SELECT id, role FROM users WHERE id = $1 AND school_id = $2 AND role = ANY($3::text[]) FOR UPDATE`,
       [userId, schoolId, ['parent', 'student']]
     );
-    if (!target.rowCount) return { status: 'not_found' };
+    if (!target.rowCount || target.rows[0].role !== role) return { status: 'not_found' };
+    if ((role === 'student' && studentIds.length !== 1) || (role === 'parent' && studentIds.length < 1)) {
+      return { status: 'invalid_links' };
+    }
     for (const studentId of studentIds) {
       const student = await client.query(
         `SELECT 1 FROM records WHERE school_id = $1 AND kind = 'student'
