@@ -60,3 +60,34 @@ test('learning analysis follows repository order rather than user-entered assess
   assert.equal(result.trend,22);
   assert.ok(result.evidence.some(item=>item.includes('لا توجد نتائج منخفضة')));
 });
+
+
+test('analysis evidence wording and cohort sample count match the SQLite contract', () => {
+  const result = calculateLearningAnalysis([
+    { student_id:'S-1', skill:'الفكرة الرئيسة', pct:68 },
+    { student_id:'S-2', skill:'الفكرة الرئيسة', pct:82 },
+    { student_id:'S-1', skill:'المفردات والسياق', pct:75 }
+  ], 'الفكرة الرئيسة', '', '');
+  assert.equal(result.targetScore, 75);
+  assert.equal(result.sampleSize, 2);
+  assert.ok(result.evidence.includes('آخر نتيجة مسجلة للمهارة 75%.'));
+  assert.ok(result.evidence.includes('احتُسب متوسط المهارة من أحدث نتيجة لكل طالب/مجموعة؛ عدد السجلات الممثلة: 2.'));
+  assert.ok(result.evidence.some(item => item.includes('لا توجد نتائج منخفضة مسجلة للمهارات السابقة')));
+});
+
+test('analysis reports prerequisite evidence guidance even when prerequisite scores are absent', () => {
+  const result = calculateLearningAnalysis([
+    { student_id:'S-1', skill:'الفكرة الرئيسة', pct:55 }
+  ], 'الفكرة الرئيسة', 'S-1', '');
+  assert.equal(result.prerequisiteEvidence.length, 2);
+  assert.ok(result.evidence.some(item => item.includes('لا توجد نتائج منخفضة مسجلة للمهارات السابقة')));
+  assert.equal(result.likelyRoots.length, 0);
+});
+
+test('analysis uses exact short skill aliases before overlapping longer aliases', () => {
+  const result = calculateLearningAnalysis([
+    { student_id:'S-1', skill:'تمثيل الكسور', pct:61 }
+  ], 'الكسور', 'S-1', '');
+  assert.equal(result.skill, 'تمثيل الكسور');
+  assert.equal(result.targetScore, 61);
+});
