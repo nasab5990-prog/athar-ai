@@ -5,6 +5,9 @@ import cors from 'cors';
 import session from 'express-session';
 import { pool } from './db/postgres.js';
 import { sessionStore } from './db/session-store.js';
+import * as auth from './db/auth.js';
+import * as access from './db/authorization.js';
+import { registerPostgresAuthRoutes } from './db/postgres-auth-routes.js';
 
 const app = express();
 const production = process.env.NODE_ENV === 'production';
@@ -36,6 +39,19 @@ app.use(session({
     maxAge: 8 * 60 * 60 * 1000
   }
 }));
+
+const authMiddleware = registerPostgresAuthRoutes(app, {
+  auth, access,
+  demoEnabled: process.env.DEMO_LOGIN_ENABLED === 'true',
+  otpSecret: process.env.OTP_SECRET,
+  sessionSecret: process.env.SESSION_SECRET,
+  mailConfig: {
+    host: process.env.SMTP_HOST, port: process.env.SMTP_PORT,
+    secure: process.env.SMTP_SECURE === 'true',
+    user: process.env.SMTP_USER, pass: process.env.SMTP_PASS,
+    from: process.env.MAIL_FROM
+  }
+});
 
 app.get('/api/health', async (req, res, next) => {
   try {
