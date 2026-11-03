@@ -147,3 +147,58 @@ test('PostgreSQL record batch writes are atomic and return JSONB as objects', as
 test.after(async () => {
   await pool?.end();
 });
+
+
+test('PostgreSQL school-user and assignment repositories keep links school-scoped', async () => {
+  const { createSchoolUser, listSchoolUsers, replaceTeacherAssignments, replaceAccountStudentLinks } =
+    await import('../db/records.js');
+  const suffix = randomUUID();
+  const schoolId = `REPO-TEST-${suffix}`;
+  const teacherEmail = `teacher-${suffix}@example.test`;
+  const parentEmail = `parent-${suffix}@example.test`;
+  let teacherId;
+  let parentId;
+  try {
+    const teacher = await createSchoolUser({
+      email: teacherEmail, name: 'Repository Teacher', role: 'teacher',
+      schoolId, studentIds: []
+    });
+    assert.equal(teacher.status, 'created');
+    teacherId = teacher.user.id;
+
+    const student = await pool.query(
+      `INSERT INTO records(school_id, owner_id, kind, payload)
+       VALUES($1, $2, 'student', $3::jsonb) RETURNING id`,
+      [schoolId, teacherId, JSON.stringify({ student_id: suffix, name: 'Test Learner' })]
+    );
+    assert.ok(student.rows[0].id);
+
+    const parent = await createSchoolUser({
+      email: parentEmail, name: 'Repository Parent', role: 'parent',
+      schoolId, studentIds: [suffix]
+    });
+    assert.equal(parent.status, 'created');
+    parentId = parent.user.id;
+    assert.deepEqual(parent.user.linkedStudentIds, [suffix]);
+
+    const listed = await listSchoolUsers(schoolId);
+    assert.equal(listed.length, 2);
+    assert.deepEqual(listed.find(user => String(user.id) === String(parentId)).linkedStudentIds, [suffix]);
+
+    const assigned = await replaceTeacherAssignments({
+      userId: teacherId, schoolId, studentIds: [suffix]
+    });
+    assert.equal(assigned.status, 'updated');
+
+    const links = await replaceAccountStudentLinks({
+      userId: parentId, schoolId, role: 'parent', studentIds: [suffix]
+    });
+    assert.equal(links.status, 'updated');
+
+    const { listAssessmentsForAnalysis } = await import('../db/records.js');
+    assert.deepEqual(await listAssessmentsForAnalysis({ id: teacherId, role: 'teacher', school_id: schoolId }), []);
+  } finally {
+    await pool.query('DELETE FROM records WHERE school_id = $1', [schoolId]);
+    await pool.query('DELETE FROM users WHERE school_id = $1', [schoolId]);
+  }
+});
