@@ -8,6 +8,7 @@ import { sessionStore } from './db/session-store.js';
 import * as auth from './db/auth.js';
 import * as access from './db/authorization.js';
 import { registerPostgresAuthRoutes } from './db/postgres-auth-routes.js';
+import { registerPostgresDataRoutes } from './db/postgres-data-routes.js';
 
 const app = express();
 const production = process.env.NODE_ENV === 'production';
@@ -52,6 +53,8 @@ const authMiddleware = registerPostgresAuthRoutes(app, {
     from: process.env.MAIL_FROM
   }
 });
+
+registerPostgresDataRoutes(app, authMiddleware);
 
 app.get('/api/health', async (req, res, next) => {
   try {
