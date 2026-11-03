@@ -272,3 +272,60 @@ test('PostgreSQL OTP verification claims attempts atomically and rejects expired
   }
 });
 
+
+
+test('PostgreSQL HTTP record routes enforce teacher student scope and audit writes', async () => {
+  const express = (await import('express')).default;
+  const { registerPostgresDataRoutes } = await import('../db/postgres-data-routes.js');
+  const { writeAudit } = await import('../db/auth.js');
+  const suffix = randomUUID();
+  const schoolId = `HTTP-TEST-${suffix}`;
+  const otherSchool = `HTTP-OTHER-${suffix}`;
+  const app = express();
+  app.use(express.json());
+  let activeUser;
+  const requireAuth = (req, res, next) => { req.user = activeUser; next(); };
+  const requireRole = (...roles) => (req, res, next) =>
+    roles.includes(req.user?.role) ? next() : res.status(403).json({ message: 'forbidden' });
+  registerPostgresDataRoutes(app, { requireAuth, requireRole, writeAudit });
+  const server = app.listen(0);
+  const base = await new Promise(resolve => server.once('listening', () =>
+    resolve(`http://127.0.0.1:${server.address().port}`)));
+  let ownerId, otherTeacherId;
+  const ids = { own: `OWN-${suffix}`, assigned: `ASSIGNED-${suffix}`, foreign: `FOREIGN-${suffix}` };
+  try {
+    const owner = await pool.query(
+      `INSERT INTO users(email,name,role,school_id) VALUES($1,'Owner','teacher',$2) RETURNING id`,
+      [`owner-${suffix}@example.test`, schoolId]);
+    ownerId = owner.rows[0].id;
+    const other = await pool.query(
+      `INSERT INTO users(email,name,role,school_id) VALUES($1,'Other','teacher',$2) RETURNING id`,
+      [`other-${suffix}@example.test`, schoolId]);
+    otherTeacherId = other.rows[0].id;
+    await pool.query(
+      `INSERT INTO records(school_id,owner_id,kind,payload)
+       VALUES($1,$2,'student',$3::jsonb),($1,$4,'student',$5::jsonb),($6,$4,'student',$7::jsonb)`,
+      [schoolId, ownerId, JSON.stringify({student_id:ids.own}), otherTeacherId,
+       JSON.stringify({student_id:ids.assigned}), otherSchool, JSON.stringify({student_id:ids.foreign})]);
+    activeUser = { id: ownerId, role: 'teacher', school_id: schoolId };
+    const postAssessment = studentId => fetch(`${base}/api/records`, {
+      method:'POST', headers:{'content-type':'application/json'},
+      body:JSON.stringify({kind:'assessment',payload:{student_id:studentId,pct:75}})
+    });
+    assert.equal((await postAssessment(ids.assigned)).status, 403);
+    assert.equal((await postAssessment(ids.foreign)).status, 404);
+    const allowed = await postAssessment(ids.own);
+    assert.equal(allowed.status, 201);
+    const created = await allowed.json();
+    assert.equal(created.record.payload.student_id, ids.own);
+    const audit = await pool.query(
+      `SELECT event FROM audit_log WHERE user_id=$1 AND event='record.create' ORDER BY id DESC LIMIT 1`,
+      [ownerId]);
+    assert.equal(audit.rows[0]?.event, 'record.create');
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+    await pool.query(`DELETE FROM records WHERE school_id = ANY($1::text[])`, [[schoolId, otherSchool]]);
+    if (ownerId) await pool.query('DELETE FROM audit_log WHERE user_id=$1', [ownerId]);
+    await pool.query('DELETE FROM users WHERE school_id = ANY($1::text[])', [[schoolId, otherSchool]]);
+  }
+});
