@@ -47,8 +47,13 @@ export function registerPostgresDataRoutes(app, { requireAuth, requireRole }) {
         return res.status(400).json({ message: 'قائمة السجلات غير صالحة (1 إلى 100 سجل).' });
       for (const item of items.filter(item => item.kind !== 'student')) {
         const studentId = clean(item.payload.student_id, 80);
-        if (!studentId || !(await records.findStudentRecord(req.user.school_id, studentId)))
+        const student = studentId ? await records.findStudentRecord(req.user.school_id, studentId) : null;
+        if (!student)
           return res.status(400).json({ message: 'تأكد من إضافة الطلبة قبل سجلاتهم المرتبطة.' });
+        if (req.user.role === 'teacher' && String(student.owner_id) !== String(req.user.id)) {
+          const assigned = await (await import('./authorization.js')).findStudentAccessibleTo(req.user, studentId);
+          if (!assigned) return res.status(403).json({ message: 'أحد الطلبة غير ضمن نطاق صلاحياتك.' });
+        }
       }
       const created = await records.insertRecordsBatch({
         schoolId: req.user.school_id, ownerId: req.user.id, records: items
