@@ -78,3 +78,14 @@ Do not change Render environment variables, deploy this branch to the current pr
 - [ ] Add integration tests for role visibility, school isolation, teacher ownership, assigned learners, parent/student links, duplicate student IDs, atomic batch rollback, and linked-student deletion.
 
 The repository returns PostgreSQL `BIGINT` IDs as strings in the standard `pg` driver. The API boundary must preserve this safely (do not coerce IDs to JavaScript numbers unless they are within the safe integer range). JSONB payloads are returned as objects by `pg`, so the old SQLite `JSON.parse(row.payload)` mapping must not be copied unchanged.
+
+
+## Authentication and identity repository preview
+
+- [x] Added `db/auth.js` with PostgreSQL helpers for active-user lookup, OTP persistence/attempt tracking, linked and assigned student IDs, audit writes, and isolated demo-user creation.
+- [x] Demo identities are restricted to `DEMO-SCHOOL`; the helper creates no learner records, assessments, scores, or student links, and rejects conflicting existing demo accounts.
+- [ ] These helpers are not wired into `server.js`. The live preview server remains SQLite-backed; do not mix these helpers into individual routes until the server's authentication, session identity, authorization helpers, and route handlers are migrated together.
+- [ ] OTP expiry and attempt-limit checks, constant-time hash comparison, session regeneration, and generic email responses must remain enforced in the route layer when it is migrated.
+- [ ] Add tests for inactive users, OTP expiry and five-attempt lockout, demo-account conflicts, school isolation, and audit writes before integration.
+- [ ] Review the schema's `audit_log.user_id` relationship and retention policy before production use; audit rows currently do not declare a foreign key to users.
+
