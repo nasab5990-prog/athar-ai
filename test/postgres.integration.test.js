@@ -66,14 +66,28 @@ test('schema creates users, records and enforces school-scoped data access queri
   }
 });
 
-test('PostgreSQL session store module can initialize against the test database', async () => {
+test('PostgreSQL session store persists, reads and deletes a session', async () => {
   const { sessionStore } = await import('../db/session-store.js');
+  const sid = `integration-${randomUUID()}`;
+  const sessionData = {
+    cookie: { originalMaxAge: null, expires: null, secure: false, httpOnly: true, path: '/' },
+    probe: 'postgres-session-store'
+  };
+
   await new Promise((resolve, reject) => {
-    sessionStore.on('connect', resolve);
-    sessionStore.on('error', reject);
-    sessionStore.length((error) => error ? reject(error) : resolve());
+    sessionStore.set(sid, sessionData, error => error ? reject(error) : resolve());
   });
-  await new Promise((resolve, reject) => sessionStore.close(error => error ? reject(error) : resolve()));
+
+  try {
+    const loaded = await new Promise((resolve, reject) => {
+      sessionStore.get(sid, (error, value) => error ? reject(error) : resolve(value));
+    });
+    assert.equal(loaded?.probe, sessionData.probe);
+  } finally {
+    await new Promise((resolve, reject) => {
+      sessionStore.destroy(sid, error => error ? reject(error) : resolve());
+    });
+  }
 });
 
 test('PostgreSQL repositories preserve demo identities without creating fake student data', async () => {
