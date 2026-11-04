@@ -312,14 +312,14 @@
         <div><label for="intSemester">الفصل الدراسي</label><select id="intSemester"><option value="">اختر الفصل</option><option value="الأول">الفصل الدراسي الأول</option><option value="الثاني">الفصل الدراسي الثاني</option><option value="سنوي">سنوي</option></select></div>
       </div>
       <label for="intSubject">المادة الدراسية</label>
-      <input id="intSubject" type="text" placeholder="اكتب اسم المادة كما يظهر في الكتاب المدرسي">
+      <select id="intSubject" disabled><option value="">اختر الصف أولًا</option></select>
       <div class="grid-two">
-        <div><label for="intUnit">الوحدة</label><input id="intUnit" type="text" placeholder="اسم الوحدة أو رقمها"></div>
-        <div><label for="intLesson">الدرس</label><input id="intLesson" type="text" placeholder="اسم الدرس أو رقمه"></div>
+        <div><label for="intUnit">الوحدة</label><select id="intUnit" disabled><option value="">اختر المادة أولًا</option></select></div>
+        <div><label for="intLesson">الدرس</label><select id="intLesson" disabled><option value="">اختر الوحدة أولًا</option></select></div>
       </div>
       <label for="intOutcome">ناتج التعلم</label>
-      <textarea id="intOutcome" rows="2" placeholder="ما الذي يُتوقع من المتعلم أن يعرفه أو يؤديه؟"></textarea>
-      <div class="note">تُترك الحقول المنهجية فارغة عند التدخل الصفي العام، ويمكن استكمالها لاحقًا.</div>
+      <textarea id="intOutcome" rows="2" readonly placeholder="سيظهر ناتج التعلم تلقائيًا بعد اختيار الدرس"></textarea>
+      <div id="curriculumCatalogStatus" class="note" aria-live="polite">اختر الصف لعرض المواد المتاحة في فهرس المناهج الموثق.</div>
       <label>إمكانات التنفيذ في المدرسة</label>
       <select id="activityMode">
         <option value="offline">دون أجهزة أو إنترنت — ورقة وسبورة وأدوات صفية</option>
