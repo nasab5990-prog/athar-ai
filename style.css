@@ -219,3 +219,46 @@ body.dark .sidebar-actions .logout-action {
 @media print{
   .platform-footer{display:none!important}
 }
+
+
+/* Progressive disclosure: show curriculum controls only when requested/available. */
+.curriculum-disclosure,
+.curriculum-extra{
+  border:1px solid var(--border);
+  border-radius:13px;
+  background:var(--surface);
+  margin:1rem 0;
+  overflow:hidden;
+}
+.curriculum-disclosure > summary,
+.curriculum-extra > summary{
+  list-style:none;
+  cursor:pointer;
+  padding:.9rem 1rem;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:.75rem;
+  font-weight:700;
+  color:var(--text);
+}
+.curriculum-disclosure > summary::-webkit-details-marker,
+.curriculum-extra > summary::-webkit-details-marker{display:none}
+.curriculum-disclosure > summary::after,
+.curriculum-extra > summary::after{
+  content:"+";
+  font-size:1.25rem;
+  color:var(--primary,#2457a7);
+  margin-inline-start:auto;
+}
+.curriculum-disclosure[open] > summary::after,
+.curriculum-extra[open] > summary::after{content:"−"}
+.curriculum-disclosure > summary small{
+  font-size:.78rem;
+  font-weight:400;
+  color:var(--muted,#687386);
+}
+.curriculum-fields{padding:0 1rem 1rem}
+.curriculum-extra{margin:.4rem 0 .8rem;background:transparent}
+.curriculum-extra > summary{font-size:.9rem;padding:.65rem .8rem}
+#curriculumCatalogStatus{margin:.25rem 0 .5rem}
