@@ -464,7 +464,7 @@ if (localStorage.getItem('athar_team') && document.getElementById('teamName')) d
 function latestAssessmentRows(rows = assessments) {
   const latest = new Map();
   for (const assessment of rows) {
-    const key = `${assessment.student_id || 'class'}|${assessment.skill || assessment.name || 'skill'}`;
+    const key = `${assessment.student_id || 'class'}|${displaySkillName(assessment.skill || assessment.name || 'skill')}`;
     if (!latest.has(key)) latest.set(key, assessment);
   }
   return [...latest.values()];
@@ -544,7 +544,18 @@ function renderReports() {
   const el = document.getElementById('reportSummary');
   if (!el) return;
   const currentAssessments = latestAssessmentRows();
-  el.innerHTML = `<p>الطلبة: ${students.length} • التقويمات: ${assessments.length} • التدخلات: ${interventions.length} • قياسات الأثر: ${impacts.length}</p><p>متوسط أحدث نتائج المهارات المسجلة: ${currentAssessments.length ? `${Math.round(currentAssessments.reduce((sum,a)=>sum+Number(a.pct||0),0)/currentAssessments.length)}%` : 'لا توجد بيانات'}</p>`;
+  const skillGroups = new Map();
+  currentAssessments.forEach(assessment => {
+    const skill = displaySkillName(assessment.skill || assessment.name || 'مهارة غير محددة');
+    if (!skillGroups.has(skill)) skillGroups.set(skill, []);
+    skillGroups.get(skill).push(Number(assessment.pct) || 0);
+  });
+  const skillRows = [...skillGroups.entries()].map(([skill, scores]) => {
+    const average = Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length);
+    const lowCount = scores.filter(score => score < 70).length;
+    return `<li><strong>${esc(skill)}</strong> — متوسط الإتقان ${average}% • نتائج دون 70%: ${lowCount} من ${scores.length}</li>`;
+  }).join('');
+  el.innerHTML = `<p>الطلبة: ${students.length} • التقويمات: ${assessments.length} • التدخلات: ${interventions.length} • قياسات الأثر: ${impacts.length}</p><p>متوسط أحدث نتائج المهارات المسجلة: ${currentAssessments.length ? `${Math.round(currentAssessments.reduce((sum,a)=>sum+Number(a.pct||0),0)/currentAssessments.length)}%` : 'لا توجد بيانات'}</p><h4>ملخص المهارات</h4><ul>${skillRows || '<li>لا توجد نتائج مهارية كافية لإعداد الملخص.</li>'}</ul>`;
 }
 async function loadSchoolUsers() {
   const el = document.getElementById('usersList');
