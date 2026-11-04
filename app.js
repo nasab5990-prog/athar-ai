@@ -457,7 +457,22 @@ async function saveAssessment() {
     const el = document.getElementById('assessResult');
     if (el) el.innerHTML = `<strong>نسبة الإتقان: ${payload.pct}%</strong><p class="note">${student ? `الطالب: ${esc(student.name)}` : 'تقويم صفي غير مرتبط بطالب محدد'} — حُفظ على الخادم.</p>`;
     renderAssess(); updateDashboard(); updateCycle(); updateAlerts();
-    showToast('تم حفظ التقويم مركزيًا.');
+    const lastAnalysis = window.atharLastAnalysisRequest;
+    const sameStudentScope = lastAnalysis && String(lastAnalysis.student_id || '') === String(studentId || '');
+    const isPrerequisiteAssessment = lastAnalysis && sameStudentScope &&
+      (window.atharLastAnalysisPrerequisites || []).some(item => displaySkillName(item.skill) === displaySkillName(skill));
+    if (isPrerequisiteAssessment) {
+      try {
+        const refreshed = await api('/api/analysis', { method:'POST', body:JSON.stringify(lastAnalysis) });
+        analyses.unshift({ student_id:lastAnalysis.student_id || null, skill:refreshed.analysis.skill, result:refreshed.analysis, date:new Date().toISOString(), recordId:refreshed.id });
+        renderAnalysis(refreshed.analysis, 'analysisResult');
+        showToast('حُفظ التقويم وتحدّثت خريطة الجذور بالنتيجة الجديدة.');
+      } catch (refreshError) {
+        showToast(`حُفظ التقويم، لكن تعذر تحديث الخريطة تلقائيًا: ${refreshError.message}`);
+      }
+    } else {
+      showToast('تم حفظ التقويم مركزيًا. أعد تحليل المهارة المستهدفة لتحديث خريطة الجذور.');
+    }
   } catch (error) { showToast(error.message); }
 }
 function diagnosticQuestionSet(skill) {
@@ -548,8 +563,16 @@ function renderLearningRootMap(analysis, rootItems, observation, patternHint) {
     : Number(item.score) < 70 ? { label:'مؤشر فجوة يحتاج إلى مراجعة', cls:'review' } : { label:'لا تظهر فجوة في النتائج', cls:'ok' };
   const previous = (rootItems || []).map(item => {
     const state = statusFor(item);
-    const score = item.score === null || item.score === undefined ? 'لا توجد نتيجة مسجلة' : `متوسط الإتقان ${Number(item.score)}%`;
-    return `<div class="root-map-node ${state.cls}"><strong>${esc(displaySkillName(item.skill))}</strong><span>${state.label}</span><small>${score}</small><button type="button" class="btn small root-map-assess" data-root-skill="${esc(item.skill)}">${item.score === null || item.score === undefined ? 'إجراء تقويم تشخيصي' : Number(item.score) < 70 ? 'إعادة التحقق بالتقويم' : 'مراجعة التقويم'}</button></div>`;
+    const sampleSize = Number(item.sampleSize || 0);
+    const score = item.score === null || item.score === undefined
+      ? 'لا توجد نتيجة مسجلة'
+      : `متوسط الإتقان ${Number(item.score)}% • عينة: ${sampleSize || 'غير محددة'}`;
+    const evidenceNote = item.score === null || item.score === undefined
+      ? 'لا يمكن الحكم قبل توفر نتيجة تقويم.'
+      : Number(item.score) < 70
+        ? 'نتيجة دون 70%؛ مؤشر يحتاج إلى مراجعة عينة الإجابات.'
+        : 'النتيجة لا تشير إلى فجوة وفق الحد الإرشادي الحالي.';
+    return `<div class="root-map-node ${state.cls}"><strong>${esc(displaySkillName(item.skill))}</strong><span>${state.label}</span><small>${score}</small><small>${evidenceNote}</small><button type="button" class="btn small root-map-assess" data-root-skill="${esc(item.skill)}">${item.score === null || item.score === undefined ? 'إجراء تقويم تشخيصي' : Number(item.score) < 70 ? 'إعادة التحقق بالتقويم' : 'مراجعة التقويم'}</button></div>`;
   }).join('') || '<div class="root-map-node pending"><strong>لا توجد مهارات سابقة موثقة</strong><span>تحتاج الخريطة إلى بيانات منهجية</span></div>';
   const next = (analysis.nextSkills || []).map(skill => `<div class="root-map-node future"><strong>${esc(displaySkillName(skill))}</strong><span>مهارة لاحقة</span></div>`).join('') || '<div class="root-map-node future"><strong>لا توجد مهارات لاحقة مسجلة</strong><span>يمكن إضافتها عند توثيق التسلسل</span></div>';
   map.innerHTML = `<div class="root-map-legend"><span><i class="pending"></i> يحتاج إلى تقويم</span><span><i class="review"></i> مؤشر يحتاج إلى مراجعة</span><span><i class="ok"></i> لا تظهر فجوة</span></div>
@@ -588,6 +611,7 @@ function renderAnalysis(analysis, destinationId) {
           : '';
   const rootStatus = analysis.rootCauseStatus || (roots.length ? 'تحتاج المهارات السابقة إلى مراجعة الأدلة.' : 'لا تتوفر خريطة موثقة للمهارات السابقة.');
   const evidenceItems = analysis.evidence || [];
+  window.atharLastAnalysisPrerequisites = roots.map(item => ({ skill:item.skill, score:item.score, sampleSize:item.sampleSize || 0 }));
   const rootItems = roots.map(item => {
     const status = item.score === null || item.score === undefined
       ? 'غير متحقق — لا توجد نتيجة مسجلة'
@@ -618,8 +642,10 @@ async function analyzeErrors() {
   const skill = document.getElementById('analysisSkill')?.value.trim() || document.getElementById('assessName')?.value.trim() || 'تمثيل الكسور';
   const studentId = document.getElementById('analysisStudent')?.value || '';
   const observedErrors = document.getElementById('errorInput')?.value.trim() || '';
+  const analysisRequest = { skill, student_id:studentId, observedErrors };
   try {
-    const result = await api('/api/analysis', { method:'POST', body:JSON.stringify({ skill, student_id:studentId, observedErrors }) });
+    const result = await api('/api/analysis', { method:'POST', body:JSON.stringify(analysisRequest) });
+    window.atharLastAnalysisRequest = analysisRequest;
     analyses.unshift({ student_id:studentId || null, skill:result.analysis.skill, result:result.analysis, date:new Date().toISOString(), recordId:result.id });
     renderAnalysis(result.analysis, 'analysisResult'); updateCycle();
     showToast('اكتمل التحليل باستخدام نتائج التقويم وخريطة المهارات.');
