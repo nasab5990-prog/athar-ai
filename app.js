@@ -257,6 +257,7 @@ function fillStudentSelects() {
     }
     if (id !== 'accountStudentIds' && previous && [...select.options].some(o => o.value === previous)) select.value = previous;
   }
+  fillImpactInterventions();
   if (currentRole === 'student' || currentRole === 'parent') {
     const progress = document.getElementById('progressStudent');
     if (progress) {
@@ -271,7 +272,31 @@ function fillStudentSelects() {
   }
 }
 
-async function renderStudents() {
+async function fillImpactInterventions() {
+  const select = document.getElementById('impactIntervention');
+  if (!select) return;
+  const studentId = document.getElementById('impactStudent')?.value || '';
+  const previous = select.value;
+  const rows = interventions.filter(item => studentId
+    ? item.student_id === studentId
+    : true
+  );
+  select.innerHTML = '<option value="">اختر التدخل المرتبط بالقياس</option>';
+  rows.forEach(item => {
+    if (item.recordId === undefined || item.recordId === null) return;
+    const option = document.createElement('option');
+    option.value = String(item.recordId);
+    const studentName = item.student_name || students.find(student => student.student_id === item.student_id)?.name || 'تدخل صفي';
+    option.textContent = `${displaySkillName(item.skill || 'مهارة غير محددة')} — ${studentName} — ${formatDate(item.date)}`;
+    select.appendChild(option);
+  });
+  if (previous && [...select.options].some(option => option.value === previous)) select.value = previous;
+  if (studentId && !rows.length) {
+    select.innerHTML = '<option value="">لا توجد تدخلات مسجلة لهذا الطالب</option>';
+  }
+}
+
+function renderStudents() {
   const el = document.getElementById('studentsList');
   const countEl = document.getElementById('studentCount');
   if (!el) return;
@@ -559,15 +584,28 @@ async function calcImpact() {
   const before = Number(document.getElementById('before')?.value);
   const after = Number(document.getElementById('after')?.value);
   const studentId = document.getElementById('impactStudent')?.value || null;
+  const interventionId = document.getElementById('impactIntervention')?.value || '';
   if (!Number.isFinite(before) || !Number.isFinite(after) || before < 0 || after < 0 || before > 100 || after > 100) return showToast('أدخل نسبتين من 0 إلى 100.');
+  if (!interventionId) return showToast('اختر التدخل الذي تريد قياس أثره أولًا.');
+  const intervention = interventions.find(item => String(item.recordId) === interventionId);
+  if (!intervention) return showToast('تعذر العثور على التدخل المحدد. حدّث قائمة التدخلات وحاول مجددًا.');
+  if (studentId && intervention.student_id !== studentId) return showToast('التدخل المحدد لا يرتبط بالطالب المختار.');
   const student = students.find(s => s.student_id === studentId);
-  const payload = { student_id:studentId, student_name:student?.name || null, before, after, difference:Number((after-before).toFixed(1)), date:new Date().toISOString() };
+  const difference = Number((after-before).toFixed(1));
+  const payload = {
+    student_id:studentId || intervention.student_id || null,
+    student_name:student?.name || intervention.student_name || null,
+    intervention_record_id:intervention.recordId,
+    intervention_skill:displaySkillName(intervention.skill || ''),
+    intervention_goal:intervention.goal || '',
+    before, after, difference, date:new Date().toISOString()
+  };
   try {
     const result = await syncRecord('impact', payload);
     impacts.unshift({ ...result.payload, recordId:result.id });
     const el = document.getElementById('impactResult');
-    if (el) el.innerHTML = `<div class="card"><strong>الفرق: ${payload.difference > 0 ? '+' : ''}${payload.difference} نقطة مئوية</strong><p>${esc(student?.name || 'تقويم صفي')}</p><span class="badge ${payload.difference > 0 ? 'success' : 'warning'}">${payload.difference > 0 ? 'تحسن مسجل' : payload.difference === 0 ? 'لا تغير' : 'انخفاض يحتاج مراجعة'}</span></div>`;
-    updateDashboard(); updateCycle(); updateAlerts(); showToast('تم حفظ قياس الأثر مركزيًا.');
+    if (el) el.innerHTML = `<div class="card"><strong>الفرق: ${payload.difference > 0 ? '+' : ''}${payload.difference} نقطة مئوية</strong><p>${esc(student?.name || intervention.student_name || 'تقويم صفي')}</p><p>التدخل المرتبط: ${esc(payload.intervention_skill)} — ${esc(payload.intervention_goal)}</p><span class="badge ${payload.difference > 0 ? 'success' : 'warning'}">${payload.difference > 0 ? 'تحسن مسجل' : payload.difference === 0 ? 'لا تغير' : 'انخفاض يحتاج مراجعة'}</span></div>`;
+    updateDashboard(); updateCycle(); updateAlerts(); renderReports(); showToast('تم حفظ قياس الأثر وربطه بالتدخل المحدد.');
   } catch (error) { showToast(error.message); }
 }
 function applyAccess() {
