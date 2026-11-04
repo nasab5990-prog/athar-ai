@@ -328,7 +328,10 @@
     <h1>قياس الأثر</h1>
     <div class="card">
       <label>الطالب (اختياري)</label>
-      <select id="impactStudent"><option value="">قياس صفي</option></select>
+      <select id="impactStudent" onchange="fillImpactInterventions()"><option value="">قياس صفي</option></select>
+      <label>التدخل المراد قياس أثره</label>
+      <select id="impactIntervention"><option value="">اختر التدخل المرتبط بالقياس</option></select>
+      <p class="note">اختر التدخل الذي نُفّذ بالفعل حتى يرتبط قياس التحسن بسجله.</p>
       <label>النتيجة قبل التدخل (%)</label>
       <input type="number" id="before" min="0" max="100" placeholder="0–100">
       <label>النتيجة بعد التدخل (%)</label>
