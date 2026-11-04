@@ -1044,10 +1044,28 @@ async function saveIntervention() {
 function renderInt() {
   const el = document.getElementById('intList');
   if (!el) return;
-  el.innerHTML = interventions.slice(0, 15).map(i => {
+  el.innerHTML = interventions.slice(0, 50).map((i, index) => {
     const c = i.curriculum || {};
     const curriculumLine = [c.grade ? `الصف ${c.grade}` : '', c.subject || '', c.semester ? `الفصل ${c.semester}` : '', c.unit ? `الوحدة: ${c.unit}` : '', c.lesson ? `الدرس: ${c.lesson}` : ''].filter(Boolean).join(' • ');
-    return `<div class="card" style="margin-top:.6rem"><strong>${esc(displaySkillName(i.skill))}</strong><p>${esc(i.student_name || 'تدخل صفي')} • ${esc(formatDate(i.date))}</p>${curriculumLine ? `<p class="note">${esc(curriculumLine)}</p>` : ''}${c.learning_outcome ? `<p><strong>ناتج التعلم:</strong> ${esc(c.learning_outcome)}</p>` : ''}<p>${esc(i.goal || '')}</p></div>`;
+    const studentName = i.student_name || students.find(student => student.student_id === i.student_id)?.name || 'تدخل صفي';
+    const modeLabel = ({ offline:'دون أجهزة أو إنترنت', shared:'جهاز المعلم مع شاشة مشتركة', online:'أجهزة للطلبة وإنترنت' })[i.activity_mode] || 'غير محدد';
+    const statusLabel = ({ active:'نشط', completed:'مكتمل', paused:'متوقف مؤقتًا' })[i.status] || i.status || 'غير محدد';
+    return `<details class="card saved-intervention-card" style="margin-top:.6rem">
+      <summary style="cursor:pointer;display:flex;justify-content:space-between;gap:.8rem;align-items:center;flex-wrap:wrap">
+        <span><strong>${esc(displaySkillName(i.skill))}</strong><small style="display:block;color:var(--muted,#667085);margin-top:.25rem">${esc(studentName)} • ${esc(formatDate(i.date))}</small></span>
+        <span class="badge">${esc(statusLabel)}</span>
+      </summary>
+      <div style="margin-top:.8rem">
+        ${curriculumLine ? `<p class="note">${esc(curriculumLine)}</p>` : ''}
+        ${c.learning_outcome ? `<p><strong>ناتج التعلم:</strong> ${esc(c.learning_outcome)}</p>` : ''}
+        <p><strong>الهدف:</strong><br>${esc(i.goal || 'غير مسجل')}</p>
+        <p><strong>خطوات التدخل:</strong><br>${esc(i.steps || 'غير مسجلة')}</p>
+        ${i.enrichment ? `<p><strong>مسار الإثراء:</strong><br>${esc(i.enrichment)}</p>` : ''}
+        <p><strong>إمكانات التنفيذ:</strong> ${esc(modeLabel)} • <strong>الوقت:</strong> ${esc(i.activity_duration || 'غير محدد')} دقيقة</p>
+        <p><strong>مصدر إعداد التدخل:</strong> ${i.suggestion_source === 'athar-analysis' ? 'من تحليل رادار التعثر' : 'إعداد المعلم'}</p>
+        ${i.analysis_record_id ? `<p class="note">مرتبط بتحليل محفوظ في رادار التعثر (رقم السجل: ${esc(i.analysis_record_id)}).</p>` : ''}
+      </div>
+    </details>`;
   }).join('') || '<p class="note">لا توجد تدخلات مسجلة بعد.</p>';
   fillStudentSelects();
 }
