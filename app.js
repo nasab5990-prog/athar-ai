@@ -2,6 +2,7 @@
 let students = [];
 let assessments = [];
 let interventions = [];
+let editingInterventionId = null;
 let impacts = [];
 let analyses = [];
 let currentRole = null;
@@ -1026,30 +1027,68 @@ async function saveIntervention() {
   if (!skill || !goal || !steps) return showToast('أكمل المهارة والهدف وخطوات التدخل.');
   try {
     const suggestion = window.atharSuggestedIntervention;
+    const existing = editingInterventionId
+      ? interventions.find(item => String(item.recordId) === String(editingInterventionId))
+      : null;
+    if (editingInterventionId && !existing) return showToast('تعذر العثور على التدخل المراد تعديله. حدّث السجلات وحاول مجددًا.');
+    const oldCurriculum = existing?.curriculum || {};
     const curriculum = {
-      grade:document.getElementById('intGrade')?.value || null,
-      subject:document.getElementById('intSubject')?.value.trim() || null,
-      semester:document.getElementById('intSemester')?.value || null,
-      unit:document.getElementById('intUnit')?.value.trim() || null,
-      lesson:document.getElementById('intLesson')?.value.trim() || null,
-      learning_outcome:document.getElementById('intOutcome')?.value.trim() || null
+      grade:document.getElementById('intGrade')?.value || oldCurriculum.grade || null,
+      subject:document.getElementById('intSubject')?.value || oldCurriculum.subject || null,
+      semester:document.getElementById('intSemester')?.value || oldCurriculum.semester || null,
+      unit:document.getElementById('intUnit')?.value || oldCurriculum.unit || null,
+      lesson:document.getElementById('intLesson')?.value || oldCurriculum.lesson || null,
+      learning_outcome:document.getElementById('intOutcome')?.value.trim() || oldCurriculum.learning_outcome || null
     };
-    const payload = { student_id:studentId, student_name:student?.name || null, skill, goal, steps, enrichment, curriculum, status:'active', activity_mode:document.getElementById('activityMode')?.value || 'offline', activity_duration:Number(document.getElementById('activityDuration')?.value || 15), date:new Date().toISOString(), suggestion_source:suggestion && suggestion.skill === displaySkillName(skill) && suggestion.studentId === studentId ? 'athar-analysis' : 'teacher', analysis_record_id:suggestion && suggestion.skill === displaySkillName(skill) && suggestion.studentId === studentId ? suggestion.analysisId : null };
-    const result = await syncRecord('intervention', payload);
-    interventions.unshift({ ...result.payload, recordId:result.id });
-    renderInt(); updateDashboard(); updateCycle(); updateAlerts();
-    showToast('تم حفظ التدخل على قاعدة بيانات المدرسة.');
+    const payload = {
+      ...(existing || {}),
+      student_id:existing ? existing.student_id : studentId,
+      student_name:existing ? existing.student_name : (student?.name || null),
+      skill, goal, steps, enrichment, curriculum,
+      status:editingInterventionId
+        ? (document.getElementById('intStatus')?.value || existing.status || 'active')
+        : 'active',
+      activity_mode:document.getElementById('activityMode')?.value || existing?.activity_mode || 'offline',
+      activity_duration:Number(document.getElementById('activityDuration')?.value || existing?.activity_duration || 15),
+      date:existing?.date || new Date().toISOString(),
+      suggestion_source:existing?.suggestion_source || (suggestion && suggestion.skill === displaySkillName(skill) && suggestion.studentId === studentId ? 'athar-analysis' : 'teacher'),
+      analysis_record_id:existing?.analysis_record_id ?? (suggestion && suggestion.skill === displaySkillName(skill) && suggestion.studentId === studentId ? suggestion.analysisId : null)
+    };
+    let result;
+    if (editingInterventionId) {
+      result = await api(`/api/records/${encodeURIComponent(editingInterventionId)}`, { method:'PUT', body:JSON.stringify({ payload }) });
+      interventions = interventions.map(item => String(item.recordId) === String(editingInterventionId)
+        ? { ...result.payload, recordId:result.id } : item);
+      editingInterventionId = null;
+      const statusField = document.getElementById('intStatusField');
+      if (statusField) statusField.hidden = true;
+      const saveButton = document.getElementById('saveInterventionBtn');
+      if (saveButton) saveButton.textContent = 'حفظ التدخل';
+      const cancelButton = document.getElementById('cancelInterventionEditBtn');
+      if (cancelButton) cancelButton.hidden = true;
+      renderInt(); updateDashboard(); updateCycle(); updateAlerts();
+      showToast('تم تحديث التدخل المحفوظ مع الاحتفاظ برقم سجله وروابطه.');
+    } else {
+      result = await syncRecord('intervention', payload);
+      interventions.unshift({ ...result.payload, recordId:result.id });
+      renderInt(); updateDashboard(); updateCycle(); updateAlerts();
+      showToast('تم حفظ التدخل على قاعدة بيانات المدرسة.');
+    }
   } catch (error) { showToast(error.message); }
 }
 function renderInt() {
   const el = document.getElementById('intList');
   if (!el) return;
-  el.innerHTML = interventions.slice(0, 50).map((i, index) => {
+  el.innerHTML = interventions.slice(0, 50).map(i => {
     const c = i.curriculum || {};
     const curriculumLine = [c.grade ? `الصف ${c.grade}` : '', c.subject || '', c.semester ? `الفصل ${c.semester}` : '', c.unit ? `الوحدة: ${c.unit}` : '', c.lesson ? `الدرس: ${c.lesson}` : ''].filter(Boolean).join(' • ');
     const studentName = i.student_name || students.find(student => student.student_id === i.student_id)?.name || 'تدخل صفي';
     const modeLabel = ({ offline:'دون أجهزة أو إنترنت', shared:'جهاز المعلم مع شاشة مشتركة', online:'أجهزة للطلبة وإنترنت' })[i.activity_mode] || 'غير محدد';
     const statusLabel = ({ active:'نشط', completed:'مكتمل', paused:'متوقف مؤقتًا' })[i.status] || i.status || 'غير محدد';
+    const recordId = Number(i.recordId);
+    const editButton = Number.isInteger(recordId) && recordId > 0
+      ? `<button class="btn small secondary" type="button" onclick="editIntervention(${recordId})">تعديل واستكمال التدخل</button>`
+      : '';
     return `<details class="card saved-intervention-card" style="margin-top:.6rem">
       <summary style="cursor:pointer;display:flex;justify-content:space-between;gap:.8rem;align-items:center;flex-wrap:wrap">
         <span><strong>${esc(displaySkillName(i.skill))}</strong><small style="display:block;color:var(--muted,#667085);margin-top:.25rem">${esc(studentName)} • ${esc(formatDate(i.date))}</small></span>
@@ -1061,13 +1100,79 @@ function renderInt() {
         <p><strong>الهدف:</strong><br>${esc(i.goal || 'غير مسجل')}</p>
         <p><strong>خطوات التدخل:</strong><br>${esc(i.steps || 'غير مسجلة')}</p>
         ${i.enrichment ? `<p><strong>مسار الإثراء:</strong><br>${esc(i.enrichment)}</p>` : ''}
-        <p><strong>إمكانات التنفيذ:</strong> ${esc(modeLabel)} • <strong>الوقت:</strong> ${esc(i.activity_duration || 'غير محدد')} دقيقة</p>
+        <p><strong>إمكانات التنفيذ:</strong> ${esc(modeLabel)} • <strong>الوقت:</strong> ${esc(i.activity_duration ?? 'غير محدد')} دقيقة</p>
         <p><strong>مصدر إعداد التدخل:</strong> ${i.suggestion_source === 'athar-analysis' ? 'من تحليل رادار التعثر' : 'إعداد المعلم'}</p>
         ${i.analysis_record_id ? `<p class="note">مرتبط بتحليل محفوظ في رادار التعثر (رقم السجل: ${esc(i.analysis_record_id)}).</p>` : ''}
+        ${editButton}
       </div>
     </details>`;
   }).join('') || '<p class="note">لا توجد تدخلات مسجلة بعد.</p>';
   fillStudentSelects();
+}
+function editIntervention(recordId) {
+  const item = interventions.find(row => String(row.recordId) === String(recordId));
+  if (!item) return showToast('تعذر العثور على التدخل. حدّث السجلات وحاول مجددًا.');
+  editingInterventionId = item.recordId;
+  fillStudentSelects();
+  const setValue = (id, value) => {
+    const field = document.getElementById(id);
+    if (field && value !== undefined && value !== null) field.value = String(value);
+  };
+  setValue('interventionStudent', item.student_id || '');
+  setValue('intSkill', displaySkillName(item.skill || ''));
+  setValue('intGoal', item.goal || '');
+  setValue('intSteps', item.steps || '');
+  setValue('intEnrich', item.enrichment || '');
+  setValue('activityMode', item.activity_mode || 'offline');
+  setValue('activityDuration', [10,15,20].includes(Number(item.activity_duration)) ? item.activity_duration : 15);
+  const curriculum = item.curriculum || {};
+  setValue('intGrade', curriculum.grade || '');
+  updateCurriculumSubjects();
+  const ensureOption = (id, value, label) => {
+    if (!value) return;
+    const select = document.getElementById(id);
+    if (!select) return;
+    if (![...select.options].some(option => option.value === String(value))) {
+      const option = document.createElement('option');
+      option.value = String(value); option.textContent = label || String(value);
+      select.appendChild(option);
+    }
+    select.value = String(value);
+  };
+  ensureOption('intSubject', curriculum.subject, curriculum.subject);
+  updateCurriculumUnits();
+  ensureOption('intUnit', curriculum.unit, curriculum.unit);
+  updateCurriculumLessons();
+  ensureOption('intLesson', curriculum.lesson, curriculum.lesson);
+  updateCurriculumOutcome();
+  setValue('intOutcome', curriculum.learning_outcome || '');
+  if (curriculum.learning_outcome) {
+    const outcomeField = document.getElementById('curriculumOutcomeField');
+    if (outcomeField) outcomeField.hidden = false;
+  }
+  setValue('intSemester', curriculum.semester || '');
+  setValue('intStatus', item.status || 'active');
+  const statusField = document.getElementById('intStatusField');
+  if (statusField) statusField.hidden = false;
+  const saveButton = document.getElementById('saveInterventionBtn');
+  if (saveButton) saveButton.textContent = 'حفظ التعديلات';
+  const cancelButton = document.getElementById('cancelInterventionEditBtn');
+  if (cancelButton) cancelButton.hidden = false;
+  show('intervention');
+  showToast('عدّل البيانات الناقصة أو حدّث حالة التدخل، ثم احفظ التعديلات.');
+}
+function cancelInterventionEdit() {
+  editingInterventionId = null;
+  const statusField = document.getElementById('intStatusField');
+  if (statusField) statusField.hidden = true;
+  const saveButton = document.getElementById('saveInterventionBtn');
+  if (saveButton) saveButton.textContent = 'حفظ التدخل';
+  const cancelButton = document.getElementById('cancelInterventionEditBtn');
+  if (cancelButton) cancelButton.hidden = true;
+  ['intSkill','intGoal','intSteps','intEnrich','intObservedErrors','intOutcome'].forEach(id => {
+    const field = document.getElementById(id); if (field) field.value = '';
+  });
+  showToast('تم إلغاء التعديل دون تغيير السجل المحفوظ.');
 }
 function printWorksheet() {
   const skill = document.getElementById('intSkill')?.value || '';
