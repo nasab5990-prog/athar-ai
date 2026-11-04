@@ -415,6 +415,64 @@ async function askAssistant() {
     showToast('أُعد الرد بالاستناد إلى بيانات المدرسة المتاحة.');
   } catch (error) { showToast(error.message); }
 }
+function buildSuggestedActivityOptions(analysis) {
+  const skill = displaySkillName(analysis.skill || 'المهارة المستهدفة');
+  const mode = document.getElementById('activityMode')?.value || 'offline';
+  const duration = Number(document.getElementById('activityDuration')?.value || 15);
+  const isReading = /الفهم المقروء|فهم المقروء|الفهم القرائي/.test(skill);
+  let activities;
+  if (isReading && mode === 'offline') {
+    activities = [
+      {title:'بطاقات الفكرة والدليل',steps:'نشاط: بطاقات الفكرة والدليل (دون أجهزة، 10–15 دقيقة). اكتب الفكرة الرئيسة وثلاثة تفاصيل على قصاصات ورقية. يطابق الطالب كل تفصيل بالفكرة، ثم يختار الدليل من النص. سجّل عدد المطابقات الصحيحة.'},
+      {title:'اقرأ وضع خطًا',steps:'نشاط: اقرأ وضع خطًا (دون أجهزة، 10 دقائق). وزّع نصًا قصيرًا مطبوعًا أو اكتبه على السبورة. يضع الطالب خطًا تحت الفكرة الرئيسة ودائرة حول دليلين، ثم يشرح اختياره.'},
+      {title:'فكر ثم اشرح',steps:'نشاط: فكر ثم اشرح (دون أجهزة، 10–15 دقيقة). اقرأ فقرة بصوت واضح، امنح الطالب دقيقة للتفكير، ثم اطلب منه تلخيصها في جملة وذكر دليل من النص.'}
+    ];
+  } else if (isReading && mode === 'shared') {
+    activities = [
+      {title:'النص التفاعلي على الشاشة',steps:'نشاط: النص التفاعلي على الشاشة (جهاز المعلم فقط، 10–15 دقيقة). اعرض النص على الشاشة، وأخفِ الأسئلة أولًا. أظهر سؤالًا واحدًا كل مرة، واطلب من الطلبة تحديد موضع الدليل شفهيًا أو على السبورة.'},
+      {title:'تصويت بالإشارات',steps:'نشاط: تصويت بالإشارات (دون أجهزة للطلبة، 10 دقائق). اعرض ثلاثة اختيارات للفكرة الرئيسة على الشاشة. يجيب الطلبة ببطاقات A/B/C أو بإشارات الأصابع، ثم يبررون الاختيار بدليل من النص.'},
+      {title:'تمييز الدليل جماعيًا',steps:'نشاط: تمييز الدليل جماعيًا (جهاز المعلم وشاشة مشتركة، 15 دقيقة). اعرض فقرة، واطلب من طالب تحديد الجملة الداعمة على الشاشة أو السبورة، ثم ناقش لماذا تعد دليلًا.'}
+    ];
+  } else if (isReading) {
+    activities = [
+      {title:'مسار قراءة قصير',steps:'نشاط: مسار قراءة قصير (أجهزة وإنترنت، 10–15 دقيقة). يقرأ الطالب نصًا قصيرًا على جهازه، ويجيب عن أسئلة الفكرة الرئيسة والتفاصيل والاستنتاج. احتفظ بدرجة كل مهارة على حدة.'},
+      {title:'تسجيل القراءة والتفسير',steps:'نشاط: تسجيل القراءة والتفسير (جهاز طالب، 10 دقائق). يسجل الطالب قراءة فقرة ثم يجيب صوتيًا أو كتابيًا عن سؤال استنتاجي ويذكر الدليل. راجع التسجيل وفق معيار موحد.'},
+      {title:'اختبار خروج رقمي',steps:'نشاط: اختبار خروج رقمي (أجهزة وإنترنت، 10 دقائق). قدّم أربعة أسئلة قصيرة تقيس المفردات والفكرة الرئيسة والتفاصيل والاستنتاج، ثم سجّل النتيجة ومواطن الخطأ.'}
+    ];
+  } else if (mode === 'offline') {
+    activities = [
+      {title:'بطاقات خطوات الحل',steps:`نشاط: بطاقات خطوات الحل لمهارة ${skill} (دون أجهزة، ${duration} دقائق). جهّز ثلاث بطاقات: مثال محلول، خطوة ناقصة، ومسألة مستقلة. يرتب الطالب الخطوات ويشرح سبب اختياره.`},
+      {title:'فكر-حل-تحقق',steps:`نشاط: فكر-حل-تحقق لمهارة ${skill} (ورقة وسبورة، ${duration} دقائق). اعرض مثالًا، ثم مثالًا مشابهًا يحله الطالب مستقلًا، واطلب منه التحقق من الحل وشرح الخطوة التي أخطأ فيها.`},
+      {title:'محطات تعلم ورقية',steps:`نشاط: محطات تعلم ورقية لمهارة ${skill} (دون أجهزة، ${duration} دقائق). أنشئ ثلاث مهام متدرجة على أوراق أو زوايا السبورة، وينفذ الطالب مهمة قصيرة في كل محطة.`}
+    ];
+  } else if (mode === 'shared') {
+    activities = [
+      {title:'نمذجة أمام الشاشة',steps:`نشاط: نمذجة أمام الشاشة لمهارة ${skill} (جهاز المعلم فقط، ${duration} دقائق). اعرض مثالًا واحدًا، وفكر بصوت مسموع، ثم أخفِ الحل واطلب من الطلبة اقتراح الخطوة التالية.`},
+      {title:'حل جماعي متدرج',steps:`نشاط: حل جماعي متدرج لمهارة ${skill} (شاشة مشتركة دون أجهزة طلبة، ${duration} دقائق). اعرض ثلاثة أمثلة متدرجة، واجمع إجابات الطلبة شفهيًا أو ببطاقات ورقية.`},
+      {title:'اكتشف الخطأ',steps:`نشاط: اكتشف الخطأ لمهارة ${skill} (شاشة أو سبورة، ${duration} دقائق). اعرض حلًا يتضمن خطأ شائعًا، واطلب من الطلبة تحديد الخطأ وتصحيحه وتفسير السبب.`}
+    ];
+  } else {
+    activities = [
+      {title:'تدريب رقمي متدرج',steps:`نشاط: تدريب رقمي متدرج لمهارة ${skill} (أجهزة وإنترنت، ${duration} دقائق). يقدم الطالب ثلاث مهام من السهل إلى الأصعب، مع تسجيل الدقة ونوع الخطأ.`},
+      {title:'تفسير الحل',steps:`نشاط: تفسير الحل لمهارة ${skill} (أجهزة متاحة، ${duration} دقائق). يحل الطالب مهمة قصيرة ثم يكتب أو يسجل تفسير خطواته، ويقارن المعلم الأداء بمعيار واضح.`},
+      {title:'تقويم خروج رقمي',steps:`نشاط: تقويم خروج رقمي لمهارة ${skill} (أجهزة وإنترنت، 5–10 دقائق). أرسل ثلاث مسائل قصيرة، وراجع الأخطاء قبل تحديد النشاط التالي.`}
+    ];
+  }
+  const modeLabel = mode === 'offline' ? 'دون أجهزة أو إنترنت' : mode === 'shared' ? 'جهاز المعلم/شاشة مشتركة' : 'أجهزة وإنترنت';
+  return `<div class="card" style="margin-top:.8rem"><h4>مجموعة أنشطة مقترحة — ${esc(modeLabel)}</h4><p class="note">اختر نشاطين أو ثلاثة فقط حسب وقت الحصة، ولا يلزم تنفيذ المجموعة كلها. الأنشطة قابلة للطباعة أو التنفيذ الشفهي بحسب الإمكانات.</p>${activities.map(activity => `<div class="card" style="margin:.5rem 0"><strong>${esc(activity.title)}</strong><p>${esc(activity.steps)}</p><button class="btn small outline" type="button" onclick='useSuggestedActivity(${JSON.stringify(activity.steps)})'>إضافة إلى خطة التدخل</button></div>`).join('')}</div>`;
+}
+function useSuggestedActivity(steps) {
+  const field = document.getElementById('intSteps');
+  if (!field) return;
+  const existing = field.value.trim();
+  if (!existing.includes(steps)) field.value = existing ? existing + '\\n' + steps : steps;
+  showToast('أُضيف النشاط إلى خطة التدخل؛ راجعه قبل الحفظ.');
+}
+function getImpactEvidenceStatus(item) {
+  if (item.evidence_status) return item.evidence_status;
+  return 'تحسن مسجل — الأدلة غير مكتملة';
+}
+
 function buildInterventionGuide(analysis, observedErrors = '') {
   const skill = displaySkillName(analysis.skill || '');
   const isReading = /الفهم المقروء|فهم المقروء|الفهم القرائي/.test(skill);
@@ -467,8 +525,9 @@ function buildInterventionGuide(analysis, observedErrors = '') {
     <h4>قياس التحسن</h4>
     <p>سجّل نتيجة التحقق القصير كنسبة مئوية، ثم أعد قياس المهارة بعد أسبوعين بمهمة مماثلة. قارنها بخط الأساس (${score === null ? 'حدّد خط الأساس أولًا' : score + '%'}). عدّل التدخل إذا لم يظهر تحسن، ولا تنسب التغير إلى التدخل وحده.</p>
     <p>الأدوات المقترحة: ورقة مطبوعة أو السبورة، بما يناسب المدارس محدودة الأجهزة.</p>`;
+  const activityOptions = buildSuggestedActivityOptions(analysis);
   const html = `<div class="card" style="margin-top:.8rem;border-right:4px solid var(--primary)">
-    <h3>دليل تنفيذ عملي للمعلم</h3>${content}
+    <h3>دليل تنفيذ عملي للمعلم</h3>${content}${activityOptions}
     <button class="btn small outline" type="button" onclick="printInterventionGuide()">طباعة دليل التنفيذ</button>
   </div>`;
   window.atharInterventionGuideHtml = html;
@@ -558,7 +617,7 @@ async function saveIntervention() {
   if (!skill || !goal || !steps) return showToast('أكمل المهارة والهدف وخطوات التدخل.');
   try {
     const suggestion = window.atharSuggestedIntervention;
-    const payload = { student_id:studentId, student_name:student?.name || null, skill, goal, steps, enrichment, status:'active', date:new Date().toISOString(), suggestion_source:suggestion && suggestion.skill === displaySkillName(skill) && suggestion.studentId === studentId ? 'athar-analysis' : 'teacher', analysis_record_id:suggestion && suggestion.skill === displaySkillName(skill) && suggestion.studentId === studentId ? suggestion.analysisId : null };
+    const payload = { student_id:studentId, student_name:student?.name || null, skill, goal, steps, enrichment, status:'active', activity_mode:document.getElementById('activityMode')?.value || 'offline', activity_duration:Number(document.getElementById('activityDuration')?.value || 15), date:new Date().toISOString(), suggestion_source:suggestion && suggestion.skill === displaySkillName(skill) && suggestion.studentId === studentId ? 'athar-analysis' : 'teacher', analysis_record_id:suggestion && suggestion.skill === displaySkillName(skill) && suggestion.studentId === studentId ? suggestion.analysisId : null };
     const result = await syncRecord('intervention', payload);
     interventions.unshift({ ...result.payload, recordId:result.id });
     renderInt(); updateDashboard(); updateCycle(); updateAlerts();
@@ -592,19 +651,39 @@ async function calcImpact() {
   if (studentId && intervention.student_id !== studentId) return showToast('التدخل المحدد لا يرتبط بالطالب المختار.');
   const student = students.find(s => s.student_id === studentId);
   const difference = Number((after-before).toFixed(1));
+  const tool = document.getElementById('impactTool')?.value.trim() || '';
+  const beforeDate = document.getElementById('impactBeforeDate')?.value || '';
+  const afterDate = document.getElementById('impactAfterDate')?.value || '';
+  const activityMode = document.getElementById('impactActivityMode')?.value || '';
+  const sessionsPlanned = Number(document.getElementById('impactSessionsPlanned')?.value || 0);
+  const sessionsDone = Number(document.getElementById('impactSessionsDone')?.value || 0);
+  const evidenceNote = document.getElementById('impactEvidenceNote')?.value.trim() || '';
+  const followupRaw = document.getElementById('impactFollowup')?.value;
+  const followup = followupRaw === '' || followupRaw === undefined ? null : Number(followupRaw);
+  if (followup !== null && (!Number.isFinite(followup) || followup < 0 || followup > 100)) return showToast('أدخل نتيجة متابعة من 0 إلى 100.');
+  const hasCoreEvidence = Boolean(tool && beforeDate && afterDate && activityMode && sessionsPlanned > 0 && sessionsDone >= sessionsPlanned && evidenceNote);
+  const evidenceStatus = hasCoreEvidence && followup !== null && followup >= after
+    ? 'تحسن مستمر — قياس متابعة يؤكد بقاء النتيجة أو ارتفاعها'
+    : hasCoreEvidence
+      ? 'تحسن موثق — أداة وتواريخ وتنفيذ موثقة'
+      : 'تحسن مسجل — الأدلة غير مكتملة';
   const payload = {
     student_id:studentId || intervention.student_id || null,
     student_name:student?.name || intervention.student_name || null,
     intervention_record_id:intervention.recordId,
     intervention_skill:displaySkillName(intervention.skill || ''),
     intervention_goal:intervention.goal || '',
-    before, after, difference, date:new Date().toISOString()
+    before, after, difference, date:new Date().toISOString(),
+    evidence_tool:tool, before_date:beforeDate || null, after_date:afterDate || null,
+    activity_mode:activityMode || null, sessions_planned:sessionsPlanned || null,
+    sessions_done:sessionsDone || null, evidence_note:evidenceNote || null,
+    followup_score:followup, evidence_status:evidenceStatus
   };
   try {
     const result = await syncRecord('impact', payload);
     impacts.unshift({ ...result.payload, recordId:result.id });
     const el = document.getElementById('impactResult');
-    if (el) el.innerHTML = `<div class="card"><strong>الفرق: ${payload.difference > 0 ? '+' : ''}${payload.difference} نقطة مئوية</strong><p>${esc(student?.name || intervention.student_name || 'تقويم صفي')}</p><p>التدخل المرتبط: ${esc(payload.intervention_skill)} — ${esc(payload.intervention_goal)}</p><span class="badge ${payload.difference > 0 ? 'success' : 'warning'}">${payload.difference > 0 ? 'تحسن مسجل' : payload.difference === 0 ? 'لا تغير' : 'انخفاض يحتاج مراجعة'}</span></div>`;
+    if (el) el.innerHTML = `<div class="card"><strong>الفرق: ${payload.difference > 0 ? '+' : ''}${payload.difference} نقطة مئوية</strong><p>${esc(student?.name || intervention.student_name || 'تقويم صفي')}</p><p>التدخل المرتبط: ${esc(payload.intervention_skill)} — ${esc(payload.intervention_goal)}</p><p><strong>توثيق النتيجة:</strong> ${esc(evidenceStatus)}</p><p class="note">أداة القياس: ${esc(tool || 'غير محددة')} • الجلسات: ${sessionsDone || 0}/${sessionsPlanned || 'غير محدد'} • ${esc(evidenceNote || 'لا توجد ملاحظة مرفقة')}</p><span class="badge ${payload.difference > 0 ? 'success' : 'warning'}">${payload.difference > 0 ? 'تحسن مسجل' : payload.difference === 0 ? 'لا تغير' : 'انخفاض يحتاج مراجعة'}</span></div>`;
     updateDashboard(); updateCycle(); updateAlerts(); renderReports(); showToast('تم حفظ قياس الأثر وربطه بالتدخل المحدد.');
   } catch (error) { showToast(error.message); }
 }
@@ -733,7 +812,7 @@ function renderReports() {
     const skill = displaySkillName(item.intervention_skill || intervention?.skill || 'مهارة غير محددة');
     const studentName = item.student_name || intervention?.student_name || 'تقويم صفي';
     const delta = Number(item.difference ?? (Number(item.after)-Number(item.before)));
-    return `<li><strong>${esc(skill)}</strong> — ${esc(studentName)}: ${Number(item.before)}% إلى ${Number(item.after)}% (${delta > 0 ? '+' : ''}${delta} نقطة) <span class="note">مرتبط بتدخل محفوظ</span></li>`;
+    return `<li><strong>${esc(skill)}</strong> — ${esc(studentName)}: ${Number(item.before)}% إلى ${Number(item.after)}% (${delta > 0 ? '+' : ''}${delta} نقطة) <span class="note">${esc(getImpactEvidenceStatus(item))}</span></li>`;
   }).join('');
   el.innerHTML = `<p>الطلبة: ${students.length} • التقويمات: ${assessments.length} • التدخلات: ${interventions.length} • قياسات الأثر: ${impacts.length}</p><p>متوسط أحدث نتائج المهارات المسجلة: ${currentAssessments.length ? `${Math.round(currentAssessments.reduce((sum,a)=>sum+Number(a.pct||0),0)/currentAssessments.length)}%` : 'لا توجد بيانات'}</p><h4>ملخص المهارات</h4><ul>${skillRows || '<li>لا توجد نتائج مهارية كافية لإعداد الملخص.</li>'}</ul><h4>أثر التدخلات المرتبطة</h4><ul>${impactRowsHtml || '<li>لم تُسجل قياسات أثر مرتبطة بتدخلات بعد.</li>'}</ul>`;
 }
