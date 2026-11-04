@@ -145,6 +145,7 @@ async function loadRecords() {
   impacts = rows.filter(x => x.kind === 'impact').map(x => ({ ...x.payload, recordId:x.id }));
   analyses = rows.filter(x => x.kind === 'analysis').map(x => ({ ...x.payload, recordId:x.id }));
   renderStudents(); renderAssess(); renderInt(); fillStudentSelects();
+  renderAnalysisHistory();
   renderStudentProgress(); renderPrincipalView(); updateDashboard(); updateCycle(); updateAlerts(); updateStatus(); renderReports();
 }
 
@@ -492,6 +493,7 @@ async function saveAssessment() {
       try {
         const refreshed = await api('/api/analysis', { method:'POST', body:JSON.stringify(lastAnalysis) });
         analyses.unshift({ student_id:lastAnalysis.student_id || null, skill:refreshed.analysis.skill, result:refreshed.analysis, date:new Date().toISOString(), recordId:refreshed.id });
+        renderAnalysisHistory();
         renderAnalysis(refreshed.analysis, 'analysisResult');
         showToast('حُفظ التقويم وتحدّثت خريطة الجذور بالنتيجة الجديدة.');
       } catch (refreshError) {
@@ -636,6 +638,43 @@ function renderLearningRootMap(analysis, rootItems, observation, patternHint) {
     });
   });
 }
+function renderAnalysisHistory() {
+  const host = document.getElementById('analysisHistory');
+  if (!host) return;
+  const saved = analyses.filter(item => item && (item.result || item.analysis));
+  host.innerHTML = saved.length
+    ? '<h3>التحليلات السابقة</h3><p class="note">اختاري أي مهارة لاستعادة تحليلها وخريطة جذورها.</p>' +
+      saved.map((item, index) => {
+        const result = item.result || item.analysis || {};
+        const skill = displaySkillName(item.skill || result.skill || 'مهارة غير محددة');
+        const student = item.student_name || item.studentName || '';
+        const score = result.targetScore === null || result.targetScore === undefined ? 'لا توجد نتيجة مرتبطة' : 'الإتقان ' + Number(result.targetScore) + '%';
+        return '<button class="btn secondary saved-analysis-button" type="button" data-analysis-index="' + index + '" style="display:block;width:100%;text-align:right;margin:.45rem 0">' +
+          '<strong>' + esc(skill) + '</strong><br><small>' + esc(formatDate(item.date)) + ' • ' + esc(score) + (student ? ' • ' + esc(student) : item.student_id ? ' • تحليل فردي' : ' • تحليل صفي') + '</small></button>';
+      }).join('')
+    : '<div class="root-map-empty">لا توجد تحليلات سابقة محفوظة في نطاق صلاحيتك بعد.</div>';
+  host.querySelectorAll('[data-analysis-index]').forEach(button => {
+    button.addEventListener('click', () => {
+      const item = saved[Number(button.dataset.analysisIndex)];
+      if (!item) return;
+      const result = item.result || item.analysis;
+      window.atharLastAnalysisRequest = {
+        skill: result.skill || item.skill || '',
+        student_id: item.student_id || '',
+        observedErrors: result.observedErrors || ''
+      };
+      renderAnalysis(result, 'analysisResult');
+      const radar = document.getElementById('analysisSkill');
+      const observation = document.getElementById('errorInput');
+      const student = document.getElementById('analysisStudent');
+      if (radar) radar.value = result.skill || item.skill || '';
+      if (observation) observation.value = result.observedErrors || '';
+      if (student) student.value = item.student_id || '';
+      document.getElementById('analysisResult')?.scrollIntoView({ behavior:'smooth', block:'start' });
+      showToast('تم استعادة التحليل وخريطة الجذور المحفوظة.');
+    });
+  });
+}
 function renderAnalysis(analysis, destinationId) {
   const el = document.getElementById(destinationId);
   if (!el) return;
@@ -696,6 +735,7 @@ async function analyzeErrors() {
     const result = await api('/api/analysis', { method:'POST', body:JSON.stringify(analysisRequest) });
     window.atharLastAnalysisRequest = analysisRequest;
     analyses.unshift({ student_id:studentId || null, skill:result.analysis.skill, result:result.analysis, date:new Date().toISOString(), recordId:result.id });
+    renderAnalysisHistory();
     renderAnalysis(result.analysis, 'analysisResult'); updateCycle();
     showToast('اكتمل التحليل باستخدام نتائج التقويم وخريطة المهارات.');
   } catch (error) { showToast(error.message); }
