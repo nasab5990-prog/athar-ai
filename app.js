@@ -390,6 +390,70 @@ async function askAssistant() {
     showToast('أُعد الرد بالاستناد إلى بيانات المدرسة المتاحة.');
   } catch (error) { showToast(error.message); }
 }
+async function suggestIntervention() {
+  const button = document.getElementById('suggestInterventionBtn');
+  const resultEl = document.getElementById('intAiResult');
+  const studentId = document.getElementById('interventionStudent')?.value || '';
+  const student = students.find(item => item.student_id === studentId);
+  const observedErrors = document.getElementById('intObservedErrors')?.value.trim() || '';
+  let skill = document.getElementById('intSkill')?.value.trim() || '';
+
+  if (studentId && !student) return showToast('تعذر العثور على الطالب المحدد.');
+  if (!skill && studentId) {
+    const latest = latestAssessmentRows(assessments.filter(item => item.student_id === studentId));
+    latest.sort((a,b) => Number(a.pct || 0) - Number(b.pct || 0));
+    skill = latest[0]?.skill || latest[0]?.name || '';
+  }
+  if (!skill) return showToast('اختر طالبًا لديه تقويمات أو اكتب المهارة المراد دعمها أولًا.');
+  if (studentId && !assessments.some(item => item.student_id === studentId)) {
+    return showToast('لا توجد نتيجة تقويم لهذا الطالب بعد. سجّل تقويمًا أولًا حتى يكون الاقتراح مبنيًا على بياناته.');
+  }
+
+  if (button) { button.disabled = true; button.textContent = 'جارٍ تحليل الحالة وإعداد التدخل...'; }
+  if (resultEl) resultEl.innerHTML = '<div class="note">يجري فحص أحدث النتائج والمهارات السابقة المسجلة...</div>';
+  try {
+    const response = await api('/api/analysis', {
+      method:'POST',
+      body:JSON.stringify({ skill, student_id:studentId, observedErrors })
+    });
+    const analysis = response.analysis;
+    const score = analysis.targetScore;
+    const goal = score === null
+      ? 'تنفيذ تقويم تشخيصي قصير لتحديد مستوى المهارة، ثم وضع هدف قابل للقياس بناءً على النتيجة.'
+      : `رفع إتقان ${displaySkillName(analysis.skill)} من ${score}% إلى 70% على الأقل خلال أسبوعين، مع متابعة تقدم الطالب أسبوعيًا.`;
+    const rootSteps = (analysis.likelyRoots || []).map(root =>
+      `تحقق أولًا من مهارة ${displaySkillName(root.skill)}؛ أظهرت البيانات مستوى ${root.score}%، ثم قدم نشاطًا قصيرًا لمعالجة الفجوة.`
+    );
+    const steps = [
+      ...rootSteps,
+      ...(analysis.recommendations || []),
+      'نفّذ سؤال تحقق قصيرًا في نهاية كل حصة، وسجّل النتيجة لمقارنة التقدم.'
+    ];
+    const enrichment = score !== null && score >= 70
+      ? 'قدّم نصًا أو مهمة أكثر عمقًا تتضمن الاستنتاج وتبرير الإجابة بالدليل، مع استمرار التحقق من ثبات الإتقان.'
+      : 'بعد تحسن الأداء، انتقل تدريجيًا إلى نصوص أطول وأسئلة استنتاجية، مع إبقاء الدعم متاحًا عند الحاجة.';
+
+    document.getElementById('intSkill').value = displaySkillName(analysis.skill);
+    document.getElementById('intGoal').value = goal;
+    document.getElementById('intSteps').value = [...new Set(steps)].join('\n');
+    document.getElementById('intEnrich').value = enrichment;
+    window.atharSuggestedIntervention = {
+      analysisId:response.id,
+      skill:displaySkillName(analysis.skill),
+      studentId:studentId || null
+    };
+
+    const roots = (analysis.likelyRoots?.length ? analysis.likelyRoots : analysis.prerequisiteEvidence || []);
+    if (resultEl) resultEl.innerHTML = `<div class="card"><strong>ملخص الحالة المقترح</strong><p>${esc(analysis.level)} • ${score === null ? 'لا توجد نتيجة كافية' : `أحدث إتقان: ${score}%`}</p><h4>المهارات السابقة</h4><ul>${roots.map(root => `<li>${esc(displaySkillName(root.skill))}: ${root.score === null ? 'تحتاج إلى تقويم تشخيصي' : `${root.score}%`}</li>`).join('') || '<li>لا تتوفر بيانات كافية عن المهارات السابقة.</li>'}</ul><h4>الأدلة من السجلات</h4><ul>${(analysis.evidence || []).map(item => `<li>${esc(item)}</li>`).join('') || '<li>لا توجد أدلة مسجلة.</li>'}</ul><p class="note">${esc(analysis.disclaimer || 'راجع الاقتراح قبل اعتماده.')}</p><span class="badge success">تم تجهيز مسودة التدخل في الحقول أدناه</span></div>`;
+    showToast('تم تحليل الحالة وتجهيز مسودة التدخل؛ راجعها قبل الحفظ.');
+  } catch (error) {
+    if (resultEl) resultEl.innerHTML = `<div class="note">${esc(error.message)}</div>`;
+    showToast(error.message);
+  } finally {
+    if (button) { button.disabled = false; button.textContent = '✨ اقترح تدخلًا ذكيًا لهذه الحالة'; }
+  }
+}
+
 async function saveIntervention() {
   const skill = document.getElementById('intSkill')?.value.trim() || '';
   const goal = document.getElementById('intGoal')?.value.trim() || '';
@@ -399,7 +463,8 @@ async function saveIntervention() {
   const student = students.find(s => s.student_id === studentId);
   if (!skill || !goal || !steps) return showToast('أكمل المهارة والهدف وخطوات التدخل.');
   try {
-    const payload = { student_id:studentId, student_name:student?.name || null, skill, goal, steps, enrichment, status:'active', date:new Date().toISOString() };
+    const suggestion = window.atharSuggestedIntervention;
+    const payload = { student_id:studentId, student_name:student?.name || null, skill, goal, steps, enrichment, status:'active', date:new Date().toISOString(), suggestion_source:suggestion && suggestion.skill === displaySkillName(skill) && suggestion.studentId === studentId ? 'athar-analysis' : 'teacher', analysis_record_id:suggestion && suggestion.skill === displaySkillName(skill) && suggestion.studentId === studentId ? suggestion.analysisId : null };
     const result = await syncRecord('intervention', payload);
     interventions.unshift({ ...result.payload, recordId:result.id });
     renderInt(); updateDashboard(); updateCycle(); updateAlerts();
