@@ -179,3 +179,43 @@ body.dark .sidebar-actions .logout-action {
   background: rgba(180,73,73,.24);
   color: #FFE8E8;
 }
+
+
+/* حقوق تصميم وتطوير منصة أثَر */
+.platform-footer{
+  max-width:1440px;
+  margin:2rem auto 0;
+  padding:1rem 1.25rem;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-wrap:wrap;
+  gap:.45rem 1.2rem;
+  border-top:1px solid var(--border);
+  color:var(--text-light);
+  font-size:.86rem;
+  text-align:center;
+}
+.platform-footer strong{color:var(--primary);font-weight:800}
+.creator-credit{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:.8rem;
+  flex-wrap:wrap;
+  margin:1rem 0;
+  padding:1rem 1.1rem;
+  border:1px solid var(--border);
+  border-right:4px solid var(--accent);
+  border-radius:13px;
+  background:var(--surface-2);
+}
+.creator-credit-label{color:var(--text-light);font-size:.9rem}
+.creator-credit strong{color:var(--primary);font-size:1.05rem}
+@media(max-width:560px){
+  .platform-footer{flex-direction:column;gap:.35rem;padding:1rem .5rem}
+  .creator-credit{align-items:flex-start;flex-direction:column}
+}
+@media print{
+  .platform-footer{display:none!important}
+}
