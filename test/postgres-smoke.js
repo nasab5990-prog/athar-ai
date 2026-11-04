@@ -67,6 +67,30 @@ async function main() {
   const cookie = setCookie.split(';')[0];
   const me = await request('/api/auth/me', { cookie });
   if (me.data.user.role !== 'teacher' || !me.data.user.isDemo) throw new Error('Demo teacher session is invalid.');
+  const demoStudentId='ATHAR-DEMO-STUDENT-001';
+  if (!me.data.user.assignedStudentIds.includes(demoStudentId)) throw new Error('Demo teacher is not assigned to the synthetic learner.');
+  const teacherRecords=await request('/api/records',{cookie});
+  if (!teacherRecords.data.records.some(row=>row.kind==='assessment' && row.payload?.student_id===demoStudentId)) throw new Error('Demo teacher cannot see the synthetic learner assessment.');
+
+  for (const persona of ['parent','student']) {
+    const roleLogin=await request('/api/auth/demo',{method:'POST',body:{persona}});
+    const roleCookie=(roleLogin.response.headers.get('set-cookie')||'').split(';')[0];
+    if (!roleCookie) throw new Error(`Demo ${persona} login did not return a session cookie.`);
+    if (roleLogin.data.user.role!==persona || !roleLogin.data.user.linkedStudentIds.includes(demoStudentId)) throw new Error(`Demo ${persona} is not linked to the synthetic learner.`);
+    const roleRecords=await request('/api/records',{cookie:roleCookie});
+    if (!roleRecords.data.records.some(row=>row.kind==='assessment' && row.payload?.student_id===demoStudentId)) throw new Error(`Demo ${persona} cannot see the synthetic learner assessment.`);
+    if (!roleRecords.data.records.some(row=>row.kind==='impact' && row.payload?.student_id===demoStudentId)) throw new Error(`Demo ${persona} cannot see the synthetic learner impact record.`);
+    await request('/api/auth/logout',{method:'POST',cookie:roleCookie});
+  }
+
+  for (const persona of ['senior_teacher','principal']) {
+    const roleLogin=await request('/api/auth/demo',{method:'POST',body:{persona}});
+    if (roleLogin.data.user.role!==persona) throw new Error(`Demo ${persona} login returned the wrong role.`);
+    const roleCookie=(roleLogin.response.headers.get('set-cookie')||'').split(';')[0];
+    const roleRecords=await request('/api/records',{cookie:roleCookie});
+    if (!roleRecords.data.records.some(row=>row.kind==='student' && row.payload?.student_id===demoStudentId)) throw new Error(`Demo ${persona} cannot see the synthetic school learner.`);
+    await request('/api/auth/logout',{method:'POST',cookie:roleCookie});
+  }
 
   const studentId = `PG-TEST-${Date.now()}`;
   const student = await request('/api/records', {
