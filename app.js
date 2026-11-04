@@ -390,6 +390,75 @@ async function askAssistant() {
     showToast('أُعد الرد بالاستناد إلى بيانات المدرسة المتاحة.');
   } catch (error) { showToast(error.message); }
 }
+function buildInterventionGuide(analysis, observedErrors = '') {
+  const skill = displaySkillName(analysis.skill || '');
+  const isReading = /الفهم المقروء|فهم المقروء|الفهم القرائي/.test(skill);
+  const score = analysis.targetScore;
+  const focusText = observedErrors.trim()
+    ? `ملاحظة المعلم: ${esc(observedErrors)}`
+    : 'ابدأ بتحديد نوع الصعوبة من إجابات الطالب قبل اختيار الدعم.';
+  const content = isReading ? `
+    <h4>1) هدف الدليل وتركيز المعلم</h4>
+    <p>النتيجة المسجلة الحالية: <strong>${score === null ? 'غير متاحة' : score + '%'}</strong>. ركّز في البداية على تحديد موضع التعثر: المفردات، أو الفكرة الرئيسة، أو التفاصيل، أو الاستنتاج.</p>
+    <p>${focusText}</p>
+    <h4>2) نشاط جاهز: اقرأ، حدّد، واستدل (12–15 دقيقة)</h4>
+    <p><strong>الأدوات:</strong> النص التالي مطبوع أو مكتوب على السبورة، وقلم. لا يحتاج الطالب إلى جهاز.</p>
+    <blockquote><p>خرجت مريم مع أسرتها إلى الشاطئ في صباح يوم الجمعة. لاحظت وجود أكياس بلاستيكية قرب الصخور، فجمعتها في كيس ووضعتها في سلة المهملات. قالت لها أمها إن المحافظة على نظافة الشاطئ تحمي الكائنات البحرية وتجعل المكان أجمل للزوار.</p></blockquote>
+    <ol>
+      <li><strong>دقيقتان:</strong> اقرأ النص قراءة هادئة، ثم اطلب من الطالب تحديد كلمة لم يفهم معناها.</li>
+      <li><strong>4 دقائق:</strong> اطلب منه وضع خط تحت الجملة التي تعبّر عن الفكرة الرئيسة.</li>
+      <li><strong>4 دقائق:</strong> اطلب منه ذكر تفصيلين من النص يدعمان الفكرة.</li>
+      <li><strong>3–5 دقائق:</strong> ناقش سؤال استنتاج، واطلب منه ذكر الدليل من النص.</li>
+    </ol>
+    <h4>3) أسئلة تشخيصية سريعة</h4>
+    <ul>
+      <li>المفردات: ما معنى «الكائنات البحرية»؟ ما الكلمة أو العبارة التي ساعدتك على فهمها؟</li>
+      <li>الفكرة الرئيسة: عمّ يتحدث النص في جملة واحدة؟</li>
+      <li>التفاصيل: اذكر عملين قامت بهما مريم.</li>
+      <li>الاستنتاج: لماذا شكرت الأم مريم؟ ما الدليل من النص؟</li>
+    </ul>
+    <h4>4) كيف يختار المعلم الدعم؟</h4>
+    <ul>
+      <li>إذا تعثر في معنى الكلمات: اشرح كلمة واحدة بالسياق والصورة أو المثال، ثم أعد السؤال.</li>
+      <li>إذا ذكر تفصيلًا بدل الفكرة الرئيسة: استخدم سؤال «ما الشيء المشترك بين التفاصيل؟» ثم قدّم جملة بداية: «يتحدث النص عن…».</li>
+      <li>إذا أجاب دون دليل: اطلب منه الإشارة إلى الجملة التي بنى عليها إجابته.</li>
+      <li>إذا تعثر في الاستنتاج: استخدم «ماذا أعرف من النص؟ + ماذا أفهم من ذلك؟».</li>
+    </ul>
+    <h4>5) قياس التحسن</h4>
+    <p>في نهاية النشاط استخدم بطاقة خروج من 4 بنود: معنى كلمة من السياق، الفكرة الرئيسة، تفصيل داعم، واستنتاج مع دليل. سجّل عدد الإجابات الصحيحة من 4 كنسبة مئوية. أعد تقويمًا قصيرًا بنص جديد مماثل في الصعوبة بعد أسبوعين، وقارن النتيجة بخط الأساس المسجل (${score === null ? 'حدّد خط الأساس أولًا' : score + '%'}). الهدف المقترح في المسودة هو 70% على الأقل، ويعدّله المعلم وفق مستوى الطالب.</p>
+    <h4>6) تذكير للمعلم</h4>
+    <p>هذه خطة مقترحة وليست تشخيصًا. راجع إجابات الطالب وسياق الصف، وعدّل النص أو الزمن أو مستوى الدعم بما يناسبه.</p>` : `
+    <h4>دليل تنفيذ مختصر</h4>
+    <p>المهارة المستهدفة: <strong>${esc(skill || 'المهارة المحددة')}</strong>. النتيجة المسجلة: <strong>${score === null ? 'لا توجد نتيجة كافية' : score + '%'}</strong>.</p>
+    <p>${focusText}</p>
+    <ol>
+      <li><strong>قبل التنفيذ (3 دقائق):</strong> اختر سؤالًا قصيرًا يقيس المهارة نفسها، وجهّز مثالًا محلولًا وورقة أو سبورة.</li>
+      <li><strong>التشخيص (3–5 دقائق):</strong> اطلب من الطالب حل مثال مستقل، واسأله أن يشرح كيف توصل إلى الإجابة. سجّل نوع الخطأ بدل الاكتفاء بالدرجة.</li>
+      <li><strong>التدريس الموجّه (5–7 دقائق):</strong> نمذج خطوة واحدة بصوت مسموع، ثم حل مثالًا معه، ثم اطلب مثالًا مستقلًا.</li>
+      <li><strong>التحقق (2–3 دقائق):</strong> قدّم سؤالًا جديدًا من المهارة نفسها دون مساعدة وسجّل النتيجة.</li>
+    </ol>
+    <h4>أسئلة المعلم التشخيصية</h4>
+    <ul><li>ما الخطوة التي بدأت بها؟</li><li>ما الجزء الذي لم يكن واضحًا؟</li><li>كيف تتحقق من أن إجابتك صحيحة؟</li></ul>
+    <h4>قياس التحسن</h4>
+    <p>سجّل نتيجة التحقق القصير كنسبة مئوية، ثم أعد قياس المهارة بعد أسبوعين بمهمة مماثلة. قارنها بخط الأساس (${score === null ? 'حدّد خط الأساس أولًا' : score + '%'}). عدّل التدخل إذا لم يظهر تحسن، ولا تنسب التغير إلى التدخل وحده.</p>
+    <p>الأدوات المقترحة: ورقة مطبوعة أو السبورة، بما يناسب المدارس محدودة الأجهزة.</p>`;
+  const html = `<div class="card" style="margin-top:.8rem;border-right:4px solid var(--primary)">
+    <h3>دليل تنفيذ عملي للمعلم</h3>${content}
+    <button class="btn small outline" type="button" onclick="printInterventionGuide()">طباعة دليل التنفيذ</button>
+  </div>`;
+  window.atharInterventionGuideHtml = html;
+  return html;
+}
+
+function printInterventionGuide() {
+  const html = window.atharInterventionGuideHtml;
+  if (!html) return showToast('أنشئ المقترح الذكي أولًا.');
+  const win = window.open('', '_blank');
+  if (!win) return showToast('اسمح بفتح نافذة الطباعة.');
+  win.document.write(`<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><title>دليل تنفيذ — أثَر</title><style>body{font-family:Arial,sans-serif;line-height:1.8;padding:24px;color:#172b45}h3,h4{color:#174a83}li{margin:.35rem 0}blockquote{border-right:3px solid #8aa;padding:.4rem 1rem;background:#f5f8fc}button{display:none}@page{size:A4;margin:16mm}</style><body><h2>أثَر | دليل تنفيذ التدخل</h2>${html}</body></html>`);
+  win.document.close(); win.focus(); win.print();
+}
+
 async function suggestIntervention() {
   const button = document.getElementById('suggestInterventionBtn');
   const resultEl = document.getElementById('intAiResult');
@@ -444,7 +513,7 @@ async function suggestIntervention() {
     };
 
     const roots = (analysis.likelyRoots?.length ? analysis.likelyRoots : analysis.prerequisiteEvidence || []);
-    if (resultEl) resultEl.innerHTML = `<div class="card"><strong>ملخص الحالة المقترح</strong><p>${esc(analysis.level)} • ${score === null ? 'لا توجد نتيجة كافية' : `أحدث إتقان: ${score}%`}</p><h4>المهارات السابقة</h4><ul>${roots.map(root => `<li>${esc(displaySkillName(root.skill))}: ${root.score === null ? 'تحتاج إلى تقويم تشخيصي' : `${root.score}%`}</li>`).join('') || '<li>لا تتوفر بيانات كافية عن المهارات السابقة.</li>'}</ul><h4>الأدلة من السجلات</h4><ul>${(analysis.evidence || []).map(item => `<li>${esc(item)}</li>`).join('') || '<li>لا توجد أدلة مسجلة.</li>'}</ul><p class="note">${esc(analysis.disclaimer || 'راجع الاقتراح قبل اعتماده.')}</p><span class="badge success">تم تجهيز مسودة التدخل في الحقول أدناه</span></div>`;
+    if (resultEl) resultEl.innerHTML = `<div class="card"><strong>ملخص الحالة المقترح</strong><p>${esc(analysis.level)} • ${score === null ? 'لا توجد نتيجة كافية' : `أحدث إتقان: ${score}%`}</p><h4>المهارات السابقة</h4><ul>${roots.map(root => `<li>${esc(displaySkillName(root.skill))}: ${root.score === null ? 'تحتاج إلى تقويم تشخيصي' : `${root.score}%`}</li>`).join('') || '<li>لا تتوفر بيانات كافية عن المهارات السابقة.</li>'}</ul><h4>الأدلة من السجلات</h4><ul>${(analysis.evidence || []).map(item => `<li>${esc(item)}</li>`).join('') || '<li>لا توجد أدلة مسجلة.</li>'}</ul><p class="note">${esc(analysis.disclaimer || 'راجع الاقتراح قبل اعتماده.')}</p><span class="badge success">تم تجهيز مسودة التدخل في الحقول أدناه</span></div>${buildInterventionGuide(analysis, observedErrors)}`;
     showToast('تم تحليل الحالة وتجهيز مسودة التدخل؛ راجعها قبل الحفظ.');
   } catch (error) {
     if (resultEl) resultEl.innerHTML = `<div class="note">${esc(error.message)}</div>`;
