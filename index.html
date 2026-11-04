@@ -313,24 +313,29 @@
       <p class="note">اختر التدخل الذي نُفّذ بالفعل حتى يرتبط قياس التحسن بسجله.</p>
       <label>النتيجة قبل التدخل (%)</label>
       <input type="number" id="before" min="0" max="100" placeholder="0–100">
-      <label>تاريخ القياس القبلي</label>
-      <input type="date" id="impactBeforeDate">
-      <label>أداة القياس المستخدمة (نفس المهارة ونفس معايير التصحيح)</label>
-      <input type="text" id="impactTool" placeholder="مثال: بطاقة فهم مقروء من 10 أسئلة">
-      <label>النتيجة بعد التدخل (%)</label>
-      <input type="number" id="after" min="0" max="100" placeholder="0–100">
-      <label>تاريخ القياس البعدي</label>
-      <input type="date" id="impactAfterDate">
-      <label>طريقة تنفيذ الأنشطة</label>
-      <select id="impactActivityMode"><option value="">اختر طريقة التنفيذ</option><option value="offline">ورقة وسبورة دون أجهزة أو إنترنت</option><option value="shared">جهاز المعلم وشاشة مشتركة</option><option value="online">أجهزة للطلبة وإنترنت</option></select>
-      <div class="grid-two">
-        <div><label>الجلسات المخططة</label><input type="number" id="impactSessionsPlanned" min="1" max="30" placeholder="مثال: 4"></div>
-        <div><label>الجلسات المنفذة</label><input type="number" id="impactSessionsDone" min="0" max="30" placeholder="مثال: 3"></div>
-      </div>
-      <label>دليل أو ملاحظة المعلم (اختياري)</label>
-      <textarea id="impactEvidenceNote" rows="2" placeholder="مثال: 4 إجابات صحيحة من 5، وتمكن من تحديد الفكرة الرئيسة دون مساعدة."></textarea>
-      <label>نتيجة قياس المتابعة بعد أسبوعين (اختياري %)</label>
-      <input type="number" id="impactFollowup" min="0" max="100" placeholder="0–100">
+      <details class="secondary-tools-disclosure impact-evidence-disclosure">
+        <summary><span>توثيق الأدلة والتفاصيل</span><small>اختياري — افتحه لتوثيق جودة التنفيذ والمتابعة</small></summary>
+        <div class="secondary-tools-content">
+          <label>تاريخ القياس القبلي</label>
+          <input type="date" id="impactBeforeDate">
+          <label>أداة القياس المستخدمة (نفس المهارة ونفس معايير التصحيح)</label>
+          <input type="text" id="impactTool" placeholder="مثال: بطاقة فهم مقروء من 10 أسئلة">
+          <label>النتيجة بعد التدخل (%)</label>
+          <input type="number" id="after" min="0" max="100" placeholder="0–100">
+          <label>تاريخ القياس البعدي</label>
+          <input type="date" id="impactAfterDate">
+          <label>طريقة تنفيذ الأنشطة</label>
+          <select id="impactActivityMode"><option value="">اختر طريقة التنفيذ</option><option value="offline">ورقة وسبورة دون أجهزة أو إنترنت</option><option value="shared">جهاز المعلم وشاشة مشتركة</option><option value="online">أجهزة للطلبة وإنترنت</option></select>
+          <div class="grid-two">
+          <div><label>الجلسات المخططة</label><input type="number" id="impactSessionsPlanned" min="1" max="30" placeholder="مثال: 4"></div>
+          <div><label>الجلسات المنفذة</label><input type="number" id="impactSessionsDone" min="0" max="30" placeholder="مثال: 3"></div>
+          </div>
+          <label>دليل أو ملاحظة المعلم (اختياري)</label>
+          <textarea id="impactEvidenceNote" rows="2" placeholder="مثال: 4 إجابات صحيحة من 5، وتمكن من تحديد الفكرة الرئيسة دون مساعدة."></textarea>
+          <label>نتيجة قياس المتابعة بعد أسبوعين (اختياري %)</label>
+          <input type="number" id="impactFollowup" min="0" max="100" placeholder="0–100">
+        </div>
+      </details>
       <button class="btn" onclick="calcImpact()">حساب الفرق وتوثيق الأدلة</button>
       <div id="impactResult" style="margin-top:.8rem;"></div>
     </div>
