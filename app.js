@@ -482,7 +482,7 @@ function renderAnalysis(analysis, destinationId) {
     status:item.score === null ? 'غير مقاس — يحتاج إلى تقويم تشخيصي' : item.score < 70 ? 'فجوة محتملة وفق النتائج' : 'لا تظهر فجوة في النتائج المتاحة',
     evidence:item.score === null ? 'لا توجد نتيجة مسجلة لهذه المهارة السابقة.' : `متوسط أحدث النتائج ${item.score}% من ${item.sampleSize || 0} سجل/سجلات.`
   }));
-  const teacherObservation = analysis.observedErrors || 'لم تُسجل ملاحظة عن نمط الخطأ؛ افحص إجابات الطلبة لتحديده.';
+  const teacherObservation = analysis.observedErrors || (analysis.evidence || []).find(item => String(item).startsWith('ملاحظة المعلم:'))?.replace('ملاحظة المعلم:', '').trim() || 'لم تُسجل ملاحظة عن نمط الخطأ؛ افحص إجابات الطلبة لتحديده.';
   const rootStatus = analysis.rootCauseStatus || (roots.length ? 'تحتاج المهارات السابقة إلى مراجعة الأدلة.' : 'لا تتوفر خريطة موثقة للمهارات السابقة.');
   const evidenceItems = analysis.evidence || [];
   el.innerHTML = `<div class="card">
