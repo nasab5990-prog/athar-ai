@@ -230,9 +230,14 @@
       <label>الملاحظة الصفية / نوع الخطأ</label>
       <label>المهارة المستهدفة</label>
       <input id="analysisSkill" type="text" placeholder="مثال: تمثيل الكسور أو الفهم المقروء">
-      <label>الطالب (اختياري لتحليل فردي)</label>
-      <select id="analysisStudent"><option value="">بيانات التقويمات المتاحة في نطاق صلاحيتك</option></select>
       <textarea id="errorInput" rows="3" placeholder="صف الخطأ كما ظهر في إجابات الطلبة..."></textarea>
+      <details class="secondary-tools-disclosure">
+        <summary>تحديد طالب للتحليل الفردي <small>اختياري — اتركه مغلقًا لتحليل أنماط الصف</small></summary>
+        <div class="secondary-tools-content">
+          <label>الطالب</label>
+          <select id="analysisStudent"><option value="">بيانات التقويمات المتاحة في نطاق صلاحيتك</option></select>
+        </div>
+      </details>
       <button class="btn" onclick="analyzeErrors()">تحليل</button>
       <div id="analysisResult" style="margin-top:.8rem;"></div>
     </div>
