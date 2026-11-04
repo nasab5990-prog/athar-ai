@@ -262,3 +262,45 @@ body.dark .sidebar-actions .logout-action {
 .curriculum-extra{margin:.4rem 0 .8rem;background:transparent}
 .curriculum-extra > summary{font-size:.9rem;padding:.65rem .8rem}
 #curriculumCatalogStatus{margin:.25rem 0 .5rem}
+
+
+/* إظهار أدوات إدارة الطلبة الثانوية عند الحاجة فقط */
+.secondary-tools-disclosure{
+  margin: .8rem 0;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.secondary-tools-disclosure > summary{
+  list-style: none;
+  cursor: pointer;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:.35rem .8rem;
+  padding:.85rem 1rem;
+  color:var(--text);
+  font-weight:800;
+}
+.secondary-tools-disclosure > summary::-webkit-details-marker{display:none}
+.secondary-tools-disclosure > summary::after{
+  content:"+";
+  color:var(--primary);
+  font-size:1.2rem;
+  margin-inline-start:auto;
+}
+.secondary-tools-disclosure[open] > summary::after{content:"−"}
+.secondary-tools-disclosure > summary small{
+  color:var(--text-light);
+  font-size:.78rem;
+  font-weight:400;
+}
+.secondary-tools-card{
+  margin:0!important;
+  border:0!important;
+  border-top:1px solid var(--border)!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+}
