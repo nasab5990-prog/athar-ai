@@ -176,80 +176,26 @@
     </div>
     <details class="secondary-tools-disclosure">
       <summary><span>إضافة مجموعة طلبة دفعة واحدة</span><small>استخدمها عند إدخال قائمة كاملة</small></summary>
-      <div class="card secondary-tools-card">
-      <h3>إضافة مجموعة طلبة دفعة واحدة</h3>
-      <p class="note">الصقي الأسماء، اسمًا في كل سطر. تُطبق قيمة الصف والشعبة المحددين على جميع الأسماء. الحد الأقصى 100 طالب في الدفعة.</p>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin:.7rem 0;">
-        <div><label>صف المجموعة</label><select id="bulkGrade"><option value="" selected disabled>اختر الصف</option>
-            <option value="الأول">الأول</option>
-            <option value="الثاني">الثاني</option>
-            <option value="الثالث">الثالث</option>
-            <option value="الرابع">الرابع</option>
-            <option value="الخامس">الخامس</option>
-            <option value="السادس">السادس</option>
-            <option value="السابع">السابع</option>
-            <option value="الثامن">الثامن</option>
-            <option value="التاسع">التاسع</option>
-            <option value="العاشر">العاشر</option>
-            <option value="الحادي عشر">الحادي عشر</option>
-            <option value="الثاني عشر">الثاني عشر</option>
-        </select></div>
-        <div><label>شعبة المجموعة</label><select id="bulkSection"><option value="" selected disabled>اختر الشعبة</option>
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-            <option value="5">5</option>
-            <option value="6">6</option>
-            <option value="7">7</option>
-            <option value="8">8</option>
-            <option value="9">9</option>
-            <option value="10">10</option>
-        </select></div>
+      <div class="secondary-tools-content">
+        <p class="note">الصقي الأسماء، اسمًا في كل سطر. تُطبق قيمة الصف والشعبة المحددين على جميع الأسماء. الحد الأقصى 100 طالب في الدفعة.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin:.7rem 0;">
+          <div><label>صف المجموعة</label><select id="bulkGrade"><option value="" selected disabled>اختر الصف</option><option value="الأول">الأول</option><option value="الثاني">الثاني</option><option value="الثالث">الثالث</option><option value="الرابع">الرابع</option><option value="الخامس">الخامس</option><option value="السادس">السادس</option><option value="السابع">السابع</option><option value="الثامن">الثامن</option><option value="التاسع">التاسع</option><option value="العاشر">العاشر</option><option value="الحادي عشر">الحادي عشر</option><option value="الثاني عشر">الثاني عشر</option></select></div>
+          <div><label>شعبة المجموعة</label><select id="bulkSection"><option value="" selected disabled>اختر الشعبة</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option></select></div>
+        </div>
+        <label for="bulkStudentNames">أسماء الطلبة (كل اسم في سطر مستقل)</label>
+        <textarea id="bulkStudentNames" rows="7" maxlength="12000" placeholder="أحمد محمد&#10;سارة علي&#10;خالد سعيد" style="width:100%;min-height:150px;resize:vertical;margin:.5rem 0 1rem;padding:.8rem;border:1px solid var(--border);border-radius:12px;font:inherit;line-height:1.8;" aria-describedby="bulkNamesHelp"></textarea>
+        <p id="bulkNamesHelp" class="note">اكتبي أو الصقي اسمًا واحدًا في كل سطر. يمكنك إدخال حتى 100 اسم.</p>
+        <button class="btn" type="button" onclick="bulkAddStudents()">حفظ أسماء المجموعة</button>
+        <div id="bulkImportResult" class="note" aria-live="polite"></div>
       </div>
-      <label for="bulkStudentNames">أسماء الطلبة (كل اسم في سطر مستقل)</label>
-      <textarea id="bulkStudentNames" rows="7" maxlength="12000" placeholder="أحمد محمد\nسارة علي\nخالد سعيد" style="width:100%;min-height:150px;resize:vertical;margin:.5rem 0 1rem;padding:.8rem;border:1px solid var(--border);border-radius:12px;font:inherit;line-height:1.8;" aria-describedby="bulkNamesHelp"></textarea>
-      <p id="bulkNamesHelp" class="note">اكتبي أو الصقي اسمًا واحدًا في كل سطر. يمكنك إدخال حتى 100 اسم.</p>
-      <button class="btn" type="button" onclick="bulkAddStudents()">حفظ أسماء المجموعة</button>
-      <div id="bulkImportResult" class="note" aria-live="polite"></div>
-    </div>
-       </div>
     </details>
     <details class="secondary-tools-disclosure">
       <summary><span>تصفية الطلبة</span><small>افتحها عند البحث حسب الصف أو الشعبة</small></summary>
-      <div class="card secondary-tools-card">
-   <div class="card" style="margin-top:1rem;">
-      <h3>تصفية حسب الصف والشعبة</h3>
-      <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
-        <select id="filterGrade" onchange="renderStudents()">
-          <option value="">كل الصفوف</option>
-          <option value="الأول">الأول</option>
-          <option value="الثاني">الثاني</option>
-          <option value="الثالث">الثالث</option>
-          <option value="الرابع">الرابع</option>
-          <option value="الخامس">الخامس</option>
-          <option value="السادس">السادس</option>
-          <option value="السابع">السابع</option>
-          <option value="الثامن">الثامن</option>
-          <option value="التاسع">التاسع</option>
-          <option value="العاشر">العاشر</option>
-          <option value="الحادي عشر">الحادي عشر</option>
-          <option value="الثاني عشر">الثاني عشر</option>
-        </select>
-        <select id="filterSection" onchange="renderStudents()" style="max-width:160px;">
-          <option value="">كل الشعب</option>
-          <option value="1">1</option>
-          <option value="2">2</option>
-          <option value="3">3</option>
-          <option value="4">4</option>
-          <option value="5">5</option>
-          <option value="6">6</option>
-          <option value="7">7</option>
-          <option value="8">8</option>
-          <option value="9">9</option>
-          <option value="10">10</option>
-        </select>
-      </div>
+      <div class="secondary-tools-content">
+        <div style="display:flex;gap:.6rem;flex-wrap:wrap;">
+          <select id="filterGrade" onchange="renderStudents()"><option value="">كل الصفوف</option><option value="الأول">الأول</option><option value="الثاني">الثاني</option><option value="الثالث">الثالث</option><option value="الرابع">الرابع</option><option value="الخامس">الخامس</option><option value="السادس">السادس</option><option value="السابع">السابع</option><option value="الثامن">الثامن</option><option value="التاسع">التاسع</option><option value="العاشر">العاشر</option><option value="الحادي عشر">الحادي عشر</option><option value="الثاني عشر">الثاني عشر</option></select>
+          <select id="filterSection" onchange="renderStudents()" style="max-width:160px;"><option value="">كل الشعب</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option></select>
+        </div>
       </div>
     </details>
     <div class="card" style="margin-top:1rem;">
