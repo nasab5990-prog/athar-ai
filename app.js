@@ -148,6 +148,85 @@ async function loadRecords() {
   renderStudentProgress(); renderPrincipalView(); updateDashboard(); updateCycle(); updateAlerts(); updateStatus(); renderReports();
 }
 
+// Curriculum selectors are populated only from verified curriculum records.
+const ATHAR_CURRICULUM_CATALOG = window.ATHAR_CURRICULUM_CATALOG || {};
+const ATHAR_SUBJECTS_BY_GRADE = {
+  2:['الرياضيات','العلوم','اللغة العربية','التربية الإسلامية','عالمي الرقمي','اللغة الإنجليزية','المهارات الحياتية'],
+  3:['اللغة العربية','الدراسات الاجتماعية','الرياضيات','العلوم','اللغة الإنجليزية','المهارات الحياتية','التربية الإسلامية','عالمي الرقمي'],
+  5:['المهارات الحياتية','الرياضيات','العلوم','تقنية المعلومات','اللغة الإنجليزية','اللغة العربية','الدراسات الاجتماعية','التربية الإسلامية'],
+  7:['ديني قيمي','الدراسات الاجتماعية','لغتي الجميلة','المهارات الحياتية','الرياضيات','العلوم','اللغة الإنجليزية','تقنية المعلومات'],
+  9:['التربية الإسلامية','اللغة العربية','الرياضيات','اللغة الإنجليزية','الكيمياء','الفيزياء','الأحياء','المهارات الحياتية','تقنية المعلومات','الفنون التشكيلية','الرياضة المدرسية','الدراسات الاجتماعية'],
+  10:['التربية الإسلامية','الرياضة المدرسية','اللغة العربية','الرياضيات','اللغة الإنجليزية','الكيمياء','الفيزياء','الأحياء','المهارات الحياتية','تقنية المعلومات','الفنون التشكيلية','الدراسات الاجتماعية','المهارات الموسيقية'],
+  11:['التربية الإسلامية','اللغة العربية','الرياضيات','الأحياء','الكيمياء','الفيزياء','العلوم البيئية','هذا وطني','الجغرافيا الاقتصادية','الحضارة الإسلامية','المهارات الموسيقية','تقنية المعلومات','الفنون التشكيلية','الرياضة المدرسية'],
+  12:['التربية الإسلامية','اللغة العربية','اللغة الإنجليزية','الرياضيات','الأحياء','الكيمياء','الفيزياء','هذا وطني','الجغرافيا الاقتصادية','تقنية المعلومات','الفنون التشكيلية','الرياضة المدرسية']
+};
+function setCurriculumOptions(select, placeholder, values) {
+  if (!select) return;
+  select.innerHTML = '';
+  const first = document.createElement('option');
+  first.value = ''; first.textContent = placeholder; select.appendChild(first);
+  (values || []).forEach(item => {
+    const option = document.createElement('option');
+    option.value = typeof item === 'string' ? item : item.id;
+    option.textContent = typeof item === 'string' ? item : item.title;
+    select.appendChild(option);
+  });
+  select.disabled = !(values || []).length;
+}
+function updateCurriculumSubjects() {
+  const grade = document.getElementById('intGrade')?.value || '';
+  const subject = document.getElementById('intSubject');
+  const unit = document.getElementById('intUnit');
+  const lesson = document.getElementById('intLesson');
+  const outcome = document.getElementById('intOutcome');
+  const status = document.getElementById('curriculumCatalogStatus');
+  const rows = ATHAR_CURRICULUM_CATALOG[grade] || {};
+  const subjects = Object.keys(rows);
+  const verifiedSubjects = subjects.length ? subjects : ATHAR_SUBJECTS_BY_GRADE[grade] || [];
+  setCurriculumOptions(subject, grade ? 'اختر المادة' : 'اختر الصف أولًا', verifiedSubjects);
+  setCurriculumOptions(unit, 'اختر المادة أولًا', []);
+  setCurriculumOptions(lesson, 'اختر الوحدة أولًا', []);
+  if (outcome) outcome.value = '';
+  if (status) status.textContent = !grade
+    ? 'اختر الصف أولًا.'
+    : subjects.length
+      ? 'اختر المادة لعرض وحداتها ودروسها ونواتج التعلم الموثقة.'
+      : verifiedSubjects.length
+        ? 'المواد المعروضة مستندة إلى فهرس مكتبة الوزارة. فهرسة الوحدات والدروس ونواتج التعلم لهذا الصف قيد الاستكمال.'
+        : 'لم تُستكمل فهرسة مواد هذا الصف بعد؛ لن نعرض بيانات غير موثقة.';
+}
+function updateCurriculumUnits() {
+  const grade = document.getElementById('intGrade')?.value || '';
+  const subject = document.getElementById('intSubject')?.value || '';
+  const rows = ATHAR_CURRICULUM_CATALOG[grade]?.[subject] || {};
+  setCurriculumOptions(document.getElementById('intUnit'), 'اختر الوحدة', Object.keys(rows).map(key => ({id:key,title:rows[key].title || key})));
+  setCurriculumOptions(document.getElementById('intLesson'), 'اختر الوحدة أولًا', []);
+  const outcome = document.getElementById('intOutcome'); if (outcome) outcome.value = '';
+  const status = document.getElementById('curriculumCatalogStatus');
+  if (status) status.textContent = Object.keys(rows).length ? 'اختر الوحدة لعرض الدروس.' : 'لم تُفهرس وحدات هذه المادة بعد. ستظهر هنا فور استيراد بيانات الكتاب المعتمد.';
+}
+function updateCurriculumLessons() {
+  const grade = document.getElementById('intGrade')?.value || '';
+  const subject = document.getElementById('intSubject')?.value || '';
+  const unit = document.getElementById('intUnit')?.value || '';
+  const lessons = ATHAR_CURRICULUM_CATALOG[grade]?.[subject]?.[unit]?.lessons || {};
+  setCurriculumOptions(document.getElementById('intLesson'), 'اختر الدرس', Object.keys(lessons).map(key => ({id:key,title:lessons[key].title || key})));
+  const outcome = document.getElementById('intOutcome'); if (outcome) outcome.value = '';
+  const status = document.getElementById('curriculumCatalogStatus');
+  if (status) status.textContent = Object.keys(lessons).length ? 'اختر الدرس لعرض ناتج التعلم تلقائيًا.' : 'لم تُفهرس دروس هذه الوحدة بعد.';
+}
+function updateCurriculumOutcome() {
+  const grade = document.getElementById('intGrade')?.value || '';
+  const subject = document.getElementById('intSubject')?.value || '';
+  const unit = document.getElementById('intUnit')?.value || '';
+  const lesson = document.getElementById('intLesson')?.value || '';
+  const record = ATHAR_CURRICULUM_CATALOG[grade]?.[subject]?.[unit]?.lessons?.[lesson];
+  const outcome = document.getElementById('intOutcome');
+  if (outcome) outcome.value = record?.learning_outcome || '';
+  const status = document.getElementById('curriculumCatalogStatus');
+  if (status) status.textContent = record?.learning_outcome ? 'تم عرض ناتج التعلم من سجل المنهج.' : 'لا يوجد ناتج تعلم موثق لهذا الدرس حتى الآن.';
+}
+
 function toggleGroup(el) {
   const group = el?.parentElement;
   if (!group) return;
@@ -193,6 +272,10 @@ function show(id) {
   if (id === 'reports') renderReports();
 }
 document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('intGrade')?.addEventListener('change', updateCurriculumSubjects);
+  document.getElementById('intSubject')?.addEventListener('change', updateCurriculumUnits);
+  document.getElementById('intUnit')?.addEventListener('change', updateCurriculumLessons);
+  document.getElementById('intLesson')?.addEventListener('change', updateCurriculumOutcome);
   document.querySelectorAll('.sidebar a[data-section]').forEach(link => link.addEventListener('click', event => {
     event.preventDefault(); show(link.dataset.section);
   }));
