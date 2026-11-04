@@ -47,3 +47,30 @@ window.ATHAR_SUBJECTS_BY_GRADE['8'] = [
 ];
 window.ATHAR_CURRICULUM_SOURCE.verifiedGrades = ['1','2','3','4','5','6','7','8','9','10','11','12'];
 window.ATHAR_CURRICULUM_SOURCE.pendingGrades = [];
+
+/* موضع منهجي موثق مبدئيًا: رياضيات الصف الأول.
+   المصدر وثيقة وزارة التعليم: الدليل الإرشادي لعبارات «أستطيع أن» للصفوف 1-4،
+   ويتضمن مثالًا للصف الأول في نشاط العد حتى 10. */
+window.ATHAR_CURRICULUM_CATALOG = window.ATHAR_CURRICULUM_CATALOG || {};
+window.ATHAR_CURRICULUM_CATALOG['1'] = window.ATHAR_CURRICULUM_CATALOG['1'] || {};
+window.ATHAR_CURRICULUM_CATALOG['1']['الرياضيات'] = {
+  'unit-1': {
+    title: 'العدد والعد',
+    semester: 'يُحدد وفق ترتيب الكتاب المدرسي المعتمد',
+    source: {
+      title: 'الدليل الإرشادي لتوظيف عبارات «أستطيع أن» للصفوف (1-4) - مثال رياضيات الصف الأول',
+      url: 'https://home.moe.gov.om/file/ggg/wtheqa/1818/4.pdf',
+      note: 'يتضمن المصدر نشاط «العد حتى ١٠» وهدف حفظ الأعداد؛ لم يُنسب إليه فصل دراسي لعدم وضوحه في المقتطف.'
+    },
+    lessons: {
+      'lesson-1': {
+        title: 'العد حتى ١٠',
+        learning_outcome: 'أستطيع أن أعد حتى ١٠ أشياء.',
+        learning_target: 'التعرف على حفظ الأعداد في الأشياء حتى ٢٠ (رمز الهدف الوارد في الوثيقة: 1Nn3).',
+        assessment: 'ملاحظة العد المنظم، والتحقق من عد كل عنصر مرة واحدة، ومناقشة ثبات العدد عند إعادة ترتيب الأشياء.',
+        source_url: 'https://home.moe.gov.om/file/ggg/wtheqa/1818/4.pdf',
+        source_year: '2018'
+      }
+    }
+  }
+};
