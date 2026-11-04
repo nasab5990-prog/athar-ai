@@ -174,7 +174,9 @@
         <button class="btn" onclick="addStudent()">إضافة</button>
       </div>
     </div>
-    <div class="card" style="margin-top:1rem;">
+    <details class="secondary-tools-disclosure">
+      <summary><span>إضافة مجموعة طلبة دفعة واحدة</span><small>استخدمها عند إدخال قائمة كاملة</small></summary>
+      <div class="card secondary-tools-card">
       <h3>إضافة مجموعة طلبة دفعة واحدة</h3>
       <p class="note">الصقي الأسماء، اسمًا في كل سطر. تُطبق قيمة الصف والشعبة المحددين على جميع الأسماء. الحد الأقصى 100 طالب في الدفعة.</p>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin:.7rem 0;">
@@ -211,7 +213,12 @@
       <button class="btn" type="button" onclick="bulkAddStudents()">حفظ أسماء المجموعة</button>
       <div id="bulkImportResult" class="note" aria-live="polite"></div>
     </div>
-    <div class="card" style="margin-top:1rem;">
+       </div>
+    </details>
+    <details class="secondary-tools-disclosure">
+      <summary><span>تصفية الطلبة</span><small>افتحها عند البحث حسب الصف أو الشعبة</small></summary>
+      <div class="card secondary-tools-card">
+   <div class="card" style="margin-top:1rem;">
       <h3>تصفية حسب الصف والشعبة</h3>
       <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
         <select id="filterGrade" onchange="renderStudents()">
@@ -243,7 +250,8 @@
           <option value="10">10</option>
         </select>
       </div>
-    </div>
+      </div>
+    </details>
     <div class="card" style="margin-top:1rem;">
       <h3>الطلبة (<span id="studentCount">0</span>)</h3>
       <div id="studentsList" style="margin-top:0.6rem;"></div>
