@@ -475,13 +475,29 @@ function renderAnalysis(analysis, destinationId) {
   const el = document.getElementById(destinationId);
   if (!el) return;
   window.atharLastAnalysis = true;
-  const score = analysis.targetScore === null ? 'لا توجد نتيجة مرتبطة بعد' : `آخر إتقان: ${analysis.targetScore}%`;
-  const trend = analysis.trend === null ? '' : ` • التغير: ${analysis.trend > 0 ? '+' : ''}${analysis.trend}`;
-  const hasWeakRoots = analysis.likelyRoots.length > 0;
-  const rootsToShow = hasWeakRoots ? analysis.likelyRoots : analysis.prerequisiteEvidence;
-  const rootsTitle = hasWeakRoots ? 'جذور تعثر محتملة وفق النتائج' : 'المهارات السابقة التي يُنصح بالتحقق منها';
-  el.innerHTML = `<div class="card"><p><span class="badge ${analysis.targetScore !== null && analysis.targetScore < 50 ? 'danger' : 'info'}">${esc(analysis.level)}</span> <strong>${esc(displaySkillName(analysis.skill))}</strong></p><p>${esc(score + trend)}</p><h4>${rootsTitle}</h4><ul>${rootsToShow.map(item => `<li>${esc(displaySkillName(item.skill))}${item.score === null ? ' — تحتاج إلى تقويم تشخيصي' : ` — متوسط الإتقان ${item.score}%`}</li>`).join('') || '<li>لا تتوفر خريطة مهارات كافية لهذه المهارة.</li>'}</ul><h4>الأدلة</h4><ul>${analysis.evidence.map(item => `<li>${esc(item)}</li>`).join('') || '<li>لا توجد بيانات تقويم مرتبطة بالمهارة بعد.</li>'}</ul><h4>التوصيات المقترحة</h4><ol>${analysis.recommendations.map(item => `<li>${esc(item)}</li>`).join('')}</ol>${analysis.nextSkills.length ? `<p><strong>المهارات اللاحقة:</strong> ${analysis.nextSkills.map(skill => esc(displaySkillName(skill))).join('، ')}</p>` : ''}<p class="note">${esc(analysis.disclaimer)}</p><button class="btn small" type="button" data-use-analysis>نقل التوصيات إلى التدخل</button></div>`;
-  el.querySelector('[data-use-analysis]')?.addEventListener('click', () => useActivity(displaySkillName(analysis.skill), analysis.recommendations.join('\n')));
+  const score = analysis.targetScore === null ? 'لا توجد نتيجة مرتبطة بعد' : `أحدث إتقان: ${analysis.targetScore}%`;
+  const trend = analysis.trend === null ? '' : ` • التغير عن السابق: ${analysis.trend > 0 ? '+' : ''}${analysis.trend} نقطة`;
+  const roots = analysis.rootCandidates || (analysis.likelyRoots?.length ? analysis.likelyRoots : analysis.prerequisiteEvidence || []).map(item => ({
+    ...item,
+    status:item.score === null ? 'غير مقاس — يحتاج إلى تقويم تشخيصي' : item.score < 70 ? 'فجوة محتملة وفق النتائج' : 'لا تظهر فجوة في النتائج المتاحة',
+    evidence:item.score === null ? 'لا توجد نتيجة مسجلة لهذه المهارة السابقة.' : `متوسط أحدث النتائج ${item.score}% من ${item.sampleSize || 0} سجل/سجلات.`
+  }));
+  const teacherObservation = analysis.observedErrors || 'لم تُسجل ملاحظة عن نمط الخطأ؛ افحص إجابات الطلبة لتحديده.';
+  const rootStatus = analysis.rootCauseStatus || (roots.length ? 'تحتاج المهارات السابقة إلى مراجعة الأدلة.' : 'لا تتوفر خريطة موثقة للمهارات السابقة.');
+  const evidenceItems = analysis.evidence || [];
+  el.innerHTML = `<div class="card">
+    <p><span class="badge ${analysis.targetScore !== null && analysis.targetScore < 50 ? 'danger' : 'info'}">${esc(analysis.level)}</span> <strong>${esc(displaySkillName(analysis.skill))}</strong></p>
+    <p>${esc(score + trend)} ${analysis.sampleSize ? ` • عينة التحليل: ${Number(analysis.sampleSize)}` : ''}</p>
+    <div class="card" style="margin:.6rem 0"><strong>1 | المهارة المتأثرة</strong><p>${esc(displaySkillName(analysis.skill))}</p></div>
+    <div class="card" style="margin:.6rem 0"><strong>2 | نمط الخطأ الملحوظ</strong><p>${esc(teacherObservation)}</p><p class="note">هذا الوصف مأخوذ من ملاحظة المعلم، وليس تشخيصًا آليًا للإجابات.</p></div>
+    <div class="card" style="margin:.6rem 0"><strong>3 | الجذر المحتمل</strong><p class="note">${esc(rootStatus)}</p><ul>${roots.map(item => `<li><strong>${esc(displaySkillName(item.skill))}</strong> — ${item.score === null ? 'لا توجد نتيجة' : `متوسط الإتقان ${Number(item.score)}%`}<br><span class="note">${esc(item.status || '')} • ${esc(item.evidence || '')}</span></li>`).join('') || '<li>لا توجد مهارات سابقة موثقة لهذه المهارة بعد.</li>'}</ul></div>
+    <div class="card" style="margin:.6rem 0"><strong>4 | الدليل من السجلات</strong><ul>${evidenceItems.map(item => `<li>${esc(item)}</li>`).join('') || '<li>لا توجد نتائج تقويم مرتبطة بالمهارة بعد.</li>'}</ul></div>
+    <div class="card" style="margin:.6rem 0"><strong>5 | التدخل المقترح</strong><ol>${(analysis.recommendations || []).map(item => `<li>${esc(item)}</li>`).join('') || '<li>ابدأ بتقويم تشخيصي قصير قبل اختيار التدخل.</li>'}</ol></div>
+    ${analysis.nextSkills?.length ? `<p><strong>المهارات اللاحقة:</strong> ${analysis.nextSkills.map(skill => esc(displaySkillName(skill))).join('، ')}</p>` : ''}
+    <p class="note">${esc(analysis.disclaimer || 'النتيجة مساندة، ويعتمد القرار النهائي على مراجعة المعلم.')}</p>
+    <button class="btn small" type="button" data-use-analysis>نقل التوصيات إلى التدخل</button>
+  </div>`;
+  el.querySelector('[data-use-analysis]')?.addEventListener('click', () => useActivity(displaySkillName(analysis.skill), (analysis.recommendations || []).join('\n')));
 }
 async function analyzeErrors() {
   const skill = document.getElementById('analysisSkill')?.value.trim() || document.getElementById('assessName')?.value.trim() || 'تمثيل الكسور';
