@@ -449,7 +449,8 @@ async function saveAssessment() {
   const studentId = document.getElementById('assessmentStudent')?.value || null;
   if (!skill || total <= 0 || correct < 0 || correct > total) return showToast('تحقق من المهارة وعدد الإجابات؛ يجب ألا تتجاوز الصحيحة الإجمالي.');
   const student = students.find(s => s.student_id === studentId);
-  const payload = { student_id:studentId, student_name:student?.name || null, skill, name:skill, total, correct, pct:Math.round(correct / total * 100), date:new Date().toISOString() };
+  const diagnosticQuestions = [...document.querySelectorAll('[data-diagnostic-question]')].map((field, index) => ({ number:index + 1, question:field.value.trim() })).filter(item => item.question);
+  const payload = { student_id:studentId, student_name:student?.name || null, skill, name:skill, total, correct, pct:Math.round(correct / total * 100), date:new Date().toISOString(), diagnostic_questions:diagnosticQuestions, diagnostic_source:diagnosticQuestions.length ? 'قوالب إرشادية قابلة للتحرير' : null };
   try {
     const result = await syncRecord('assessment', payload);
     assessments.unshift({ ...result.payload, recordId:result.id });
@@ -458,6 +459,74 @@ async function saveAssessment() {
     renderAssess(); updateDashboard(); updateCycle(); updateAlerts();
     showToast('تم حفظ التقويم مركزيًا.');
   } catch (error) { showToast(error.message); }
+}
+function diagnosticQuestionSet(skill) {
+  const name = displaySkillName(skill);
+  const normalized = name.replace(/[أإآ]/g, 'ا').replace(/ى/g, 'ي');
+  if (/الفهم المقروء|فهم المقروء/.test(normalized)) {
+    const passage = 'خرجت مريم إلى الحديقة صباحًا، فرأت عامل النظافة يجمع الأوراق المتناثرة. ساعدته مريم، ثم وضعت الأوراق في سلة المهملات.';
+    return [
+      { question:`اقرأ النص: «${passage}» ثم: أين ذهبت مريم؟`, guide:'الإجابة المتوقعة: إلى الحديقة.' },
+      { question:'ماذا فعلت مريم عندما رأت عامل النظافة؟', guide:'الإجابة المتوقعة: ساعدته في جمع الأوراق.' },
+      { question:'استخرج من النص دليلًا يدل على تعاون مريم.', guide:'الإجابة المتوقعة: «ساعدته مريم».' }
+    ];
+  }
+  if (/الطلاقة|القراءة الجهرية/.test(normalized)) return [
+    {question:'اطلب من المتعلم قراءة فقرة قصيرة مناسبة لمستواه بصوت مسموع.',guide:'لاحظ صحة نطق الكلمات دون حذف أو إبدال.'},
+    {question:'اطلب إعادة قراءة جملتين مع مراعاة علامات الترقيم.',guide:'لاحظ الوقف المناسب والتنغيم.'},
+    {question:'اطلب قراءة الفقرة مرة أخرى بسلاسة.',guide:'سجّل الترددات والتوقفات غير المناسبة.'}
+  ];
+  if (/المفردات|معاني الكلمات|معنى الكلمة/.test(normalized)) return [
+    {question:'في جملة من اختيار المعلم، حدّد معنى كلمة مستهدفة بالاستعانة بالسياق.',guide:'يحدد المعنى المناسب من سياق الجملة، لا بالتخمين المنفصل.'},
+    {question:'اختر الكلمة الأقرب معنى للكلمة المستهدفة من بين ثلاثة بدائل.',guide:'يختار مرادفًا صحيحًا.'},
+    {question:'استخدم الكلمة المستهدفة في جملة من إنشائك.',guide:'يوظف الكلمة بمعنى صحيح في سياق جديد.'}
+  ];
+  if (/الفكر[ةه] الرئيس|الفكرة العامة/.test(normalized)) return [
+    {question:'اقرأ فقرة قصيرة، ثم عبّر عن موضوعها في جملة واحدة.',guide:'تعبّر الجملة عن الفكرة الجامعة لا عن تفصيل واحد.'},
+    {question:'اختر العنوان الأنسب للفقرة من بين ثلاثة عناوين.',guide:'يختار عنوانًا يشمل معظم أفكار النص.'},
+    {question:'حدّد تفصيلًا واحدًا يدعم الفكرة الرئيسة.',guide:'يذكر تفصيلًا مرتبطًا مباشرة بالفكرة.'}
+  ];
+  if (/الاستدلال|الاستنتاج/.test(normalized)) return [
+    {question:'اقرأ موقفًا قصيرًا يقدمه المعلم، ثم استنتج ما يمكن أن يحدث بعده.',guide:'يقدم استنتاجًا منطقيًا مستندًا إلى قرينة.'},
+    {question:'لماذا تصرّف الشخص في الموقف بهذه الطريقة؟ اذكر قرينة.',guide:'يربط السبب بقرينة واضحة في النص أو الموقف.'},
+    {question:'ما المعلومة التي يمكن استنتاجها دون أن تُذكر صراحة؟',guide:'يميز بين المعلومة الصريحة والاستنتاج المدعوم.'}
+  ];
+  if (/العد|الاعداد|العدد/.test(normalized)) return [
+    {question:'اعرض مجموعة من الأشياء (حتى 10)، واطلب عدّها واحدًا واحدًا.',guide:'يعد كل عنصر مرة واحدة ويصل إلى العدد الصحيح.'},
+    {question:'غيّر ترتيب الأشياء واطلب عدّها مرة أخرى.',guide:'يدرك أن تغيير الترتيب لا يغيّر العدد.'},
+    {question:'اطلب من المتعلم تكوين مجموعة تحتوي على عدد تحدده.',guide:'ينشئ مجموعة مطابقة للعدد المطلوب.'}
+  ];
+  if (/جمع|الطرح|الضرب|القسم|الكسور|العدد النسبي|الحساب/.test(normalized)) return [
+    {question:`قدّم مسألة قصيرة من الدرس تتطلب تطبيق مهارة «${name}».`,guide:'يتعرف العملية أو التمثيل المناسب قبل الحل.'},
+    {question:'قدّم مثالًا ثانيًا بأعداد أو تمثيل مختلف، واطلب توضيح خطوات الحل.',guide:'يطبق الإجراء بصورة صحيحة ويشرح خطوة أساسية.'},
+    {question:'اعرض حلًا يتضمن خطأ شائعًا، واطلب تحديد الخطأ وتصحيحه.',guide:'يحدد موضع الخطأ ويبرر التصحيح.'}
+  ];
+  return [
+    {question:`قدّم مهمة قصيرة مباشرة تقيس أداء المتعلم في «${name}».`,guide:'حدّد معيار النجاح قبل تطبيق المهمة.'},
+    {question:`قدّم مثالًا ثانيًا مختلفًا لقياس انتقال مهارة «${name}» إلى سياق جديد.`,guide:'تحقق من تطبيق المهارة لا مجرد تذكر المثال.'},
+    {question:`اعرض إجابة تتضمن خطأ شائعًا في «${name}»، واطلب من المتعلم تصحيحها.`,guide:'سجّل نوع الخطأ الذي ظهر لتحديد الاحتياج.'}
+  ];
+}
+function generateDiagnosticQuestions() {
+  const skill = document.getElementById('assessName')?.value.trim() || '';
+  if (!skill) return showToast('اكتب اسم المهارة أولًا أو اخترها من خريطة الجذور.');
+  const questions = diagnosticQuestionSet(skill);
+  const panel = document.getElementById('diagnosticQuestions');
+  if (!panel) return;
+  panel.hidden = false;
+  panel.innerHTML = `<div class="note">أسئلة إرشادية أولية مرتبطة باسم المهارة. راجعها وعدّلها لتناسب الصف والدرس قبل التطبيق؛ ليست تشخيصًا آليًا ولا توليدًا بالذكاء الاصطناعي.</div>${questions.map((item,index)=>`<div class="diagnostic-question"><label for="diagnosticQuestion${index}">السؤال ${index+1}</label><textarea id="diagnosticQuestion${index}" data-diagnostic-question rows="2">${esc(item.question)}</textarea><details><summary>مؤشر الإجابة / الملاحظة</summary><p>${esc(item.guide)}</p></details></div>`).join('')}`;
+  const total = document.getElementById('total');
+  const correct = document.getElementById('correct');
+  if (total) total.value = String(questions.length);
+  if (correct) correct.value = '';
+  showToast('أُعدّت 3 أسئلة إرشادية؛ راجعها ثم أدخل عدد الإجابات الصحيحة.');
+}
+function prepareDiagnosticAssessment(skill) {
+  const field = document.getElementById('assessName');
+  if (field) field.value = skill;
+  show('assessment');
+  generateDiagnosticQuestions();
+  field?.focus();
 }
 function renderAssess() {
   const el = document.getElementById('assessList');
@@ -491,11 +560,7 @@ function renderLearningRootMap(analysis, rootItems, observation, patternHint) {
     </div><p class="note">الأسهم توضح التسلسل التعلمي ولا تثبت علاقة سببية. لا تُعد المهارة السابقة جذرًا للتعثر إلا بعد توفر دليل تقويمي.</p>`;
   map.querySelectorAll('[data-root-skill]').forEach(button => {
     button.addEventListener('click', () => {
-      const field = document.getElementById('assessName');
-      if (field) field.value = button.dataset.rootSkill || '';
-      show('assessment');
-      field?.focus();
-      showToast('تم تجهيز التقويم للمهارة المختارة؛ أكمل عدد البنود والإجابات.');
+      prepareDiagnosticAssessment(button.dataset.rootSkill || '');
     });
   });
 }
