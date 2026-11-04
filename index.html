@@ -213,6 +213,8 @@
       <select id="assessmentStudent"><option value="">تقويم صفي (دون ربط بطالب)</option></select>
       <label>اسم التقويم / المهارة</label>
       <input type="text" id="assessName" placeholder="أدخل اسم المهارة">
+      <button class="btn secondary" type="button" onclick="generateDiagnosticQuestions()">إعداد أسئلة تشخيصية مقترحة</button>
+      <div id="diagnosticQuestions" class="diagnostic-questions" hidden></div>
       <label>إجمالي الأسئلة أو البنود</label>
       <input type="number" id="total" min="1" placeholder="مثال: 10">
       <label>الإجابات الصحيحة</label>
