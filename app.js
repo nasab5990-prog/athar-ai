@@ -727,7 +727,15 @@ function renderReports() {
     const lowCount = scores.filter(score => score < 70).length;
     return `<li><strong>${esc(skill)}</strong> — متوسط الإتقان ${average}% • نتائج دون 70%: ${lowCount} من ${scores.length}</li>`;
   }).join('');
-  el.innerHTML = `<p>الطلبة: ${students.length} • التقويمات: ${assessments.length} • التدخلات: ${interventions.length} • قياسات الأثر: ${impacts.length}</p><p>متوسط أحدث نتائج المهارات المسجلة: ${currentAssessments.length ? `${Math.round(currentAssessments.reduce((sum,a)=>sum+Number(a.pct||0),0)/currentAssessments.length)}%` : 'لا توجد بيانات'}</p><h4>ملخص المهارات</h4><ul>${skillRows || '<li>لا توجد نتائج مهارية كافية لإعداد الملخص.</li>'}</ul>`;
+  const linkedImpactRows = impacts.filter(item => item.intervention_record_id);
+  const impactRowsHtml = linkedImpactRows.slice(0,10).map(item => {
+    const intervention = interventions.find(row => String(row.recordId) === String(item.intervention_record_id));
+    const skill = displaySkillName(item.intervention_skill || intervention?.skill || 'مهارة غير محددة');
+    const studentName = item.student_name || intervention?.student_name || 'تقويم صفي';
+    const delta = Number(item.difference ?? (Number(item.after)-Number(item.before)));
+    return `<li><strong>${esc(skill)}</strong> — ${esc(studentName)}: ${Number(item.before)}% إلى ${Number(item.after)}% (${delta > 0 ? '+' : ''}${delta} نقطة) <span class="note">مرتبط بتدخل محفوظ</span></li>`;
+  }).join('');
+  el.innerHTML = `<p>الطلبة: ${students.length} • التقويمات: ${assessments.length} • التدخلات: ${interventions.length} • قياسات الأثر: ${impacts.length}</p><p>متوسط أحدث نتائج المهارات المسجلة: ${currentAssessments.length ? `${Math.round(currentAssessments.reduce((sum,a)=>sum+Number(a.pct||0),0)/currentAssessments.length)}%` : 'لا توجد بيانات'}</p><h4>ملخص المهارات</h4><ul>${skillRows || '<li>لا توجد نتائج مهارية كافية لإعداد الملخص.</li>'}</ul><h4>أثر التدخلات المرتبطة</h4><ul>${impactRowsHtml || '<li>لم تُسجل قياسات أثر مرتبطة بتدخلات بعد.</li>'}</ul>`;
 }
 async function loadSchoolUsers() {
   const el = document.getElementById('usersList');
