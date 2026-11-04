@@ -658,6 +658,7 @@ function renderAnalysisHistory() {
       const item = saved[Number(button.dataset.analysisIndex)];
       if (!item) return;
       const result = item.result || item.analysis;
+      window.atharLastAnalysisRecordId = item.recordId || null;
       window.atharLastAnalysisRequest = {
         skill: result.skill || item.skill || '',
         student_id: item.student_id || '',
@@ -674,6 +675,48 @@ function renderAnalysisHistory() {
       showToast('تم استعادة التحليل وخريطة الجذور المحفوظة.');
     });
   });
+}
+function useAnalysisForIntervention(analysis) {
+  const skill = displaySkillName(analysis.skill || 'المهارة المستهدفة');
+  const score = analysis.targetScore === null || analysis.targetScore === undefined ? null : Number(analysis.targetScore);
+  const roots = analysis.rootCandidates || analysis.likelyRoots || analysis.prerequisiteEvidence || [];
+  const request = window.atharLastAnalysisRequest || {};
+  const studentId = request.student_id || '';
+  const goal = score === null
+    ? 'تنفيذ تقويم تشخيصي قصير لتحديد مستوى إتقان المهارة، ثم اعتماد هدف قابل للقياس بناءً على النتيجة.'
+    : `رفع إتقان مهارة ${skill} من ${score}% إلى 70% على الأقل خلال أسبوعين، مع متابعة التقدم بقياس قصير.`;
+  const rootChecks = roots.map(root => {
+    const name = displaySkillName(root.skill);
+    return root.score === null || root.score === undefined
+      ? `تحقق من مهارة ${name} بتقويم قصير؛ لا توجد نتيجة مسجلة لها، لذلك لا تُعد سببًا مؤكدًا للتعثر.`
+      : Number(root.score) < 70
+        ? `راجع مهارة ${name}؛ أظهرت النتائج مستوى ${Number(root.score)}%، ثم تحقق من عينة الإجابات قبل اعتمادها فجوة.`
+        : `تحقق من استمرار إتقان مهارة ${name}؛ لا تظهر فجوة في النتائج المتاحة (${Number(root.score)}%).`;
+  });
+  const steps = [
+    ...rootChecks,
+    ...(analysis.recommendations || []),
+    'نفّذ مهمة تحقق قصيرة في نهاية التدخل، وسجّل النتيجة لمقارنتها بخط الأساس.'
+  ];
+  const enrichment = score !== null && score >= 70
+    ? 'قدّم مهمة أعمق تتطلب التفسير أو الاستدلال أو نقل المهارة إلى سياق جديد، مع متابعة ثبات الإتقان.'
+    : 'بعد تقدم المتعلم، انتقل تدريجيًا إلى مهمة أكثر تحديًا، مع إبقاء الدعم متاحًا عند الحاجة.';
+  const setValue = (id, value) => {
+    const field = document.getElementById(id);
+    if (field) field.value = value;
+  };
+  setValue('intSkill', skill);
+  setValue('intGoal', goal);
+  setValue('intSteps', [...new Set(steps)].join('\n'));
+  setValue('intEnrich', enrichment);
+  if (studentId) setValue('interventionStudent', studentId);
+  window.atharSuggestedIntervention = {
+    analysisId:window.atharLastAnalysisRecordId || null,
+    skill,
+    studentId:studentId || null
+  };
+  show('intervention');
+  showToast('نُقل التحليل إلى مسودة التدخل. راجع الهدف والخطوات قبل الحفظ.');
 }
 function renderAnalysis(analysis, destinationId) {
   const el = document.getElementById(destinationId);
@@ -721,10 +764,10 @@ function renderAnalysis(analysis, destinationId) {
     <div class="card" style="margin:.6rem 0"><strong>5 | التدخل المقترح</strong><ol>${(analysis.recommendations || []).map(item => `<li>${esc(item)}</li>`).join('') || '<li>ابدأ بتقويم تشخيصي قصير قبل اختيار التدخل.</li>'}</ol></div>
     ${analysis.nextSkills?.length ? `<p><strong>المهارات اللاحقة:</strong> ${analysis.nextSkills.map(skill => esc(displaySkillName(skill))).join('، ')}</p>` : ''}
     <p class="note">${esc(analysis.disclaimer || 'النتيجة مساندة، ويعتمد القرار النهائي على مراجعة المعلم.')}</p>
-    <button class="btn small" type="button" data-use-analysis>نقل التوصيات إلى التدخل</button>
+    <button class="btn small" type="button" data-use-analysis>نقل التحليل إلى مصمم التدخل</button>
   </div>`;
   renderLearningRootMap(analysis, rootItems, teacherObservation, patternHint);
-  el.querySelector('[data-use-analysis]')?.addEventListener('click', () => useActivity(displaySkillName(analysis.skill), (analysis.recommendations || []).join('\n')));
+  el.querySelector('[data-use-analysis]')?.addEventListener('click', () => useAnalysisForIntervention(analysis));
 }
 async function analyzeErrors() {
   const skill = document.getElementById('analysisSkill')?.value.trim() || document.getElementById('assessName')?.value.trim() || 'تمثيل الكسور';
@@ -734,6 +777,7 @@ async function analyzeErrors() {
   try {
     const result = await api('/api/analysis', { method:'POST', body:JSON.stringify(analysisRequest) });
     window.atharLastAnalysisRequest = analysisRequest;
+    window.atharLastAnalysisRecordId = result.id || null;
     analyses.unshift({ student_id:studentId || null, skill:result.analysis.skill, result:result.analysis, date:new Date().toISOString(), recordId:result.id });
     renderAnalysisHistory();
     renderAnalysis(result.analysis, 'analysisResult'); updateCycle();
@@ -746,6 +790,8 @@ async function askAssistant() {
   if (!question) return showToast('اكتب سؤالك أو المهارة التي تريد تحليلها.');
   try {
     const result = await api('/api/analysis', { method:'POST', body:JSON.stringify({ skill:question, question, student_id:studentId }) });
+    window.atharLastAnalysisRequest = { skill:question, student_id:studentId, observedErrors:question };
+    window.atharLastAnalysisRecordId = result.id || null;
     analyses.unshift({ student_id:studentId || null, skill:result.analysis.skill, result:result.analysis, date:new Date().toISOString(), recordId:result.id });
     renderAnalysis(result.analysis, 'assistantReply'); updateCycle();
     showToast('أُعد الرد بالاستناد إلى بيانات المدرسة المتاحة.');
