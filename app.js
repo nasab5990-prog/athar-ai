@@ -644,7 +644,15 @@ async function saveIntervention() {
   if (!skill || !goal || !steps) return showToast('أكمل المهارة والهدف وخطوات التدخل.');
   try {
     const suggestion = window.atharSuggestedIntervention;
-    const payload = { student_id:studentId, student_name:student?.name || null, skill, goal, steps, enrichment, status:'active', activity_mode:document.getElementById('activityMode')?.value || 'offline', activity_duration:Number(document.getElementById('activityDuration')?.value || 15), date:new Date().toISOString(), suggestion_source:suggestion && suggestion.skill === displaySkillName(skill) && suggestion.studentId === studentId ? 'athar-analysis' : 'teacher', analysis_record_id:suggestion && suggestion.skill === displaySkillName(skill) && suggestion.studentId === studentId ? suggestion.analysisId : null };
+    const curriculum = {
+      grade:document.getElementById('intGrade')?.value || null,
+      subject:document.getElementById('intSubject')?.value.trim() || null,
+      semester:document.getElementById('intSemester')?.value || null,
+      unit:document.getElementById('intUnit')?.value.trim() || null,
+      lesson:document.getElementById('intLesson')?.value.trim() || null,
+      learning_outcome:document.getElementById('intOutcome')?.value.trim() || null
+    };
+    const payload = { student_id:studentId, student_name:student?.name || null, skill, goal, steps, enrichment, curriculum, status:'active', activity_mode:document.getElementById('activityMode')?.value || 'offline', activity_duration:Number(document.getElementById('activityDuration')?.value || 15), date:new Date().toISOString(), suggestion_source:suggestion && suggestion.skill === displaySkillName(skill) && suggestion.studentId === studentId ? 'athar-analysis' : 'teacher', analysis_record_id:suggestion && suggestion.skill === displaySkillName(skill) && suggestion.studentId === studentId ? suggestion.analysisId : null };
     const result = await syncRecord('intervention', payload);
     interventions.unshift({ ...result.payload, recordId:result.id });
     renderInt(); updateDashboard(); updateCycle(); updateAlerts();
@@ -654,7 +662,11 @@ async function saveIntervention() {
 function renderInt() {
   const el = document.getElementById('intList');
   if (!el) return;
-  el.innerHTML = interventions.slice(0, 15).map(i => `<div class="card" style="margin-top:.6rem"><strong>${esc(displaySkillName(i.skill))}</strong><p>${esc(i.student_name || 'تدخل صفي')} • ${esc(formatDate(i.date))}</p><p>${esc(i.goal || '')}</p></div>`).join('') || '<p class="note">لا توجد تدخلات مسجلة بعد.</p>';
+  el.innerHTML = interventions.slice(0, 15).map(i => {
+    const c = i.curriculum || {};
+    const curriculumLine = [c.grade ? `الصف ${c.grade}` : '', c.subject || '', c.semester ? `الفصل ${c.semester}` : '', c.unit ? `الوحدة: ${c.unit}` : '', c.lesson ? `الدرس: ${c.lesson}` : ''].filter(Boolean).join(' • ');
+    return `<div class="card" style="margin-top:.6rem"><strong>${esc(displaySkillName(i.skill))}</strong><p>${esc(i.student_name || 'تدخل صفي')} • ${esc(formatDate(i.date))}</p>${curriculumLine ? `<p class="note">${esc(curriculumLine)}</p>` : ''}${c.learning_outcome ? `<p><strong>ناتج التعلم:</strong> ${esc(c.learning_outcome)}</p>` : ''}<p>${esc(i.goal || '')}</p></div>`;
+  }).join('') || '<p class="note">لا توجد تدخلات مسجلة بعد.</p>';
   fillStudentSelects();
 }
 function printWorksheet() {
