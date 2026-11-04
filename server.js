@@ -392,6 +392,55 @@ app.post('/api/records/bulk', recordLimiter, requireAuth, requireRole('teacher',
   res.status(201).json({ ok:true, count:created.length, records:created });
 });
 
+app.put('/api/records/:id', recordLimiter, requireAuth, requireRole('teacher', 'senior_teacher', 'principal'), (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ message: 'معرّف السجل غير صالح.' });
+  const row = db.prepare('SELECT id,owner_id,school_id,kind,payload FROM records WHERE id=? AND school_id=?').get(id, req.user.school_id);
+  if (!row || row.kind !== 'intervention') return res.status(404).json({ message: 'التدخل غير موجود.' });
+  if (req.user.role === 'teacher' && row.owner_id !== req.user.id) {
+    return res.status(403).json({ message: 'يمكنك تعديل التدخلات التي أنشأتها فقط.' });
+  }
+  const incoming = req.body?.payload;
+  if (!incoming || typeof incoming !== 'object' || Array.isArray(incoming)) {
+    return res.status(400).json({ message: 'بيانات التدخل غير صالحة.' });
+  }
+  const current = JSON.parse(row.payload);
+  const skill = safeText(incoming.skill, 180);
+  const goal = safeText(incoming.goal, 2000);
+  const steps = safeText(incoming.steps, 5000);
+  if (!skill || !goal || !steps) return res.status(400).json({ message: 'المهارة والهدف وخطوات التدخل مطلوبة.' });
+  const activityMode = ['offline', 'shared', 'online'].includes(incoming.activity_mode)
+    ? incoming.activity_mode : current.activity_mode || 'offline';
+  const duration = Number(incoming.activity_duration ?? current.activity_duration ?? 15);
+  if (![10, 15, 20].includes(duration)) return res.status(400).json({ message: 'مدة النشاط غير صالحة.' });
+  const status = ['active', 'completed', 'paused'].includes(incoming.status)
+    ? incoming.status : current.status || 'active';
+  const rawCurriculum = incoming.curriculum && typeof incoming.curriculum === 'object' && !Array.isArray(incoming.curriculum)
+    ? incoming.curriculum : current.curriculum || {};
+  const curriculum = {
+    grade: safeText(rawCurriculum.grade, 2) || null,
+    subject: safeText(rawCurriculum.subject, 120) || null,
+    semester: safeText(rawCurriculum.semester, 40) || null,
+    unit: safeText(rawCurriculum.unit, 160) || null,
+    lesson: safeText(rawCurriculum.lesson, 160) || null,
+    learning_outcome: safeText(rawCurriculum.learning_outcome, 1000) || null
+  };
+  const updated = {
+    ...current,
+    skill, goal, steps,
+    enrichment: safeText(incoming.enrichment, 3000),
+    curriculum,
+    activity_mode: activityMode,
+    activity_duration: duration,
+    status
+  };
+  const serialized = JSON.stringify(updated);
+  if (serialized.length > 30000) return res.status(413).json({ message: 'حجم السجل أكبر من الحد المسموح.' });
+  db.prepare('UPDATE records SET payload=? WHERE id=? AND school_id=?').run(serialized, id, req.user.school_id);
+  audit(req.user.id, 'record.update', 'intervention');
+  res.json({ id, kind: 'intervention', payload: updated });
+});
+
 app.delete('/api/records/:id', requireAuth, requireRole('teacher', 'senior_teacher', 'principal'), (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ message: 'معرّف السجل غير صالح.' });
