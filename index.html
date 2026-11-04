@@ -306,6 +306,14 @@
       <label>الطالب (اختياري — يربط التدخل بملف الطالب)</label>
       <select id="interventionStudent"><option value="">تدخل صفي</option></select>
       <div class="note" style="margin:.8rem 0">المقترح الذكي يحلل أحدث نتائج الطالب والمهارات السابقة المسجلة، ثم يجهز مسودة تدخل يراجعها المعلم.</div>
+      <label>إمكانات التنفيذ في المدرسة</label>
+      <select id="activityMode">
+        <option value="offline">دون أجهزة أو إنترنت — ورقة وسبورة وأدوات صفية</option>
+        <option value="shared">جهاز المعلم مع شاشة أو سبورة تفاعلية — دون أجهزة للطلبة</option>
+        <option value="online">إنترنت وأجهزة متاحة للطلبة</option>
+      </select>
+      <label>الوقت المتاح للنشاط</label>
+      <select id="activityDuration"><option value="10">10 دقائق</option><option value="15" selected>15 دقيقة</option><option value="20">20 دقيقة</option></select>
       <label>ملاحظة المعلم عن موضع الصعوبة (اختياري)</label>
       <textarea id="intObservedErrors" rows="2" placeholder="مثال: يحدد التفاصيل لكنه لا يميز الفكرة الرئيسة..."></textarea>
       <button class="btn" id="suggestInterventionBtn" type="button" onclick="suggestIntervention()">✨ اقترح تدخلًا ذكيًا لهذه الحالة</button>
@@ -334,9 +342,25 @@
       <p class="note">اختر التدخل الذي نُفّذ بالفعل حتى يرتبط قياس التحسن بسجله.</p>
       <label>النتيجة قبل التدخل (%)</label>
       <input type="number" id="before" min="0" max="100" placeholder="0–100">
+      <label>تاريخ القياس القبلي</label>
+      <input type="date" id="impactBeforeDate">
+      <label>أداة القياس المستخدمة (نفس المهارة ونفس معايير التصحيح)</label>
+      <input type="text" id="impactTool" placeholder="مثال: بطاقة فهم مقروء من 10 أسئلة">
       <label>النتيجة بعد التدخل (%)</label>
       <input type="number" id="after" min="0" max="100" placeholder="0–100">
-      <button class="btn" onclick="calcImpact()">حساب الفرق</button>
+      <label>تاريخ القياس البعدي</label>
+      <input type="date" id="impactAfterDate">
+      <label>طريقة تنفيذ الأنشطة</label>
+      <select id="impactActivityMode"><option value="">اختر طريقة التنفيذ</option><option value="offline">ورقة وسبورة دون أجهزة أو إنترنت</option><option value="shared">جهاز المعلم وشاشة مشتركة</option><option value="online">أجهزة للطلبة وإنترنت</option></select>
+      <div class="grid-two">
+        <div><label>الجلسات المخططة</label><input type="number" id="impactSessionsPlanned" min="1" max="30" placeholder="مثال: 4"></div>
+        <div><label>الجلسات المنفذة</label><input type="number" id="impactSessionsDone" min="0" max="30" placeholder="مثال: 3"></div>
+      </div>
+      <label>دليل أو ملاحظة المعلم (اختياري)</label>
+      <textarea id="impactEvidenceNote" rows="2" placeholder="مثال: 4 إجابات صحيحة من 5، وتمكن من تحديد الفكرة الرئيسة دون مساعدة."></textarea>
+      <label>نتيجة قياس المتابعة بعد أسبوعين (اختياري %)</label>
+      <input type="number" id="impactFollowup" min="0" max="100" placeholder="0–100">
+      <button class="btn" onclick="calcImpact()">حساب الفرق وتوثيق الأدلة</button>
       <div id="impactResult" style="margin-top:.8rem;"></div>
     </div>
     <div class="note">لا يُنسب التحسن إلى التدخل وحده.</div>
