@@ -297,10 +297,9 @@ body.dark .sidebar-actions .logout-action {
   font-size:.78rem;
   font-weight:400;
 }
-.secondary-tools-card{
-  margin:0!important;
-  border:0!important;
-  border-top:1px solid var(--border)!important;
-  border-radius:0!important;
-  box-shadow:none!important;
+
+.secondary-tools-content{
+  padding:.25rem 1rem 1rem;
+  border-top:1px solid var(--border);
 }
+.secondary-tools-content > :first-child{margin-top:.7rem}
