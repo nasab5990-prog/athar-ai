@@ -178,33 +178,47 @@ function updateCurriculumSubjects() {
   setCurriculumOptions(unit, 'اختر المادة أولًا', []);
   setCurriculumOptions(lesson, 'اختر الوحدة أولًا', []);
   if (outcome) outcome.value = '';
-  if (status) status.textContent = !grade
-    ? 'اختر الصف أولًا.'
-    : subjects.length
-      ? 'اختر المادة لعرض وحداتها ودروسها ونواتج التعلم الموثقة.'
-      : verifiedSubjects.length
-        ? 'المواد المعروضة مستندة إلى فهرس مكتبة الوزارة. فهرسة الوحدات والدروس ونواتج التعلم لهذا الصف قيد الاستكمال.'
-        : 'لم تُستكمل فهرسة مواد هذا الصف بعد؛ لن نعرض بيانات غير موثقة.';
+  document.getElementById('curriculumUnitField').hidden = true;
+  document.getElementById('curriculumLessonField').hidden = true;
+  document.getElementById('curriculumOutcomeField').hidden = true;
+  if (status) {
+    status.hidden = !grade || !verifiedSubjects.length;
+    status.textContent = !grade ? '' : verifiedSubjects.length
+      ? 'لم تُفهرس وحدات هذا الصف بالكامل بعد؛ لن نعرض إلا المحتوى الموثق.'
+      : 'فهرسة مواد هذا الصف قيد الاستكمال.';
+  }
 }
 function updateCurriculumUnits() {
   const grade = document.getElementById('intGrade')?.value || '';
   const subject = document.getElementById('intSubject')?.value || '';
   const rows = ATHAR_CURRICULUM_CATALOG[grade]?.[subject] || {};
-  setCurriculumOptions(document.getElementById('intUnit'), 'اختر الوحدة', Object.keys(rows).map(key => ({id:key,title:rows[key].title || key})));
+  const unitKeys = Object.keys(rows);
+  const unitField = document.getElementById('curriculumUnitField');
+  const lessonField = document.getElementById('curriculumLessonField');
+  const outcomeField = document.getElementById('curriculumOutcomeField');
+  if (unitField) unitField.hidden = !unitKeys.length;
+  if (lessonField) lessonField.hidden = true;
+  if (outcomeField) outcomeField.hidden = true;
+  setCurriculumOptions(document.getElementById('intUnit'), 'اختر الوحدة', unitKeys.map(key => ({id:key,title:rows[key].title || key})));
   setCurriculumOptions(document.getElementById('intLesson'), 'اختر الوحدة أولًا', []);
   const outcome = document.getElementById('intOutcome'); if (outcome) outcome.value = '';
   const status = document.getElementById('curriculumCatalogStatus');
-  if (status) status.textContent = Object.keys(rows).length ? 'اختر الوحدة لعرض الدروس.' : 'لم تُفهرس وحدات هذه المادة بعد. ستظهر هنا فور استيراد بيانات الكتاب المعتمد.';
+  if (status) { status.hidden = !!unitKeys.length; status.textContent = unitKeys.length ? '' : 'لا تتوفر وحدات موثقة لهذه المادة بعد.'; }
 }
 function updateCurriculumLessons() {
   const grade = document.getElementById('intGrade')?.value || '';
   const subject = document.getElementById('intSubject')?.value || '';
   const unit = document.getElementById('intUnit')?.value || '';
   const lessons = ATHAR_CURRICULUM_CATALOG[grade]?.[subject]?.[unit]?.lessons || {};
-  setCurriculumOptions(document.getElementById('intLesson'), 'اختر الدرس', Object.keys(lessons).map(key => ({id:key,title:lessons[key].title || key})));
+  const lessonKeys = Object.keys(lessons);
+  const lessonField = document.getElementById('curriculumLessonField');
+  const outcomeField = document.getElementById('curriculumOutcomeField');
+  if (lessonField) lessonField.hidden = !lessonKeys.length;
+  if (outcomeField) outcomeField.hidden = true;
+  setCurriculumOptions(document.getElementById('intLesson'), 'اختر الدرس', lessonKeys.map(key => ({id:key,title:lessons[key].title || key})));
   const outcome = document.getElementById('intOutcome'); if (outcome) outcome.value = '';
   const status = document.getElementById('curriculumCatalogStatus');
-  if (status) status.textContent = Object.keys(lessons).length ? 'اختر الدرس لعرض ناتج التعلم تلقائيًا.' : 'لم تُفهرس دروس هذه الوحدة بعد.';
+  if (status) { status.hidden = !!lessonKeys.length; status.textContent = lessonKeys.length ? '' : 'لا تتوفر دروس موثقة لهذه الوحدة بعد.'; }
 }
 function updateCurriculumOutcome() {
   const grade = document.getElementById('intGrade')?.value || '';
@@ -214,8 +228,10 @@ function updateCurriculumOutcome() {
   const record = ATHAR_CURRICULUM_CATALOG[grade]?.[subject]?.[unit]?.lessons?.[lesson];
   const outcome = document.getElementById('intOutcome');
   if (outcome) outcome.value = record?.learning_outcome || '';
+  const outcomeField = document.getElementById('curriculumOutcomeField');
+  if (outcomeField) outcomeField.hidden = !record?.learning_outcome;
   const status = document.getElementById('curriculumCatalogStatus');
-  if (status) status.textContent = record?.learning_outcome ? 'تم عرض ناتج التعلم من سجل المنهج.' : 'لا يوجد ناتج تعلم موثق لهذا الدرس حتى الآن.';
+  if (status) { status.hidden = !!record?.learning_outcome; status.textContent = record?.learning_outcome ? '' : 'لا يوجد ناتج تعلم موثق لهذا الدرس حتى الآن.'; }
 }
 
 function toggleGroup(el) {
