@@ -480,7 +480,7 @@ function renderLearningRootMap(analysis, rootItems, observation, patternHint) {
   const previous = (rootItems || []).map(item => {
     const state = statusFor(item);
     const score = item.score === null || item.score === undefined ? 'لا توجد نتيجة مسجلة' : `متوسط الإتقان ${Number(item.score)}%`;
-    return `<div class="root-map-node ${state.cls}"><strong>${esc(displaySkillName(item.skill))}</strong><span>${state.label}</span><small>${score}</small></div>`;
+    return `<div class="root-map-node ${state.cls}"><strong>${esc(displaySkillName(item.skill))}</strong><span>${state.label}</span><small>${score}</small><button type="button" class="btn small root-map-assess" data-root-skill="${esc(item.skill)}">${item.score === null || item.score === undefined ? 'إجراء تقويم تشخيصي' : Number(item.score) < 70 ? 'إعادة التحقق بالتقويم' : 'مراجعة التقويم'}</button></div>`;
   }).join('') || '<div class="root-map-node pending"><strong>لا توجد مهارات سابقة موثقة</strong><span>تحتاج الخريطة إلى بيانات منهجية</span></div>';
   const next = (analysis.nextSkills || []).map(skill => `<div class="root-map-node future"><strong>${esc(displaySkillName(skill))}</strong><span>مهارة لاحقة</span></div>`).join('') || '<div class="root-map-node future"><strong>لا توجد مهارات لاحقة مسجلة</strong><span>يمكن إضافتها عند توثيق التسلسل</span></div>';
   map.innerHTML = `<div class="root-map-legend"><span><i class="pending"></i> يحتاج إلى تقويم</span><span><i class="review"></i> مؤشر يحتاج إلى مراجعة</span><span><i class="ok"></i> لا تظهر فجوة</span></div>
@@ -489,6 +489,15 @@ function renderLearningRootMap(analysis, rootItems, observation, patternHint) {
       <section class="root-map-column"><h4>المهارة المتأثرة</h4><div class="root-map-node focus"><strong>${esc(displaySkillName(analysis.skill))}</strong><span>${analysis.targetScore === null ? 'لا توجد نتيجة مرتبطة' : `الإتقان ${Number(analysis.targetScore)}%`}</span><small>${esc(observation || 'لم تسجل ملاحظة صفية')}</small><small>${esc(patternHint || 'راجع إجابات الطلبة لتحديد نمط الخطأ بدقة.')}</small></div></section><div class="root-map-arrow" aria-hidden="true">←</div>
       <section class="root-map-column"><h4>المهارات اللاحقة</h4><div class="root-map-nodes">${next}</div></section>
     </div><p class="note">الأسهم توضح التسلسل التعلمي ولا تثبت علاقة سببية. لا تُعد المهارة السابقة جذرًا للتعثر إلا بعد توفر دليل تقويمي.</p>`;
+  map.querySelectorAll('[data-root-skill]').forEach(button => {
+    button.addEventListener('click', () => {
+      const field = document.getElementById('assessName');
+      if (field) field.value = button.dataset.rootSkill || '';
+      show('assess');
+      field?.focus();
+      showToast('تم تجهيز التقويم للمهارة المختارة؛ أكمل عدد البنود والإجابات.');
+    });
+  });
 }
 function renderAnalysis(analysis, destinationId) {
   const el = document.getElementById(destinationId);
