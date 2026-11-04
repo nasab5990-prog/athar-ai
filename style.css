@@ -303,3 +303,6 @@ body.dark .sidebar-actions .logout-action {
   border-top:1px solid var(--border);
 }
 .secondary-tools-content > :first-child{margin-top:.7rem}
+
+.impact-evidence-disclosure{margin:1rem 0}
+.impact-evidence-disclosure .secondary-tools-content > label:first-child{margin-top:.5rem}
