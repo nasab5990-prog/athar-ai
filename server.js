@@ -276,6 +276,51 @@ app.post('/api/records/bulk',recordLimiter,requireAuth,requireRole('teacher','se
   await audit(req.user.id,'records.bulk_import',`count=${created.length}`);
   res.status(201).json({ok:true,count:created.length,records:created});
 }));
+app.put('/api/records/:id',recordLimiter,requireAuth,requireRole('teacher','senior_teacher','principal'),asyncRoute(async(req,res)=>{
+  const id=Number(req.params.id);
+  if (!Number.isSafeInteger(id) || id<=0) return res.status(400).json({message:'معرّف السجل غير صالح.'});
+  const row=(await query('SELECT id,owner_id,school_id,kind,payload FROM records WHERE id=$1 AND school_id=$2',[id,req.user.school_id])).rows[0];
+  if (!row || row.kind!=='intervention') return res.status(404).json({message:'التدخل غير موجود.'});
+  if (req.user.role==='teacher' && String(row.owner_id)!==String(req.user.id)) {
+    return res.status(403).json({message:'يمكنك تعديل التدخلات التي أنشأتها فقط.'});
+  }
+  const incoming=req.body?.payload;
+  if (!incoming || typeof incoming!=='object' || Array.isArray(incoming)) return res.status(400).json({message:'بيانات التدخل غير صالحة.'});
+  const current=row.payload || {};
+  const skill=safeText(incoming.skill,180);
+  const goal=safeText(incoming.goal,2000);
+  const steps=safeText(incoming.steps,5000);
+  if (!skill || !goal || !steps) return res.status(400).json({message:'المهارة والهدف وخطوات التدخل مطلوبة.'});
+  const activityMode=['offline','shared','online'].includes(incoming.activity_mode) ? incoming.activity_mode : current.activity_mode || 'offline';
+  const duration=Number(incoming.activity_duration ?? current.activity_duration ?? 15);
+  if (![10,15,20].includes(duration)) return res.status(400).json({message:'مدة النشاط غير صالحة.'});
+  const status=['active','completed','paused'].includes(incoming.status) ? incoming.status : current.status || 'active';
+  const rawCurriculum=incoming.curriculum && typeof incoming.curriculum==='object' && !Array.isArray(incoming.curriculum)
+    ? incoming.curriculum : current.curriculum || {};
+  const curriculum={
+    grade:safeText(rawCurriculum.grade,2) || null,
+    subject:safeText(rawCurriculum.subject,120) || null,
+    semester:safeText(rawCurriculum.semester,40) || null,
+    unit:safeText(rawCurriculum.unit,160) || null,
+    lesson:safeText(rawCurriculum.lesson,160) || null,
+    learning_outcome:safeText(rawCurriculum.learning_outcome,1000) || null
+  };
+  const updated={
+    ...current,
+    skill,goal,steps,
+    enrichment:safeText(incoming.enrichment,3000),
+    curriculum,
+    activity_mode:activityMode,
+    activity_duration:duration,
+    status
+  };
+  const serialized=JSON.stringify(updated);
+  if (serialized.length>30000) return res.status(413).json({message:'حجم السجل أكبر من الحد المسموح.'});
+  const saved=await query("UPDATE records SET payload=$1::jsonb WHERE id=$2 AND school_id=$3 AND kind='intervention' RETURNING id",[serialized,id,req.user.school_id]);
+  if (!saved.rowCount) return res.status(404).json({message:'التدخل غير موجود.'});
+  await audit(req.user.id,'record.update','intervention');
+  res.json({id:saved.rows[0].id,kind:'intervention',payload:updated});
+}));
 app.delete('/api/records/:id',requireAuth,requireRole('teacher','senior_teacher','principal'),asyncRoute(async(req,res)=>{
   const id=Number(req.params.id);
   if (!Number.isSafeInteger(id) || id<=0) return res.status(400).json({message:'معرّف السجل غير صالح.'});
