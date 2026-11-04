@@ -444,18 +444,45 @@ async function removeStudent(studentId) {
 }
 async function saveAssessment() {
   const skill = document.getElementById('assessName')?.value.trim() || '';
-  const total = Number(document.getElementById('total')?.value || 0);
-  const correct = Number(document.getElementById('correct')?.value || 0);
   const studentId = document.getElementById('assessmentStudent')?.value || null;
-  if (!skill || total <= 0 || correct < 0 || correct > total) return showToast('تحقق من المهارة وعدد الإجابات؛ يجب ألا تتجاوز الصحيحة الإجمالي.');
   const student = students.find(s => s.student_id === studentId);
-  const diagnosticQuestions = [...document.querySelectorAll('[data-diagnostic-question]')].map((field, index) => ({ number:index + 1, question:field.value.trim() })).filter(item => item.question);
-  const payload = { student_id:studentId, student_name:student?.name || null, skill, name:skill, total, correct, pct:Math.round(correct / total * 100), date:new Date().toISOString(), diagnostic_questions:diagnosticQuestions, diagnostic_source:diagnosticQuestions.length ? 'قوالب إرشادية قابلة للتحرير' : null };
+  const diagnosticFields = [...document.querySelectorAll('[data-diagnostic-question]')];
+  const diagnosticRatings = [...document.querySelectorAll('[data-diagnostic-rating]')];
+  let total, correct, pct, diagnosticQuestions = [];
+  if (diagnosticFields.length) {
+    if (diagnosticRatings.length !== diagnosticFields.length || diagnosticRatings.some(field => !field.value)) {
+      return showToast('قيّم كل سؤال أولًا: متقن، متقن جزئيًا، أو يحتاج إلى دعم.');
+    }
+    total = diagnosticFields.length;
+    const scores = diagnosticRatings.map(field => Number(field.value));
+    correct = scores.filter(score => score === 100).length;
+    pct = Math.round(scores.reduce((sum, score) => sum + score, 0) / total);
+    diagnosticQuestions = diagnosticFields.map((field, index) => ({
+      number:index + 1,
+      question:field.value.trim(),
+      rating:scores[index] === 100 ? 'متقن' : scores[index] === 50 ? 'متقن جزئيًا' : 'يحتاج إلى دعم',
+      score:scores[index],
+      note:document.querySelector('[data-diagnostic-note="' + index + '"]')?.value.trim() || ''
+    })).filter(item => item.question);
+  } else {
+    total = Number(document.getElementById('total')?.value || 0);
+    correct = Number(document.getElementById('correct')?.value || 0);
+    pct = total > 0 ? Math.round(correct / total * 100) : 0;
+    if (total <= 0 || correct < 0 || correct > total) return showToast('تحقق من إجمالي البنود وعدد الإجابات الصحيحة.');
+  }
+  if (!skill) return showToast('أدخل اسم التقويم أو المهارة أولًا.');
+  const payload = {
+    student_id:studentId, student_name:student?.name || null, skill, name:skill,
+    total, correct, pct, date:new Date().toISOString(),
+    diagnostic_questions:diagnosticQuestions,
+    diagnostic_source:diagnosticQuestions.length ? 'قوالب إرشادية قابلة للتحرير مع تقدير المعلم لكل سؤال' : null,
+    scoring_method:diagnosticQuestions.length ? 'متقن=100، متقن جزئيًا=50، يحتاج إلى دعم=0' : 'عدد الإجابات الصحيحة من الإجمالي'
+  };
   try {
     const result = await syncRecord('assessment', payload);
     assessments.unshift({ ...result.payload, recordId:result.id });
     const el = document.getElementById('assessResult');
-    if (el) el.innerHTML = `<strong>نسبة الإتقان: ${payload.pct}%</strong><p class="note">${student ? `الطالب: ${esc(student.name)}` : 'تقويم صفي غير مرتبط بطالب محدد'} — حُفظ على الخادم.</p>`;
+    if (el) el.innerHTML = `<strong>نسبة الإتقان: ${payload.pct}%</strong><p class="note">${student ? `الطالب: ${esc(student.name)}` : 'تقويم صفي غير مرتبط بطالب محدد'} — ${diagnosticQuestions.length ? `تقييم ${total} أسئلة؛ ${correct} متقنة بالكامل، مع احتساب الإتقان الجزئي.` : 'احتُسبت من الإجابات الصحيحة'} — حُفظ على الخادم.</p>`;
     renderAssess(); updateDashboard(); updateCycle(); updateAlerts();
     const lastAnalysis = window.atharLastAnalysisRequest;
     const sameStudentScope = lastAnalysis && String(lastAnalysis.student_id || '') === String(studentId || '');
@@ -471,7 +498,7 @@ async function saveAssessment() {
         showToast(`حُفظ التقويم، لكن تعذر تحديث الخريطة تلقائيًا: ${refreshError.message}`);
       }
     } else {
-      showToast('تم حفظ التقويم مركزيًا. أعد تحليل المهارة المستهدفة لتحديث خريطة الجذور.');
+      showToast('تم حفظ التقويم مركزيًا.');
     }
   } catch (error) { showToast(error.message); }
 }
@@ -529,12 +556,25 @@ function generateDiagnosticQuestions() {
   const panel = document.getElementById('diagnosticQuestions');
   if (!panel) return;
   panel.hidden = false;
-  panel.innerHTML = `<div class="note">أسئلة إرشادية أولية مرتبطة باسم المهارة. راجعها وعدّلها لتناسب الصف والدرس قبل التطبيق؛ ليست تشخيصًا آليًا ولا توليدًا بالذكاء الاصطناعي.</div>${questions.map((item,index)=>`<div class="diagnostic-question"><label for="diagnosticQuestion${index}">السؤال ${index+1}</label><textarea id="diagnosticQuestion${index}" data-diagnostic-question rows="2">${esc(item.question)}</textarea><details><summary>مؤشر الإجابة / الملاحظة</summary><p>${esc(item.guide)}</p></details></div>`).join('')}`;
-  const total = document.getElementById('total');
-  const correct = document.getElementById('correct');
-  if (total) total.value = String(questions.length);
-  if (correct) correct.value = '';
-  showToast('أُعدّت 3 أسئلة إرشادية؛ راجعها ثم أدخل عدد الإجابات الصحيحة.');
+  panel.innerHTML = `<div class="note">أسئلة إرشادية أولية مرتبطة باسم المهارة. راجعها وعدّلها لتناسب الصف والدرس قبل التطبيق؛ ليست تشخيصًا آليًا ولا توليدًا بالذكاء الاصطناعي. قيّم أداء المتعلم في كل سؤال وفق المؤشرات التالية.</div>
+    <div class="note">طريقة الاحتساب: متقن = 100%، متقن جزئيًا = 50%، يحتاج إلى دعم = 0%. التقدير بيد المعلم.</div>
+    ${questions.map((item,index)=>`<div class="diagnostic-question">
+      <label for="diagnosticQuestion${index}">السؤال ${index+1}</label>
+      <textarea id="diagnosticQuestion${index}" data-diagnostic-question rows="2">${esc(item.question)}</textarea>
+      <details><summary>مؤشر الإجابة / الملاحظة</summary><p>${esc(item.guide)}</p></details>
+      <label for="diagnosticRating${index}">تقدير الأداء</label>
+      <select id="diagnosticRating${index}" data-diagnostic-rating>
+        <option value="">اختر مستوى الأداء</option>
+        <option value="100">متقن</option>
+        <option value="50">متقن جزئيًا</option>
+        <option value="0">يحتاج إلى دعم</option>
+      </select>
+      <label for="diagnosticNote${index}">ملاحظة المعلم (اختياري)</label>
+      <textarea id="diagnosticNote${index}" data-diagnostic-note="${index}" rows="2" placeholder="سجّل الخطأ أو الدليل الذي لاحظته..."></textarea>
+    </div>`).join('')}`;
+  const manual = document.getElementById('manualAssessmentScore');
+  if (manual) manual.hidden = true;
+  showToast('أُعدّت الأسئلة؛ قيّم أداء كل سؤال ثم احفظ التقويم.');
 }
 function prepareDiagnosticAssessment(skill) {
   const field = document.getElementById('assessName');
