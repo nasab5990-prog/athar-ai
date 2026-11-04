@@ -491,7 +491,7 @@ app.put('/api/users/:id/student-links', requireAuth, requireRole('principal'), (
 const skillMap = [
   { keys: ['تمثيل الكسور', 'الكسور', 'كسر', 'البسط', 'المقام'], title: 'تمثيل الكسور', prerequisites: ['الجزء والكل', 'معرفة البسط والمقام'], next: ['مقارنة الكسور', 'العمليات على الكسور'], strategies: ['استخدم شرائط الكسور والأشكال المقسمة لربط الجزء بالكل.', 'اطلب من الطالب تسمية البسط والمقام قبل تمثيل الكسر.', 'قدّم سؤال تحقق قصيرًا بعد كل مثال.'] },
   { keys: ['العمليات على الكسور', 'جمع الكسور', 'طرح الكسور'], title: 'العمليات على الكسور', prerequisites: ['تمثيل الكسور', 'الكسور المتكافئة'], next: ['حل المسائل اللفظية على الكسور'], strategies: ['راجع تمثيل الكسر بصريًا قبل الانتقال إلى الخوارزمية.', 'استخدم نماذج متكافئة للمقامات.', 'درّب الطالب على تفسير سبب اختيار العملية.'] },
-  { keys: ['الفهم القرائي', 'القراءة', 'فهم المقروء'], title: 'الفهم القرائي', prerequisites: ['الطلاقة القرائية', 'المفردات والسياق'], next: ['الفكرة الرئيسة', 'الاستدلال من النص'], strategies: ['استخدم نصوصًا قصيرة متعددة المستويات.', 'درّب الطلبة على تحديد الدليل النصي.', 'اطلب إعادة صياغة الفكرة بكلمات الطالب.'] },
+  { keys: ['الفهم المقروء', 'الفهم القرائي', 'القراءة'], title: 'الفهم المقروء', prerequisites: ['الطلاقة القرائية', 'المفردات والسياق'], next: ['الفكرة الرئيسة', 'الاستدلال من النص'], strategies: ['استخدم نصوصًا قصيرة متعددة المستويات.', 'درّب الطلبة على تحديد الدليل النصي.', 'اطلب إعادة صياغة الفكرة بكلمات الطالب.'] },
   { keys: ['الفكرة الرئيسة', 'الفكرة الرئيسية'], title: 'الفكرة الرئيسة', prerequisites: ['المفردات والسياق', 'الفهم القرائي'], next: ['التلخيص', 'الاستدلال من النص'], strategies: ['استخدم عناوين وصورًا متوقعة قبل القراءة.', 'ميّز بين الفكرة الرئيسة والتفاصيل الداعمة.', 'اطلب اختيار عنوان مناسب مع ذكر الدليل.'] },
   { keys: ['الاستدلال', 'الاستنتاج'], title: 'الاستدلال من النص', prerequisites: ['الفهم القرائي', 'المفردات والسياق'], next: ['التفسير النقدي'], strategies: ['استخدم أسئلة لماذا وكيف مع مطالبة الطالب بالدليل.', 'اعرض قرائن متفرقة واطلب ربطها.', 'ناقش أكثر من احتمال قبل اختيار الاستنتاج.'] }
 ];
@@ -557,6 +557,14 @@ function analyzeLearning(user, body) {
   const level = targetScore === null ? 'لا تتوفر نتائج كافية' : targetScore < 50 ? 'تعثر مرتفع' : targetScore < 70 ? 'يحتاج إلى دعم' : targetScore < 85 ? 'قريب من الإتقان' : 'متقن';
   const roots = weakRoots.length ? weakRoots : prereqEvidence;
   const strategy = mapped?.strategies || ['ابدأ بتقويم تشخيصي قصير يحدد نوع الخطأ.', 'قسّم المهارة إلى خطوات أصغر، ثم قدّم نموذجًا محلولًا.', 'استخدم سؤال تحقق مستقلًا بعد النشاط.'];
+  const observedErrors = safeText(body.observedErrors, 1000);
+  const rootCandidates = roots.map(item => ({
+    skill:item.skill,
+    score:item.score,
+    sampleSize:item.sampleSize,
+    status:item.score === null ? 'غير مقاس — يحتاج إلى تقويم تشخيصي' : item.score < 70 ? 'فجوة مدعومة بنتائج مسجلة' : 'لا تظهر فجوة في النتائج المتاحة',
+    evidence:item.score === null ? 'لا توجد نتيجة مسجلة لهذه المهارة السابقة.' : `متوسط أحدث النتائج ${item.score}% من ${item.sampleSize} سجل/سجلات.`
+  }));
   const suggestions = targetScore === null
     ? ['أدخل نتيجة تقويم لهذه المهارة أولًا.', 'نفّذ تقويمًا قصيرًا للمهارات السابقة لتحديد جذر الفجوة.']
     : targetScore < 70
@@ -568,13 +576,17 @@ function analyzeLearning(user, body) {
   if (weakRoots.length) evidence.push(`ظهرت فجوة في مهارات سابقة: ${weakRoots.map(x => `${x.skill} (${x.score}%)`).join('، ')}.`);
   if (!weakRoots.length && prereqEvidence.length) evidence.push('لا توجد نتائج منخفضة مسجلة للمهارات السابقة ضمن البيانات المتاحة؛ يُنصح بالتأكد منها بتقويم تشخيصي عند الحاجة.');
   if (!studentId && sampleSize) evidence.push(`احتُسب متوسط المهارة من أحدث نتيجة لكل طالب/مجموعة؛ عدد السجلات الممثلة: ${sampleSize}.`);
-  if (safeText(body.observedErrors, 1000)) evidence.push(`ملاحظة المعلم: ${safeText(body.observedErrors, 1000)}`);
+  if (observedErrors) evidence.push(`ملاحظة المعلم: ${observedErrors}`);
   return {
     skill: mapped?.title || skill,
     level,
     targetScore,
     trend,
     sampleSize,
+    observedErrors,
+    errorPattern: observedErrors || 'لم تُسجل ملاحظة عن نمط الخطأ؛ يلزم فحص إجابات الطلبة لتحديده.',
+    rootCauseStatus: weakRoots.length ? 'توجد مهارات سابقة منخفضة مدعومة بنتائج' : prereqEvidence.length ? 'لا توجد فجوة مثبتة؛ بعض المهارات السابقة تحتاج إلى تحقق' : 'لا تتوفر خريطة موثقة للمهارات السابقة',
+    rootCandidates,
     likelyRoots: weakRoots,
     prerequisiteEvidence: prereqEvidence,
     nextSkills: mapped?.next || [],
