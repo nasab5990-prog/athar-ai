@@ -381,7 +381,9 @@ async function analyzeLearning(user,body) {
   let assessments=rows.map(r=>r.payload);
   if (studentId) assessments=assessments.filter(a=>a.student_id===studentId);
   const mapped=findSkill(skill), targetSkill=normalizeArabic(mapped?.title||skill);
-  const matches=(record,target)=>{const s=normalizeArabic(record.skill||record.name||'');return Boolean(s&&target&&(s.includes(target)||target.includes(s)));};
+  // Compare canonical skill names so aliases such as فهم المقروء / الفهم القرائي match.
+  const canonicalSkill=value=>normalizeArabic(findSkill(value)?.title||value);
+  const matches=(record,target)=>{const s=canonicalSkill(record.skill||record.name||''),t=canonicalSkill(target);return Boolean(s&&t&&(s===t||s.includes(t)||t.includes(s)));};
   const latestPerLearner=records=>{
     const groups=new Map();
     for(const record of records){const key=record.student_id||`class:${record.grade||''}:${record.section||''}`;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(record);}
