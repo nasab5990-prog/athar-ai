@@ -305,6 +305,11 @@
     <div class="card">
       <label>الطالب (اختياري — يربط التدخل بملف الطالب)</label>
       <select id="interventionStudent"><option value="">تدخل صفي</option></select>
+      <div class="note" style="margin:.8rem 0">المقترح الذكي يحلل أحدث نتائج الطالب والمهارات السابقة المسجلة، ثم يجهز مسودة تدخل يراجعها المعلم.</div>
+      <label>ملاحظة المعلم عن موضع الصعوبة (اختياري)</label>
+      <textarea id="intObservedErrors" rows="2" placeholder="مثال: يحدد التفاصيل لكنه لا يميز الفكرة الرئيسة..."></textarea>
+      <button class="btn" id="suggestInterventionBtn" type="button" onclick="suggestIntervention()">✨ اقترح تدخلًا ذكيًا لهذه الحالة</button>
+      <div id="intAiResult" style="margin-top:.8rem" aria-live="polite"></div>
       <label>المهارة / الفجوة</label>
       <input type="text" id="intSkill" placeholder="المهارة المستهدفة">
       <label>الهدف</label>
