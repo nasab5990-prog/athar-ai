@@ -24,6 +24,10 @@ async function api(path, options = {}) {
 function esc(value) {
   return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
 }
+function displaySkillName(value) {
+  const name = String(value ?? '').trim();
+  return ['الفهم القرائي','فهم المقروء','الفهم المقروء'].includes(name) ? 'الفهم المقروء' : name;
+}
 function setAuthMessage(message, error = false) {
   const el = document.getElementById('authMessage');
   if (el) { el.textContent = message; el.style.color = error ? '#C62828' : '#00796B'; }
@@ -343,7 +347,7 @@ async function saveAssessment() {
 function renderAssess() {
   const el = document.getElementById('assessList');
   if (!el) return;
-  el.innerHTML = assessments.slice(0, 20).map(a => `<div class="card" style="margin-top:.6rem"><strong>${esc(a.skill || a.name)}</strong> — ${Number(a.pct)}%<small> • ${esc(a.student_name || 'تقويم صفي')} • ${esc(formatDate(a.date))}</small></div>`).join('') || '<p class="note">لا توجد تقويمات محفوظة بعد.</p>';
+  el.innerHTML = assessments.slice(0, 20).map(a => `<div class="card" style="margin-top:.6rem"><strong>${esc(displaySkillName(a.skill || a.name))}</strong> — ${Number(a.pct)}%<small> • ${esc(a.student_name || 'تقويم صفي')} • ${esc(formatDate(a.date))}</small></div>`).join('') || '<p class="note">لا توجد تقويمات محفوظة بعد.</p>';
   fillStudentSelects();
 }
 function formatDate(value) {
@@ -361,7 +365,7 @@ function renderAnalysis(analysis, destinationId) {
   const hasWeakRoots = analysis.likelyRoots.length > 0;
   const rootsToShow = hasWeakRoots ? analysis.likelyRoots : analysis.prerequisiteEvidence;
   const rootsTitle = hasWeakRoots ? 'جذور تعثر محتملة وفق النتائج' : 'المهارات السابقة التي يُنصح بالتحقق منها';
-  el.innerHTML = `<div class="card"><p><span class="badge ${analysis.targetScore !== null && analysis.targetScore < 50 ? 'danger' : 'info'}">${esc(analysis.level)}</span> <strong>${esc(analysis.skill)}</strong></p><p>${esc(score + trend)}</p><h4>${rootsTitle}</h4><ul>${rootsToShow.map(item => `<li>${esc(item.skill)}${item.score === null ? ' — تحتاج إلى تقويم تشخيصي' : ` — متوسط الإتقان ${item.score}%`}</li>`).join('') || '<li>لا تتوفر خريطة مهارات كافية لهذه المهارة.</li>'}</ul><h4>الأدلة</h4><ul>${analysis.evidence.map(item => `<li>${esc(item)}</li>`).join('') || '<li>لا توجد بيانات تقويم مرتبطة بالمهارة بعد.</li>'}</ul><h4>التوصيات المقترحة</h4><ol>${analysis.recommendations.map(item => `<li>${esc(item)}</li>`).join('')}</ol>${analysis.nextSkills.length ? `<p><strong>المهارات اللاحقة:</strong> ${analysis.nextSkills.map(esc).join('، ')}</p>` : ''}<p class="note">${esc(analysis.disclaimer)}</p><button class="btn small" type="button" data-use-analysis>نقل التوصيات إلى التدخل</button></div>`;
+  el.innerHTML = `<div class="card"><p><span class="badge ${analysis.targetScore !== null && analysis.targetScore < 50 ? 'danger' : 'info'}">${esc(analysis.level)}</span> <strong>${esc(displaySkillName(analysis.skill))}</strong></p><p>${esc(score + trend)}</p><h4>${rootsTitle}</h4><ul>${rootsToShow.map(item => `<li>${esc(displaySkillName(item.skill))}${item.score === null ? ' — تحتاج إلى تقويم تشخيصي' : ` — متوسط الإتقان ${item.score}%`}</li>`).join('') || '<li>لا تتوفر خريطة مهارات كافية لهذه المهارة.</li>'}</ul><h4>الأدلة</h4><ul>${analysis.evidence.map(item => `<li>${esc(item)}</li>`).join('') || '<li>لا توجد بيانات تقويم مرتبطة بالمهارة بعد.</li>'}</ul><h4>التوصيات المقترحة</h4><ol>${analysis.recommendations.map(item => `<li>${esc(item)}</li>`).join('')}</ol>${analysis.nextSkills.length ? `<p><strong>المهارات اللاحقة:</strong> ${analysis.nextSkills.map(skill => esc(displaySkillName(skill))).join('، ')}</p>` : ''}<p class="note">${esc(analysis.disclaimer)}</p><button class="btn small" type="button" data-use-analysis>نقل التوصيات إلى التدخل</button></div>`;
   el.querySelector('[data-use-analysis]')?.addEventListener('click', () => useActivity(analysis.skill, analysis.recommendations.join('\n')));
 }
 async function analyzeErrors() {
@@ -405,7 +409,7 @@ async function saveIntervention() {
 function renderInt() {
   const el = document.getElementById('intList');
   if (!el) return;
-  el.innerHTML = interventions.slice(0, 15).map(i => `<div class="card" style="margin-top:.6rem"><strong>${esc(i.skill)}</strong><p>${esc(i.student_name || 'تدخل صفي')} • ${esc(formatDate(i.date))}</p><p>${esc(i.goal || '')}</p></div>`).join('') || '<p class="note">لا توجد تدخلات مسجلة بعد.</p>';
+  el.innerHTML = interventions.slice(0, 15).map(i => `<div class="card" style="margin-top:.6rem"><strong>${esc(displaySkillName(i.skill))}</strong><p>${esc(i.student_name || 'تدخل صفي')} • ${esc(formatDate(i.date))}</p><p>${esc(i.goal || '')}</p></div>`).join('') || '<p class="note">لا توجد تدخلات مسجلة بعد.</p>';
   fillStudentSelects();
 }
 function printWorksheet() {
@@ -414,7 +418,7 @@ function printWorksheet() {
   const steps = document.getElementById('intSteps')?.value || '';
   const win = window.open('', '_blank');
   if (!win) return showToast('اسمح بفتح نافذة الطباعة.');
-  win.document.write(`<html lang="ar" dir="rtl"><meta charset="utf-8"><title>ورقة تدخل — أثَر</title><body style="font-family:Arial,sans-serif;padding:2rem"><h2>ورقة تدخل تعليمية — منصة أثَر</h2><h3>${esc(skill)}</h3><p><strong>الهدف:</strong> ${esc(goal)}</p><p><strong>الخطوات:</strong><br>${escapeLine(steps)}</p></body></html>`);
+  win.document.write(`<html lang="ar" dir="rtl"><meta charset="utf-8"><title>ورقة تدخل — أثَر</title><body style="font-family:Arial,sans-serif;padding:2rem"><h2>ورقة تدخل تعليمية — منصة أثَر</h2><h3>${esc(displaySkillName(skill))}</h3><p><strong>الهدف:</strong> ${esc(goal)}</p><p><strong>الخطوات:</strong><br>${escapeLine(steps)}</p></body></html>`);
   win.document.close(); win.focus(); win.print();
 }
 async function calcImpact() {
@@ -514,7 +518,7 @@ function renderStudentProgress() {
   personal.forEach(a => { const key = a.skill || a.name; if (!latest.has(key)) latest.set(key, a); });
   const interventionRows = interventions.filter(i => i.student_id === student.student_id);
   const impactRows = impacts.filter(i => i.student_id === student.student_id);
-  el.innerHTML = `<div class="card"><h3>${esc(student.name)}</h3><p>${esc(student.grade || '')} • شعبة ${esc(student.section || '')}</p></div>${[...latest.values()].map(a => `<div class="card" style="margin-top:.7rem"><strong>${esc(a.skill || a.name)}</strong><div class="progress"><div class="progress-bar" style="width:${Math.max(0,Math.min(100,Number(a.pct)||0))}%"></div></div><p>نسبة الإتقان المسجلة: ${Number(a.pct)}%</p></div>`).join('') || '<p class="note">لا توجد تقويمات فردية مرتبطة بهذا الطالب بعد.</p>'}<div class="card" style="margin-top:.7rem"><h3>توصيات وتدخلات المعلم</h3>${interventionRows.map(i => `<p><strong>${esc(i.skill)}</strong><br>${esc(i.goal || '')}<br><span class="note">${esc(i.steps || '')}</span></p>`).join('') || '<p>لا توجد تدخلات مسجلة لهذا الطالب.</p>'}</div><div class="card" style="margin-top:.7rem"><h3>قياس الأثر</h3>${impactRows.map(i => `<p>${Number(i.before)}% ← ${Number(i.after)}% (${Number(i.difference)>0?'+':''}${Number(i.difference)} نقطة)</p>`).join('') || '<p>لا توجد قياسات أثر مسجلة لهذا الطالب.</p>'}</div>`;
+  el.innerHTML = `<div class="card"><h3>${esc(student.name)}</h3><p>${esc(student.grade || '')} • شعبة ${esc(student.section || '')}</p></div>${[...latest.values()].map(a => `<div class="card" style="margin-top:.7rem"><strong>${esc(displaySkillName(a.skill || a.name))}</strong><div class="progress"><div class="progress-bar" style="width:${Math.max(0,Math.min(100,Number(a.pct)||0))}%"></div></div><p>نسبة الإتقان المسجلة: ${Number(a.pct)}%</p></div>`).join('') || '<p class="note">لا توجد تقويمات فردية مرتبطة بهذا الطالب بعد.</p>'}<div class="card" style="margin-top:.7rem"><h3>توصيات وتدخلات المعلم</h3>${interventionRows.map(i => `<p><strong>${esc(displaySkillName(i.skill))}</strong><br>${esc(i.goal || '')}<br><span class="note">${esc(i.steps || '')}</span></p>`).join('') || '<p>لا توجد تدخلات مسجلة لهذا الطالب.</p>'}</div><div class="card" style="margin-top:.7rem"><h3>قياس الأثر</h3>${impactRows.map(i => `<p>${Number(i.before)}% ← ${Number(i.after)}% (${Number(i.difference)>0?'+':''}${Number(i.difference)} نقطة)</p>`).join('') || '<p>لا توجد قياسات أثر مسجلة لهذا الطالب.</p>'}</div>`;
 }
 function renderPrincipalView() {
   const el = document.getElementById('principalData');
