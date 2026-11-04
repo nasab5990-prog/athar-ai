@@ -247,9 +247,14 @@
     <h1>المساعد التربوي</h1>
     <p class="subtitle">تحليل يستند إلى نتائج التقويم وخريطة المهارات السابقة، مع بقاء القرار للمعلم.</p>
     <div class="card">
-      <label>الطالب (اختياري)</label>
-      <select id="assistantStudent"><option value="">تحليل عام للمهارة</option></select>
       <textarea id="assistantInput" rows="3" placeholder="اكتب المهارة أو السؤال الذي تريد تحليله..."></textarea>
+      <details class="secondary-tools-disclosure">
+        <summary>ربط التحليل بملف طالب <small>اختياري — لتحليل يستند إلى نتائج طالب محدد</small></summary>
+        <div class="secondary-tools-content">
+          <label>الطالب</label>
+          <select id="assistantStudent"><option value="">تحليل عام للمهارة</option></select>
+        </div>
+      </details>
       <button class="btn" onclick="askAssistant()">إرسال</button>
       <div id="assistantReply" style="margin-top:1rem;"></div>
     </div>
