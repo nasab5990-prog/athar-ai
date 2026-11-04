@@ -179,9 +179,9 @@ async function ensureDemoFixtures() {
   }
   // Seed a small learning journey so parent/student dashboards have meaningful data.
   const demoLearningRecords=[
-    ['assessment',{student_id:studentId,skill:'فهم المقروء',pct:45,date:'2026-10-01',source:'demo'}],
+    ['assessment',{student_id:studentId,skill:'الفهم المقروء',pct:45,date:'2026-10-01',source:'demo'}],
     ['intervention',{student_id:studentId,title:'قراءة موجهة قصيرة',description:'تدريب يومي على تحديد الفكرة الرئيسة',status:'مستمرة',source:'demo'}],
-    ['impact',{student_id:studentId,skill:'فهم المقروء',before:45,after:70,change:25,date:'2026-10-15',source:'demo'}]
+    ['impact',{student_id:studentId,skill:'الفهم المقروء',before:45,after:70,change:25,date:'2026-10-15',source:'demo'}]
   ];
   for (const [kind,payload] of demoLearningRecords) {
     const exists=await query(
