@@ -177,6 +177,24 @@ async function ensureDemoFixtures() {
       [schoolId,teacher.id,JSON.stringify({student_id:studentId,name:'طالب تجريبي',grade:'5',section:'أ'})]
     );
   }
+  // Seed a small learning journey so parent/student dashboards have meaningful data.
+  const demoLearningRecords=[
+    ['assessment',{student_id:studentId,skill:'فهم المقروء',pct:45,date:'2026-10-01',source:'demo'}],
+    ['intervention',{student_id:studentId,title:'قراءة موجهة قصيرة',description:'تدريب يومي على تحديد الفكرة الرئيسة',status:'مستمرة',source:'demo'}],
+    ['impact',{student_id:studentId,skill:'فهم المقروء',before:45,after:70,change:25,date:'2026-10-15',source:'demo'}]
+  ];
+  for (const [kind,payload] of demoLearningRecords) {
+    const exists=await query(
+      "SELECT id FROM records WHERE school_id=$1 AND kind=$2 AND payload->>'student_id'=$3 AND payload->>'source'='demo' LIMIT 1",
+      [schoolId,kind,studentId]
+    );
+    if (!exists.rowCount) {
+      await query(
+        'INSERT INTO records(school_id,owner_id,kind,payload) VALUES($1,$2,$3,$4::jsonb)',
+        [schoolId,teacher.id,kind,JSON.stringify(payload)]
+      );
+    }
+  }
   await query(
     "UPDATE users SET student_id=$1 WHERE email='demo.student@athar.test' AND school_id=$2",
     [studentId,schoolId]
