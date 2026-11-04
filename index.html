@@ -120,12 +120,14 @@
       <h3>تنبيهات ذكية</h3>
       <div id="smartAlerts"></div>
     </div>
-    <div class="card" id="teacherDataAdmin" style="margin-top:1rem;">
-      <h3>إدارة البيانات</h3>
-      <button class="btn small" onclick="exportData()">تصدير JSON</button>
-      <button class="btn small outline" onclick="document.getElementById('imp').click()">استيراد</button>
-      <input type="file" id="imp" accept=".json" style="display:none" onchange="importData(event)">
-    </div>
+    <details class="card secondary-tools-disclosure" id="teacherDataAdmin" style="margin-top:1rem;">
+      <summary>أدوات إدارة البيانات <small>للتصدير أو الاستيراد عند الحاجة</small></summary>
+      <div class="secondary-tools-content">
+        <button class="btn small" onclick="exportData()">تصدير JSON</button>
+        <button class="btn small outline" onclick="document.getElementById('imp').click()">استيراد</button>
+        <input type="file" id="imp" accept=".json" style="display:none" onchange="importData(event)">
+      </div>
+    </details>
   </section>
 
   <section id="students" class="section">
