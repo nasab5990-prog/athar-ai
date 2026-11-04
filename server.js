@@ -164,7 +164,33 @@ async function ensureDemoFixtures() {
     if (!user.active || user.school_id!==schoolId || user.role!==role) throw new Error('Demo account configuration conflict.');
     users[role]=user;
   }
-  await query("UPDATE users SET student_id=NULL WHERE email='demo.student@athar.test'");
+  // Stable synthetic learner shared only inside the isolated demo school.
+  const studentId='ATHAR-DEMO-STUDENT-001';
+  const teacher=users.teacher;
+  const learnerExists=await query(
+    "SELECT id FROM records WHERE school_id=$1 AND kind='student' AND payload->>'student_id'=$2 LIMIT 1",
+    [schoolId,studentId]
+  );
+  if (!learnerExists.rowCount) {
+    await query(
+      "INSERT INTO records(school_id,owner_id,kind,payload) VALUES($1,$2,'student',$3::jsonb)",
+      [schoolId,teacher.id,JSON.stringify({student_id:studentId,name:'طالب تجريبي',grade:'5',section:'أ'})]
+    );
+  }
+  await query(
+    "UPDATE users SET student_id=$1 WHERE email='demo.student@athar.test' AND school_id=$2",
+    [studentId,schoolId]
+  );
+  for (const role of ['parent','student']) {
+    await query(
+      'INSERT INTO account_students(user_id,student_id,school_id) VALUES($1,$2,$3) ON CONFLICT(user_id,student_id) DO NOTHING',
+      [users[role].id,studentId,schoolId]
+    );
+  }
+  await query(
+    'INSERT INTO teacher_students(user_id,student_id,school_id) VALUES($1,$2,$3) ON CONFLICT(user_id,student_id) DO NOTHING',
+    [teacher.id,studentId,schoolId]
+  );
   return users;
 }
 app.post('/api/auth/demo',loginLimiter,asyncRoute(async(req,res)=>{
