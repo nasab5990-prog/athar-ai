@@ -493,7 +493,7 @@ function renderLearningRootMap(analysis, rootItems, observation, patternHint) {
     button.addEventListener('click', () => {
       const field = document.getElementById('assessName');
       if (field) field.value = button.dataset.rootSkill || '';
-      show('assess');
+      show('assessment');
       field?.focus();
       showToast('تم تجهيز التقويم للمهارة المختارة؛ أكمل عدد البنود والإجابات.');
     });
