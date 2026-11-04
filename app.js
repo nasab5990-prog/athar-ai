@@ -586,7 +586,16 @@ function prepareDiagnosticAssessment(skill) {
 function renderAssess() {
   const el = document.getElementById('assessList');
   if (!el) return;
-  el.innerHTML = assessments.slice(0, 20).map(a => `<div class="card" style="margin-top:.6rem"><strong>${esc(displaySkillName(a.skill || a.name))}</strong> — ${Number(a.pct)}%<small> • ${esc(a.student_name || 'تقويم صفي')} • ${esc(formatDate(a.date))}</small></div>`).join('') || '<p class="note">لا توجد تقويمات محفوظة بعد.</p>';
+  el.innerHTML = assessments.slice(0, 50).map((a, index) => {
+    const questions = Array.isArray(a.diagnostic_questions) ? a.diagnostic_questions : [];
+    const questionDetails = questions.length
+      ? `<div class="assessment-saved-questions"><h4>تفاصيل أداء الأسئلة</h4><ol>${questions.map(item => `<li style="margin:.65rem 0"><strong>${escapeLine(item.question || 'سؤال دون نص')}</strong><p class="note">التقدير: ${esc(item.rating || (item.score === 100 ? 'متقن' : item.score === 50 ? 'متقن جزئيًا' : item.score === 0 ? 'يحتاج إلى دعم' : 'غير مسجل'))}</p>${item.note ? `<p class="note">ملاحظة المعلم: ${escapeLine(item.note)}</p>` : ''}</li>`).join('')}</ol></div>`
+      : '<p class="note">هذا تقويم محفوظ بالطريقة السابقة؛ لا توجد تفاصيل تقييم لكل سؤال.</p>';
+    const total = Number(a.total || questions.length || 0);
+    const correct = Number(a.correct || 0);
+    const scoreDetails = `<p class="note">الإجمالي: ${total || 'غير مسجل'} • الإجابات الصحيحة بالكامل: ${correct} • طريقة الاحتساب: ${esc(a.scoring_method || 'الطريقة السابقة')}</p>`;
+    return `<details class="card saved-assessment-card" style="margin-top:.6rem"><summary style="cursor:pointer"><strong>${esc(displaySkillName(a.skill || a.name))}</strong> — ${Number(a.pct)}%<small> • ${esc(a.student_name || 'تقويم صفي')} • ${esc(formatDate(a.date))} • فتح التفاصيل</small></summary><div class="secondary-tools-content">${scoreDetails}${questionDetails}</div></details>`;
+  }).join('') || '<p class="note">لا توجد تقويمات محفوظة بعد.</p>';
   fillStudentSelects();
 }
 function formatDate(value) {
