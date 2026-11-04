@@ -471,6 +471,25 @@ function formatDate(value) {
   return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString('ar-OM');
 }
 function escapeLine(value) { return esc(value).replace(/\n/g, '<br>'); }
+function renderLearningRootMap(analysis, rootItems, observation, patternHint) {
+  const map = document.getElementById('learningRootMap');
+  if (!map) return;
+  const statusFor = item => item.score === null || item.score === undefined
+    ? { label:'يحتاج إلى تقويم', cls:'pending' }
+    : Number(item.score) < 70 ? { label:'مؤشر فجوة يحتاج إلى مراجعة', cls:'review' } : { label:'لا تظهر فجوة في النتائج', cls:'ok' };
+  const previous = (rootItems || []).map(item => {
+    const state = statusFor(item);
+    const score = item.score === null || item.score === undefined ? 'لا توجد نتيجة مسجلة' : `متوسط الإتقان ${Number(item.score)}%`;
+    return `<div class="root-map-node ${state.cls}"><strong>${esc(displaySkillName(item.skill))}</strong><span>${state.label}</span><small>${score}</small></div>`;
+  }).join('') || '<div class="root-map-node pending"><strong>لا توجد مهارات سابقة موثقة</strong><span>تحتاج الخريطة إلى بيانات منهجية</span></div>';
+  const next = (analysis.nextSkills || []).map(skill => `<div class="root-map-node future"><strong>${esc(displaySkillName(skill))}</strong><span>مهارة لاحقة</span></div>`).join('') || '<div class="root-map-node future"><strong>لا توجد مهارات لاحقة مسجلة</strong><span>يمكن إضافتها عند توثيق التسلسل</span></div>';
+  map.innerHTML = `<div class="root-map-legend"><span><i class="pending"></i> يحتاج إلى تقويم</span><span><i class="review"></i> مؤشر يحتاج إلى مراجعة</span><span><i class="ok"></i> لا تظهر فجوة</span></div>
+    <div class="root-map-flow">
+      <section class="root-map-column"><h4>المهارات السابقة</h4><div class="root-map-nodes">${previous}</div></section><div class="root-map-arrow" aria-hidden="true">←</div>
+      <section class="root-map-column"><h4>المهارة المتأثرة</h4><div class="root-map-node focus"><strong>${esc(displaySkillName(analysis.skill))}</strong><span>${analysis.targetScore === null ? 'لا توجد نتيجة مرتبطة' : `الإتقان ${Number(analysis.targetScore)}%`}</span><small>${esc(observation || 'لم تسجل ملاحظة صفية')}</small><small>${esc(patternHint || 'راجع إجابات الطلبة لتحديد نمط الخطأ بدقة.')}</small></div></section><div class="root-map-arrow" aria-hidden="true">←</div>
+      <section class="root-map-column"><h4>المهارات اللاحقة</h4><div class="root-map-nodes">${next}</div></section>
+    </div><p class="note">الأسهم توضح التسلسل التعلمي ولا تثبت علاقة سببية. لا تُعد المهارة السابقة جذرًا للتعثر إلا بعد توفر دليل تقويمي.</p>`;
+}
 function renderAnalysis(analysis, destinationId) {
   const el = document.getElementById(destinationId);
   if (!el) return;
@@ -518,6 +537,7 @@ function renderAnalysis(analysis, destinationId) {
     <p class="note">${esc(analysis.disclaimer || 'النتيجة مساندة، ويعتمد القرار النهائي على مراجعة المعلم.')}</p>
     <button class="btn small" type="button" data-use-analysis>نقل التوصيات إلى التدخل</button>
   </div>`;
+  renderLearningRootMap(analysis, rootItems, teacherObservation, patternHint);
   el.querySelector('[data-use-analysis]')?.addEventListener('click', () => useActivity(displaySkillName(analysis.skill), (analysis.recommendations || []).join('\n')));
 }
 async function analyzeErrors() {
