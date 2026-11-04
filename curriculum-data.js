@@ -20,13 +20,13 @@ window.ATHAR_SUBJECTS_BY_GRADE = {
   '12': ['التربية الإسلامية','اللغة العربية','اللغة الإنجليزية','الرياضيات','الأحياء','الكيمياء','الفيزياء','هذا وطني','الجغرافيا الاقتصادية','تقنية المعلومات','الفنون التشكيلية','الرياضة المدرسية']
 };
 
-/* إضافات مستندة إلى الخطة الدراسية للمدارس الخاصة 2025/2026.
+/* قوائم مواد الصفوف 1 و4 و6 و8 مستندة إلى الخطة الدراسية للمدارس الخاصة 2026/2027.
    تختلف المواد بحسب البرنامج أحادي/ثنائي اللغة والمدرسة؛
    لا تُعامل هذه القوائم كقائمة موحدة لجميع المدارس الحكومية والخاصة. */
-window.ATHAR_CURRICULUM_SOURCE.privateSchoolPlan2025_2026 = {
-  title: 'الخطة الدراسية للمدارس الخاصة 2025/2026',
-  url: 'https://home.moe.gov.om/images/library/file/MKLL001.pdf',
-  note: 'مرجع لخطة المدارس الخاصة (أحادي/ثنائي اللغة)، ويجب مطابقة القائمة مع الخطة المعتمدة للمدرسة.'
+window.ATHAR_CURRICULUM_SOURCE.privateSchoolPlan2026_2027 = {
+  title: 'الخطة الدراسية للبرنامجين أحادي وثنائي اللغة للمدارس الخاصة 2026/2027',
+  url: 'https://home.moe.gov.om/images/library/file/Book419286.pdf',
+  note: 'مرجع رسمي للمدارس الخاصة فقط؛ يجب مطابقة البرنامج مع الخطة المعتمدة لكل مدرسة.'
 };
 window.ATHAR_SUBJECTS_BY_GRADE['1'] = [
   'التربية الإسلامية','اللغة العربية','اللغة الإنجليزية','الرياضيات','العلوم',
@@ -69,8 +69,64 @@ window.ATHAR_CURRICULUM_CATALOG['1']['الرياضيات'] = {
         learning_target: 'التعرف على حفظ الأعداد في الأشياء حتى ٢٠ (رمز الهدف الوارد في الوثيقة: 1Nn3).',
         assessment: 'ملاحظة العد المنظم، والتحقق من عد كل عنصر مرة واحدة، ومناقشة ثبات العدد عند إعادة ترتيب الأشياء.',
         source_url: 'https://home.moe.gov.om/file/ggg/wtheqa/1818/4.pdf',
-        source_year: '2018'
+        source_year: '2018',
+        verification_status: 'needs_revalidation_for_2026_2027',
+        verification_note: 'هذا مرجع أقدم؛ يبقى محفوظًا ولا يُعرض على أنه وثيقة العام 2026/2027 قبل مطابقته مع الكتاب والنشرة الحالية.'
       }
     }
   }
+};
+
+/* سياسة حداثة الوثائق في أثَر:
+   لا تُستخدم وثيقة من سنة سابقة على أنها صادرة للعام الحالي.
+   تُضاف وثائق العام التالي عند نشرها رسميًا والتحقق من محتواها. */
+window.ATHAR_ACADEMIC_YEAR = {
+  current: '2026/2027',
+  next: '2027/2028',
+  getLabel(startYear) {
+    const year = Number(startYear);
+    if (!Number.isInteger(year) || year < 2000) return '';
+    return year + '/' + (year + 1);
+  },
+  getNext(startYear) {
+    const year = Number(startYear);
+    if (!Number.isInteger(year) || year < 2000) return '';
+    return (year + 1) + '/' + (year + 2);
+  }
+};
+window.ATHAR_YEARLY_DOCUMENTS = {
+  '2026/2027': {
+    guidanceNewsletters: {
+      title: 'النشرات التوجيهية للعام الدراسي 2026/2027',
+      url: 'https://home.moe.gov.om/ar/library/202',
+      status: 'official_collection_available',
+      notes: 'تشمل النشرة التوجيهية للمصادر التعليمية ونشرات الرياضيات والعلوم واللغة الإنجليزية وتقنية المعلومات ودراسات الأعمال والاقتصاد.'
+    },
+    curriculumFrameworks: {
+      title: 'الأطر المنهجية للمواد 2026',
+      url: 'https://site.moe.gov.om/library/216',
+      status: 'official_collection_available'
+    },
+    privateSchoolStudyPlan: {
+      title: 'الخطة الدراسية للمدارس الخاصة 2026/2027',
+      url: 'https://home.moe.gov.om/images/library/file/Book419286.pdf',
+      status: 'official_document_available',
+      scope: 'المدارس الخاصة - البرنامج أحادي وثنائي اللغة'
+    },
+    assessmentDocuments: {
+      title: 'وثائق تقويم تعلم الطلبة 2026/2027',
+      url: 'https://site.moe.gov.om/library/216',
+      status: 'verify_each_subject_document',
+      notes: 'لا تُعتمد وثيقة تقويم لمادة أو صف حتى يُتحقق من أنها تخص العام 2026/2027 ومن مصدر الوزارة.'
+    },
+    annualCalendar: {
+      title: 'التقويم السنوي للعام الدراسي 2026/2027',
+      status: 'awaiting_direct_ministry_file_link',
+      notes: 'لا تُستبدل وثيقة التقويم الرسمية برابط خبر أو نسخة غير رسمية.'
+    }
+  }
+};
+window.ATHAR_DOCUMENT_VERSION_RULE = {
+  nextYear: '2027/2028',
+  rule: 'عند بدء العام الدراسي التالي، تُحدّث الوثائق فقط بعد صدورها رسميًا؛ تبقى الإصدارات السابقة محفوظة في أرشيفها ولا تُعرض كوثائق حالية.'
 };
