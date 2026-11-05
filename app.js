@@ -652,7 +652,7 @@ function renderAnalysisHistory() {
         const student = item.student_name || item.studentName || '';
         const score = result.targetScore === null || result.targetScore === undefined ? 'لا توجد نتيجة مرتبطة' : 'الإتقان ' + Number(result.targetScore) + '%';
         return '<div class="saved-analysis-row" style="display:flex;gap:.5rem;align-items:stretch;margin:.45rem 0"><button class="btn secondary saved-analysis-button" type="button" data-analysis-index="' + index + '" style="flex:1;text-align:right">' +
-          '<strong>' + esc(skill) + '</strong><br><small>' + esc(formatDate(item.date)) + ' • ' + esc(score) + (student ? ' • ' + esc(student) : item.student_id ? ' • تحليل فردي' : ' • تحليل صفي') + '</small></button><button class="btn outline small" type="button" data-delete-analysis="' + index + '" aria-label="حذف سجل التحليل" title="حذف سجل التحليل"><span aria-hidden="true">🗑</span></button></div>';
+          '<strong>' + esc(skill) + '</strong><br><small>' + esc(formatDate(item.date)) + ' • ' + esc(score) + (student ? ' • ' + esc(student) : item.student_id ? ' • تحليل فردي' : ' • تحليل صفي') + '</small></button><button class="btn analysis-delete-btn" type="button" data-delete-analysis="' + index + '" aria-label="حذف سجل التحليل" title="حذف سجل التحليل"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M10 11v6m4-6v6M5.5 7l1 13h11l1-13M9 7V4h6v3" /></svg></button></div>';
       }).join('')
     : '<div class="root-map-empty">لا توجد تحليلات سابقة محفوظة في نطاق صلاحيتك بعد.</div>';
   host.querySelectorAll('[data-delete-analysis]').forEach(button => {
