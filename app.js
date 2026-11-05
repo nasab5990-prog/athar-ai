@@ -1310,15 +1310,27 @@ function renderImpactTrendCharts() {
     }).join('');
     const first = points[0].value, latest = points[points.length-1].value;
     const previous = points.length > 1 ? points[points.length-2].value : first;
+    const delta = latest - first;
     const status = latest < previous
       ? 'تراجع في آخر قياس بمقدار ' + (previous-latest) + ' نقطة؛ يُنصح بمراجعة الأدلة وظروف التنفيذ'
-      : latest > first
-        ? 'النتيجة الأخيرة أعلى من خط الأساس بمقدار ' + (latest-first) + ' نقطة'
-        : latest === first
+      : delta > 0
+        ? 'النتيجة الأخيرة أعلى من خط الأساس بمقدار ' + delta + ' نقطة'
+        : delta === 0
           ? 'النتيجة الأخيرة مساوية لخط الأساس'
           : 'لا يظهر تحسن مقارنة بخط الأساس';
+    const statusClass = latest < previous ? 'decline' : delta > 0 ? 'improve' : 'steady';
     const studentName = sorted[sorted.length-1].student_name || students.find(row => row.student_id === sorted[sorted.length-1].student_id)?.name || 'قياس صفي';
-    return '<div class="card" style="margin-top:.7rem"><strong>' + esc(displaySkillName(intervention?.skill || sorted[0].intervention_skill || 'مسار قياس')) + '</strong><p class="note">' + esc(studentName) + ' • ' + sorted.length + ' قياس/قياسات محفوظة</p><p class="note">' + esc(status) + '</p><div style="overflow-x:auto"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="منحنى نتائج القياس قبل التدخل وبعده" viewBox="0 0 ' + width + ' ' + height + '" style="display:block;width:100%;min-width:' + width + 'px;height:auto;max-height:260px">' + grid + '<path d="' + path + '" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' + marks + '</svg></div><p class="note">كل نقطة تمثل نتيجة قبل التدخل أو بعده أو قياس متابعة بعد أسبوعين. يعرض المنحنى تغير النتائج ولا يثبت أن التدخل وحده سبب التحسن.</p></div>';
+    const areaPath = path + ' L ' + x(points.length-1).toFixed(1) + ',' + (top+plotHeight) + ' L ' + x(0).toFixed(1) + ',' + (top+plotHeight) + ' Z';
+    const latestValue = latest + '%';
+    const trendIcon = latest < previous ? '↘' : delta > 0 ? '↗' : '→';
+    return '<section class="impact-trend-card">' +
+      '<div class="impact-trend-head"><div><span class="impact-trend-eyebrow">مؤشر متابعة التدخل</span><h4>' + esc(displaySkillName(intervention?.skill || sorted[0].intervention_skill || 'مسار قياس')) + '</h4><p>' + esc(studentName) + ' <span>•</span> ' + sorted.length + ' قياس محفوظ</p></div><span class="impact-trend-icon">' + trendIcon + '</span></div>' +
+      '<div class="impact-trend-stats"><div><span>أحدث نتيجة</span><strong>' + latestValue + '</strong></div><div><span>التغير عن البداية</span><strong class="' + (delta > 0 ? 'positive' : delta < 0 ? 'negative' : '') + '">' + (delta > 0 ? '+' : '') + delta + ' <small>نقطة</small></strong></div><div><span>عدد نقاط القياس</span><strong>' + points.length + '</strong></div></div>' +
+      '<div class="impact-trend-status ' + statusClass + '"><span class="impact-status-dot"></span>' + esc(status) + '</div>' +
+      '<div class="impact-trend-chart"><div class="impact-chart-legend"><span><i></i> نتائج القياس</span><small>مقياس الإتقان من 0 إلى 100%</small></div><div class="impact-chart-scroll"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="منحنى نتائج القياس قبل التدخل وبعده والمتابعة" viewBox="0 0 ' + width + ' ' + height + '" style="display:block;width:100%;min-width:' + width + 'px;height:auto">' +
+      '<defs><linearGradient id="impactLine' + esc(key.replace(/[^a-zA-Z0-9_-]/g,'_')) + '" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#3978c8"/><stop offset="100%" stop-color="#16a394"/></linearGradient><linearGradient id="impactArea' + esc(key.replace(/[^a-zA-Z0-9_-]/g,'_')) + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3978c8" stop-opacity=".2"/><stop offset="100%" stop-color="#3978c8" stop-opacity="0"/></linearGradient></defs>' +
+      grid + '<path d="' + areaPath + '" fill="url(#impactArea' + esc(key.replace(/[^a-zA-Z0-9_-]/g,'_')) + ')"/><path d="' + path + '" fill="none" stroke="url(#impactLine' + esc(key.replace(/[^a-zA-Z0-9_-]/g,'_')) + ')" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>' + marks + '</svg></div></div>' +
+      '<p class="impact-trend-footnote">تُعرض النتائج قبل التدخل وبعده والمتابعة عند توفرها. يوضح الرسم مسار التغير، ولا يثبت أن التدخل وحده سبب التحسن.</p></section>';
   }).join('');
 }
 function renderImpactHistory() {
