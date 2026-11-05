@@ -266,11 +266,14 @@ function resetSectionView(section) {
   if (!section) return;
   section.querySelectorAll('details[open]').forEach(details => { details.open = false; });
   const transientOutputs = {
+    students:['bulkImportResult'],
+    assessment:['assessResult','diagnosticQuestions','curriculumCatalogStatus'],
     radar:['analysisResult'],
-    assessment:['assessResult'],
-    assistant:['assistantResult'],
+    assistant:['assistantReply'],
     intervention:['intAiResult'],
     impact:['impactResult'],
+    lowresource:['lowResInfo'],
+    roles:['roleInfo','usersList'],
     teacherdev:['pathResult'],
     guide:['guideContent'],
     studentProgress:['studentProgressContent'],
