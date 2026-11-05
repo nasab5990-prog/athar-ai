@@ -264,26 +264,49 @@ const roleSections = {
 function canOpenSection(id) { return (roleSections[currentRole] || []).includes(id); }
 function resetSectionView(section) {
   if (!section) return;
+
+  // Every section returns to its initial form state when the user leaves it.
+  // This affects only the visible UI; saved records and server data are untouched.
   section.querySelectorAll('details[open]').forEach(details => { details.open = false; });
+  section.querySelectorAll('input, textarea, select').forEach(field => {
+    if (field.matches('button, input[type="button"], input[type="submit"], input[type="hidden"]')) return;
+    if (field.tagName === 'SELECT') {
+      const defaultIndex = [...field.options].findIndex(option => option.defaultSelected);
+      field.selectedIndex = defaultIndex >= 0 ? defaultIndex : 0;
+    } else if (field.type === 'checkbox' || field.type === 'radio') {
+      field.checked = field.defaultChecked;
+    } else {
+      field.value = field.defaultValue || '';
+    }
+  });
+
   const transientOutputs = {
     students:['bulkImportResult'],
     assessment:['assessResult','diagnosticQuestions','curriculumCatalogStatus'],
     radar:['analysisResult'],
     assistant:['assistantReply'],
-    intervention:['intAiResult'],
+    intervention:['intAiResult','curriculumCatalogStatus'],
     impact:['impactResult'],
     lowresource:['lowResInfo'],
     roles:['roleInfo','usersList'],
     teacherdev:['pathResult'],
     guide:['guideContent'],
     studentProgress:['studentProgressContent'],
-    principalView:['principalData']
+    principalView:['principalData'],
+    activities:['activityResult','activityPreview'],
+    inclusive:['inclusiveResult']
   };
   (transientOutputs[section.id] || []).forEach(id => {
     const element = document.getElementById(id);
-    if (element) element.innerHTML = '';
+    if (element) {
+      element.innerHTML = '';
+      if (element.id === 'diagnosticQuestions') element.hidden = true;
+    }
   });
+
+  // Restore section-specific dependent controls and cancel any temporary edit mode.
   if (section.id === 'intervention') resetInterventionForm();
+  if (section.id === 'students') renderStudents();
 }
 function show(id) {
   if (!canOpenSection(id)) return showToast('هذه الصفحة غير متاحة لدور حسابك.');
