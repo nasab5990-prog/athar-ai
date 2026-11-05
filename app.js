@@ -1017,6 +1017,36 @@ async function suggestIntervention() {
   }
 }
 
+function resetInterventionForm() {
+  const fields = ['interventionStudent','intGrade','intSubject','intUnit','intLesson','intOutcome','intSemester','intObservedErrors','intSkill','intGoal','intSteps','intEnrich'];
+  fields.forEach(id => {
+    const field = document.getElementById(id);
+    if (field) field.value = '';
+  });
+  const mode = document.getElementById('activityMode');
+  if (mode) mode.value = 'offline';
+  const duration = document.getElementById('activityDuration');
+  if (duration) duration.value = '15';
+  const status = document.getElementById('intStatus');
+  if (status) status.value = 'active';
+  ['curriculumUnitField','curriculumLessonField','curriculumOutcomeField','intStatusField'].forEach(id => {
+    const field = document.getElementById(id);
+    if (field) field.hidden = true;
+  });
+  ['intAiResult','curriculumCatalogStatus'].forEach(id => {
+    const field = document.getElementById(id);
+    if (field) field.innerHTML = '';
+  });
+  document.querySelectorAll('#intervention details').forEach(details => { details.open = false; });
+  const saveButton = document.getElementById('saveInterventionBtn');
+  if (saveButton) saveButton.textContent = 'حفظ التدخل';
+  const cancelButton = document.getElementById('cancelInterventionEditBtn');
+  if (cancelButton) cancelButton.hidden = true;
+  editingInterventionId = null;
+  updateCurriculumSubjects();
+  fillStudentSelects();
+}
+
 async function saveIntervention() {
   const skill = document.getElementById('intSkill')?.value.trim() || '';
   const goal = document.getElementById('intGoal')?.value.trim() || '';
@@ -1069,12 +1099,14 @@ async function saveIntervention() {
       const cancelButton = document.getElementById('cancelInterventionEditBtn');
       if (cancelButton) cancelButton.hidden = true;
       renderInt(); updateDashboard(); updateCycle(); updateAlerts();
-      showToast('تم تحديث التدخل المحفوظ مع الاحتفاظ برقم سجله وروابطه.');
+      resetInterventionForm();
+      showToast('تم تحديث التدخل المحفوظ مع الاحتفاظ برقم سجله وروابطه، وتم تفريغ النموذج.');
     } else {
       result = await syncRecord('intervention', payload);
       interventions.unshift({ ...result.payload, recordId:result.id });
       renderInt(); updateDashboard(); updateCycle(); updateAlerts();
-      showToast('تم حفظ التدخل على قاعدة بيانات المدرسة.');
+      resetInterventionForm();
+      showToast('تم حفظ التدخل على قاعدة بيانات المدرسة، وتم تفريغ النموذج.');
     }
   } catch (error) { showToast(error.message); }
 }
