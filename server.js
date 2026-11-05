@@ -309,6 +309,7 @@ app.put('/api/records/:id',recordLimiter,requireAuth,requireRole('teacher','seni
     ...current,
     skill,goal,steps,
     enrichment:safeText(incoming.enrichment,3000),
+    observed_errors:safeText(incoming.observed_errors,2000),
     curriculum,
     activity_mode:activityMode,
     activity_duration:duration,
