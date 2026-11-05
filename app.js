@@ -1327,7 +1327,7 @@ function renderImpactTrendCharts(filterItem = null) {
     const areaPath = path + ' L ' + x(points.length-1).toFixed(1) + ',' + (top+plotHeight) + ' L ' + x(0).toFixed(1) + ',' + (top+plotHeight) + ' Z';
     const latestValue = latest + '%';
     const trendIcon = latest < previous ? '↘' : delta > 0 ? '↗' : '→';
-    return '<details class="impact-trend-disclosure">' +
+    return '<details class="impact-trend-disclosure" open>' +
       '<summary class="impact-trend-summary"><span class="impact-trend-summary-main"><strong>' + esc(displaySkillName(intervention?.skill || sorted[0].intervention_skill || 'مسار قياس')) + '</strong><small>' + esc(studentName) + ' • ' + sorted.length + ' قياس محفوظ</small></span><span class="impact-trend-summary-result"><strong>' + latestValue + '</strong><small>أحدث نتيجة</small></span><span class="impact-trend-icon">' + trendIcon + '</span></summary>' +
       '<section class="impact-trend-card">' +
       '<div class="impact-trend-head"><div><span class="impact-trend-eyebrow">مؤشر متابعة التدخل</span><h4>' + esc(displaySkillName(intervention?.skill || sorted[0].intervention_skill || 'مسار قياس')) + '</h4><p>' + esc(studentName) + ' <span>•</span> ' + sorted.length + ' قياس محفوظ</p></div><span class="impact-trend-icon">' + trendIcon + '</span></div>' +
