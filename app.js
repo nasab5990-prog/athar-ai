@@ -283,6 +283,7 @@ function resetSectionView(section) {
     const element = document.getElementById(id);
     if (element) element.innerHTML = '';
   });
+  if (section.id === 'intervention') resetInterventionForm();
 }
 function show(id) {
   if (!canOpenSection(id)) return showToast('هذه الصفحة غير متاحة لدور حسابك.');
@@ -1099,6 +1100,7 @@ function resetInterventionForm() {
   const cancelButton = document.getElementById('cancelInterventionEditBtn');
   if (cancelButton) cancelButton.hidden = true;
   editingInterventionId = null;
+  window.atharSuggestedIntervention = null;
   updateCurriculumSubjects();
   fillStudentSelects();
 }
