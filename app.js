@@ -1117,6 +1117,7 @@ function renderInt() {
     const c = i.curriculum || {};
     const curriculumLine = [c.grade ? `الصف ${c.grade}` : '', c.subject || '', c.semester ? `الفصل ${c.semester}` : '', c.unit ? `الوحدة: ${c.unit}` : '', c.lesson ? `الدرس: ${c.lesson}` : ''].filter(Boolean).join(' • ');
     const studentName = i.student_name || students.find(student => student.student_id === i.student_id)?.name || 'تدخل صفي';
+    const observedErrors = String(i.observed_errors ?? i.observedErrors ?? '').trim();
     const modeLabel = ({ offline:'دون أجهزة أو إنترنت', shared:'جهاز المعلم مع شاشة مشتركة', online:'أجهزة للطلبة وإنترنت' })[i.activity_mode] || 'غير محدد';
     const statusLabel = ({ active:'نشط', completed:'مكتمل', paused:'متوقف مؤقتًا' })[i.status] || i.status || 'غير محدد';
     const recordId = Number(i.recordId);
@@ -1125,7 +1126,7 @@ function renderInt() {
       : '';
     return `<details class="card saved-intervention-card" style="margin-top:.6rem">
       <summary style="cursor:pointer;display:flex;justify-content:space-between;gap:.8rem;align-items:center;flex-wrap:wrap">
-        <span><strong>${esc(displaySkillName(i.skill))}</strong><small style="display:block;color:var(--muted,#667085);margin-top:.25rem">${esc(studentName)} • ${esc(formatDate(i.date))}</small></span>
+        <span><strong>${esc(displaySkillName(i.skill))}</strong><small style="display:block;color:var(--muted,#667085);margin-top:.25rem">${esc(studentName)} • ${esc(formatDate(i.date))}</small>${observedErrors ? `<small style="display:block;margin-top:.3rem;color:var(--text,#344054)">ملاحظة المعلم: ${esc(observedErrors)}</small>` : ''}</span>
         <span class="badge">${esc(statusLabel)}</span>
       </summary>
       <div style="margin-top:.8rem">
@@ -1134,7 +1135,7 @@ function renderInt() {
         <p><strong>الهدف:</strong><br>${esc(i.goal || 'غير مسجل')}</p>
         <p><strong>خطوات التدخل:</strong><br>${esc(i.steps || 'غير مسجلة')}</p>
         ${i.enrichment ? `<p><strong>مسار الإثراء:</strong><br>${esc(i.enrichment)}</p>` : ''}
-        ${i.observed_errors ? `<p><strong>ملاحظة المعلم:</strong><br>${esc(i.observed_errors)}</p>` : ''}
+        ${observedErrors ? `<p><strong>ملاحظة المعلم:</strong><br>${esc(observedErrors)}</p>` : ''}
         <p><strong>إمكانات التنفيذ:</strong> ${esc(modeLabel)} • <strong>الوقت:</strong> ${esc(i.activity_duration ?? 'غير محدد')} دقيقة</p>
         <p><strong>مصدر إعداد التدخل:</strong> ${i.suggestion_source === 'athar-analysis' ? 'من تحليل رادار التعثر' : 'إعداد المعلم'}</p>
         ${i.analysis_record_id ? `<p class="note">مرتبط بتحليل محفوظ في رادار التعثر (رقم السجل: ${esc(i.analysis_record_id)}).</p>` : ''}
