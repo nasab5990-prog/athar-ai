@@ -278,6 +278,10 @@ function show(id) {
   if (id === 'studentProgress') renderStudentProgress();
   if (id === 'principalView') renderPrincipalView();
   if (id === 'roles' && currentRole === 'principal') loadSchoolUsers();
+  if (id === 'radar') {
+    const resultHost = document.getElementById('analysisResult');
+    if (resultHost) resultHost.innerHTML = '';
+  }
   if (id === 'reports') renderReports();
 }
 document.addEventListener('DOMContentLoaded', () => {
