@@ -324,3 +324,39 @@ body.dark .sidebar-actions .logout-action {
 .root-map-empty { padding:1rem; border:1px dashed #cbd5e1; border-radius:12px; color:#64748b; text-align:center; }
 @media (max-width:760px) { .root-map-flow { grid-template-columns:1fr; gap:.45rem; } .root-map-arrow { transform:rotate(-90deg); line-height:1; } .root-map-column { width:100%; } }
 @media print { .root-map-node { break-inside:avoid; box-shadow:none; } }
+
+
+/* لوحة احترافية لمسار قياسات الأثر */
+.impact-trend-card{
+  margin:.85rem 0 1.2rem;padding:1.15rem;
+  border:1px solid #dce7f4;border-radius:20px;
+  background:linear-gradient(145deg,#fff 0%,#f7faff 58%,#f0f8fb 100%);
+  box-shadow:0 12px 30px rgba(31,75,125,.08);
+  color:#18324f;overflow:hidden
+}
+.impact-trend-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding-bottom:.9rem;border-bottom:1px solid #e3ebf5}
+.impact-trend-eyebrow{display:inline-block;margin-bottom:.35rem;color:#3978c8;font-size:.74rem;font-weight:800;letter-spacing:.03em}
+.impact-trend-head h4{margin:0;color:#183b62;font-size:1.15rem;font-weight:900}
+.impact-trend-head p{margin:.35rem 0 0;color:#6b7d91;font-size:.84rem}
+.impact-trend-icon{width:46px;height:46px;display:grid;place-items:center;border-radius:15px;background:linear-gradient(140deg,#e7f1ff,#e3f7f3);color:#2876a8;font-size:1.7rem;font-weight:900;flex:none}
+.impact-trend-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.65rem;margin:1rem 0}
+.impact-trend-stats>div{padding:.8rem .9rem;border:1px solid #e3ebf5;border-radius:14px;background:rgba(255,255,255,.82);min-width:0}
+.impact-trend-stats span{display:block;color:#718198;font-size:.75rem;font-weight:700}
+.impact-trend-stats strong{display:block;margin-top:.25rem;color:#183b62;font-size:1.35rem;font-weight:900;font-variant-numeric:tabular-nums}
+.impact-trend-stats strong.positive{color:#13866f}.impact-trend-stats strong.negative{color:#c45b56}
+.impact-trend-stats strong small{font-size:.7rem;font-weight:700}
+.impact-trend-status{display:flex;align-items:center;gap:.55rem;padding:.7rem .85rem;border-radius:12px;font-size:.84rem;font-weight:750}
+.impact-trend-status.improve{background:#eaf8f3;color:#14745f}.impact-trend-status.decline{background:#fff0ee;color:#a84640}.impact-trend-status.steady{background:#eef4fb;color:#42617f}
+.impact-status-dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex:none}
+.impact-trend-chart{margin-top:1rem;padding:.8rem .75rem .35rem;border:1px solid #e5edf6;border-radius:15px;background:rgba(255,255,255,.8)}
+.impact-chart-legend{display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap;margin:0 .25rem .35rem;color:#61758d;font-size:.76rem}
+.impact-chart-legend span{display:flex;align-items:center;gap:.4rem;font-weight:800}.impact-chart-legend i{width:17px;height:4px;border-radius:9px;background:linear-gradient(90deg,#3978c8,#16a394)}
+.impact-chart-scroll{overflow-x:auto}
+.impact-trend-chart svg text{font-family:inherit}
+.impact-trend-footnote{margin:.75rem .15rem 0;color:#718198;font-size:.75rem;line-height:1.7}
+@media(max-width:600px){.impact-trend-card{padding:.85rem;border-radius:16px}.impact-trend-stats{gap:.4rem}.impact-trend-stats>div{padding:.65rem .5rem}.impact-trend-stats span{font-size:.68rem}.impact-trend-stats strong{font-size:1.12rem}.impact-trend-head h4{font-size:1rem}}
+body.dark .impact-trend-card{background:linear-gradient(145deg,#17283d,#172f3b);border-color:#30475e;color:#e7f0fa;box-shadow:0 12px 30px rgba(0,0,0,.18)}
+body.dark .impact-trend-head{border-color:#30475e}body.dark .impact-trend-head h4,body.dark .impact-trend-stats strong{color:#e7f0fa}
+body.dark .impact-trend-head p,body.dark .impact-trend-stats span,body.dark .impact-trend-footnote{color:#a9bacd}
+body.dark .impact-trend-stats>div,body.dark .impact-trend-chart{background:rgba(255,255,255,.04);border-color:#30475e}
+body.dark .impact-trend-status.improve{background:#123e36;color:#8ce0c8}body.dark .impact-trend-status.decline{background:#4b292b;color:#ffb7ae}body.dark .impact-trend-status.steady{background:#263c54;color:#c1d7ef}
