@@ -379,3 +379,8 @@ body.dark .impact-trend-disclosure{background:#17283d;border-color:#30475e}
 body.dark .impact-trend-summary-main strong{color:#e7f0fa}
 body.dark .impact-trend-summary-main small,body.dark .impact-trend-summary-result small{color:#a9bacd}
 @media(max-width:520px){.impact-trend-summary{gap:.5rem;padding:.8rem}.impact-trend-summary-main strong{font-size:.88rem}.impact-trend-summary-result strong{font-size:1rem}.impact-trend-summary .impact-trend-icon{width:36px;height:36px;font-size:1.3rem}}
+
+
+.impact-record-trend{margin:1rem 0;padding-top:.85rem;border-top:1px solid var(--border)}
+.impact-record-trend>strong{display:block;margin:0 0 .55rem;color:var(--primary);font-size:.9rem;font-weight:850}
+.impact-record-trend .impact-trend-disclosure{margin:.45rem 0}
