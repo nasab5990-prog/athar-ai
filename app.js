@@ -1269,12 +1269,56 @@ async function calcImpact() {
     updateDashboard(); updateCycle(); updateAlerts(); renderReports(); showToast('تم حفظ قياس الأثر وربطه بالتدخل المحدد.');
   } catch (error) { showToast(error.message); }
 }
+function renderImpactTrendCharts() {
+  const groups = new Map();
+  impacts.forEach(item => {
+    const key = item.intervention_record_id !== undefined && item.intervention_record_id !== null
+      ? String(item.intervention_record_id)
+      : 'unlinked|' + String(item.student_id || 'class') + '|' + String(item.intervention_skill || 'unknown');
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(item);
+  });
+  return [...groups.entries()].map(([key, rows]) => {
+    const intervention = interventions.find(row => String(row.recordId) === key);
+    const sorted = rows.slice().sort((a,b) => new Date(a.after_date || a.date || 0) - new Date(b.after_date || b.date || 0));
+    const points = [];
+    sorted.forEach((item,index) => {
+      const before = Number(item.before);
+      const after = Number(item.after);
+      if (Number.isFinite(before)) points.push({ value:before, label:'قبل ' + (index+1), date:item.before_date || item.date || '' });
+      if (Number.isFinite(after)) points.push({ value:after, label:'بعد ' + (index+1), date:item.after_date || item.date || '' });
+    });
+    if (points.length < 2) return '';
+    const width = Math.max(520, points.length * 92);
+    const height = 238;
+    const left = 42, right = 18, top = 28, bottom = 62;
+    const plotWidth = width - left - right;
+    const plotHeight = height - top - bottom;
+    const x = index => left + (points.length === 1 ? plotWidth/2 : index * plotWidth/(points.length-1));
+    const y = value => top + (100 - Math.max(0,Math.min(100,value))) / 100 * plotHeight;
+    const path = points.map((point,index) => (index ? 'L' : 'M') + x(index).toFixed(1) + ',' + y(point.value).toFixed(1)).join(' ');
+    const grid = [0,50,100].map(value => {
+      const yy=y(value).toFixed(1);
+      return '<line x1="' + left + '" y1="' + yy + '" x2="' + (width-right) + '" y2="' + yy + '" stroke="currentColor" opacity=".16" stroke-dasharray="4 4"/><text x="' + (left-9) + '" y="' + (Number(yy)+4) + '" text-anchor="end" font-size="11" fill="currentColor">' + value + '%</text>';
+    }).join('');
+    const marks = points.map((point,index) => {
+      const xx=x(index).toFixed(1), yy=y(point.value).toFixed(1);
+      const date = point.date ? formatDate(point.date) : 'دون تاريخ';
+      return '<g><title>' + esc(point.label + ' • ' + point.value + '% • ' + date) + '</title><circle cx="' + xx + '" cy="' + yy + '" r="5" fill="currentColor"/><text x="' + xx + '" y="' + (Number(yy)-11) + '" text-anchor="middle" font-size="11" font-weight="600" fill="currentColor">' + point.value + '%</text><text x="' + xx + '" y="' + (height-34) + '" text-anchor="middle" font-size="11" fill="currentColor">' + esc(point.label) + '</text><text x="' + xx + '" y="' + (height-17) + '" text-anchor="middle" font-size="9" fill="currentColor">' + esc(point.date ? point.date.slice(0,10) : '') + '</text></g>';
+    }).join('');
+    const first = points[0].value, latest = points[points.length-1].value;
+    const status = latest > first ? 'النتيجة الأخيرة أعلى من خط الأساس بمقدار ' + (latest-first) + ' نقطة' : latest < first ? 'النتيجة الأخيرة أقل من خط الأساس بمقدار ' + (first-latest) + ' نقطة؛ راجع أسباب التغير' : 'النتيجة الأخيرة مساوية لخط الأساس';
+    const studentName = sorted[sorted.length-1].student_name || students.find(row => row.student_id === sorted[sorted.length-1].student_id)?.name || 'قياس صفي';
+    return '<div class="card" style="margin-top:.7rem"><strong>' + esc(displaySkillName(intervention?.skill || sorted[0].intervention_skill || 'مسار قياس')) + '</strong><p class="note">' + esc(studentName) + ' • ' + sorted.length + ' قياس/قياسات محفوظة</p><p class="note">' + esc(status) + '</p><div style="overflow-x:auto"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="منحنى نتائج القياس قبل التدخل وبعده" viewBox="0 0 ' + width + ' ' + height + '" style="display:block;width:100%;min-width:' + width + 'px;height:auto;max-height:260px">' + grid + '<path d="' + path + '" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' + marks + '</svg></div><p class="note">كل نقطة تمثل نتيجة قبل التدخل أو بعده في أحد القياسات. يعرض المنحنى تغير النتائج ولا يثبت أن التدخل وحده سبب التحسن.</p></div>';
+  }).join('');
+}
 function renderImpactHistory() {
   const host = document.getElementById('impactHistory');
   if (!host) return;
   const saved = impacts.slice().sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
   host.innerHTML = saved.length
-    ? '<h3>سجل قياسات الأثر</h3><p class="note">افتح أي قياس لمراجعة نتائجه والتدخل والأدلة المرتبطة به.</p>' +
+    ? '<h3>مسار التقدم عبر القياسات</h3><p class="note">مقارنة زمنية لنتائج ما قبل التدخل وما بعده، مجمعة حسب التدخل.</p>' + renderImpactTrendCharts() +
+      '<h3 style="margin-top:1.2rem">سجل قياسات الأثر</h3><p class="note">افتح أي قياس لمراجعة نتائجه والتدخل والأدلة المرتبطة به.</p>' +
       saved.map(item => {
         const intervention = interventions.find(row => String(row.recordId) === String(item.intervention_record_id));
         const studentName = item.student_name || students.find(row => row.student_id === item.student_id)?.name || 'قياس صفي';
