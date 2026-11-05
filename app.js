@@ -708,9 +708,6 @@ function useAnalysisForIntervention(analysis) {
     : 'بعد تقدم المتعلم، انتقل تدريجيًا إلى مهمة أكثر تحديًا، مع إبقاء الدعم متاحًا عند الحاجة.');
   const support = ai?.differentiated?.support || '';
   const expected = ai?.differentiated?.expected || '';
-  if (support || expected) {
-    setValue('intSteps', [...new Set(steps)].join('\n') + (support ? `\n\nمستوى الدعم: ${support}` : '') + (expected ? `\nمستوى المتوقع: ${expected}` : ''));
-  }
   const setValue = (id, value) => {
     const field = document.getElementById(id);
     if (field) field.value = value;
@@ -718,6 +715,7 @@ function useAnalysisForIntervention(analysis) {
   setValue('intSkill', skill);
   setValue('intGoal', goal);
   setValue('intSteps', [...new Set(steps)].join('\n'));
+  if (support || expected) setValue('intSteps', [...new Set(steps)].join('\n') + (support ? `\n\nمستوى الدعم: ${support}` : '') + (expected ? `\nمستوى المتوقع: ${expected}` : ''));
   setValue('intEnrich', enrichment);
   if (studentId) setValue('interventionStudent', studentId);
   window.atharSuggestedIntervention = {
