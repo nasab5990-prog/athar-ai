@@ -651,15 +651,35 @@ function renderAnalysisHistory() {
         const skill = displaySkillName(item.skill || result.skill || 'مهارة غير محددة');
         const student = item.student_name || item.studentName || '';
         const score = result.targetScore === null || result.targetScore === undefined ? 'لا توجد نتيجة مرتبطة' : 'الإتقان ' + Number(result.targetScore) + '%';
-        return '<button class="btn secondary saved-analysis-button" type="button" data-analysis-index="' + index + '" style="display:block;width:100%;text-align:right;margin:.45rem 0">' +
-          '<strong>' + esc(skill) + '</strong><br><small>' + esc(formatDate(item.date)) + ' • ' + esc(score) + (student ? ' • ' + esc(student) : item.student_id ? ' • تحليل فردي' : ' • تحليل صفي') + '</small></button>';
+        return '<div class="saved-analysis-row" style="display:flex;gap:.5rem;align-items:stretch;margin:.45rem 0"><button class="btn secondary saved-analysis-button" type="button" data-analysis-index="' + index + '" style="flex:1;text-align:right">' +
+          '<strong>' + esc(skill) + '</strong><br><small>' + esc(formatDate(item.date)) + ' • ' + esc(score) + (student ? ' • ' + esc(student) : item.student_id ? ' • تحليل فردي' : ' • تحليل صفي') + '</small></button><button class="btn outline small" type="button" data-delete-analysis="' + index + '" aria-label="حذف سجل التحليل">حذف</button></div>';
       }).join('')
     : '<div class="root-map-empty">لا توجد تحليلات سابقة محفوظة في نطاق صلاحيتك بعد.</div>';
+  host.querySelectorAll('[data-delete-analysis]').forEach(button => {
+    button.addEventListener('click', async () => {
+      const item = saved[Number(button.dataset.deleteAnalysis)];
+      if (!item?.recordId) return showToast('تعذر تحديد سجل التحليل المراد حذفه.');
+      const skill = displaySkillName(item.skill || item.result?.skill || 'هذا التحليل');
+      if (!confirm('حذف تحليل ' + skill + ' نهائيًا من السجلات؟')) return;
+      try {
+        await api('/api/records/' + item.recordId, { method:'DELETE' });
+        if (String(window.atharLastAnalysisRecordId || '') === String(item.recordId)) {
+          window.atharLastAnalysisRecordId = null;
+          const resultHost = document.getElementById('analysisResult');
+          if (resultHost) resultHost.innerHTML = '';
+          const map = document.getElementById('learningRootMap');
+          if (map) map.innerHTML = '<div class="root-map-empty">اختاري تحليلًا محفوظًا أو نفّذي تحليلًا جديدًا لعرض الخريطة.</div>';
+        }
+        await loadRecords();
+        showToast('حُذف سجل التحليل.');
+      } catch (error) { showToast(error.message); }
+    });
+  });
   host.querySelectorAll('[data-analysis-index]').forEach(button => {
     button.addEventListener('click', () => {
       const item = saved[Number(button.dataset.analysisIndex)];
       if (!item) return;
-      const result = item.result || item.analysis;
+      const result = { ...(item.result || item.analysis), aiAssist:item.aiAssist || (item.result || item.analysis)?.aiAssist || null };
       window.atharLastAnalysisRecordId = item.recordId || null;
       window.atharLastAnalysisRequest = {
         skill: result.skill || item.skill || '',
@@ -775,7 +795,8 @@ function renderAnalysis(analysis, destinationId) {
     <p class="note">${esc(analysis.disclaimer || 'النتيجة مساندة، ويعتمد القرار النهائي على مراجعة المعلم.')}</p>
     <button class="btn small" type="button" data-use-analysis>نقل التحليل إلى مصمم التدخل</button>
   </div>`;
-  renderLearningRootMap(analysis, rootItems, teacherObservation, patternHint);
+  const mapHost = document.getElementById('learningRootMap');
+  if (mapHost) renderLearningRootMap(analysis, rootItems, teacherObservation, patternHint);
   el.querySelector('[data-use-analysis]')?.addEventListener('click', () => useAnalysisForIntervention(analysis));
 }
 async function analyzeErrors() {
