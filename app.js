@@ -146,7 +146,7 @@ async function loadRecords() {
   impacts = rows.filter(x => x.kind === 'impact').map(x => ({ ...x.payload, recordId:x.id }));
   analyses = rows.filter(x => x.kind === 'analysis').map(x => ({ ...x.payload, recordId:x.id }));
   renderStudents(); renderAssess(); renderInt(); fillStudentSelects();
-  renderAnalysisHistory();
+  renderImpactHistory(); renderAnalysisHistory();
   renderStudentProgress(); renderPrincipalView(); updateDashboard(); updateCycle(); updateAlerts(); updateStatus(); renderReports();
 }
 
@@ -1263,10 +1263,46 @@ async function calcImpact() {
   try {
     const result = await syncRecord('impact', payload);
     impacts.unshift({ ...result.payload, recordId:result.id });
+    renderImpactHistory();
     const el = document.getElementById('impactResult');
     if (el) el.innerHTML = `<div class="card"><strong>الفرق: ${payload.difference > 0 ? '+' : ''}${payload.difference} نقطة مئوية</strong><p>${esc(student?.name || intervention.student_name || 'تقويم صفي')}</p><p>التدخل المرتبط: ${esc(payload.intervention_skill)} — ${esc(payload.intervention_goal)}</p><p><strong>توثيق النتيجة:</strong> ${esc(evidenceStatus)}</p><p class="note">أداة القياس: ${esc(tool || 'غير محددة')} • الجلسات: ${sessionsDone || 0}/${sessionsPlanned || 'غير محدد'} • ${esc(evidenceNote || 'لا توجد ملاحظة مرفقة')}</p><span class="badge ${payload.difference > 0 ? 'success' : 'warning'}">${payload.difference > 0 ? 'تحسن مسجل' : payload.difference === 0 ? 'لا تغير' : 'انخفاض يحتاج مراجعة'}</span></div>`;
     updateDashboard(); updateCycle(); updateAlerts(); renderReports(); showToast('تم حفظ قياس الأثر وربطه بالتدخل المحدد.');
   } catch (error) { showToast(error.message); }
+}
+function renderImpactHistory() {
+  const host = document.getElementById('impactHistory');
+  if (!host) return;
+  const saved = impacts.slice().sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+  host.innerHTML = saved.length
+    ? '<h3>سجل قياسات الأثر</h3><p class="note">افتح أي قياس لمراجعة نتائجه والتدخل والأدلة المرتبطة به.</p>' +
+      saved.map(item => {
+        const intervention = interventions.find(row => String(row.recordId) === String(item.intervention_record_id));
+        const studentName = item.student_name || students.find(row => row.student_id === item.student_id)?.name || 'قياس صفي';
+        const skill = item.intervention_skill || intervention?.skill || 'مهارة غير محددة';
+        const difference = Number(item.difference ?? (Number(item.after) - Number(item.before)));
+        const differenceLabel = (difference > 0 ? '+' : '') + difference + ' نقطة مئوية';
+        const outcomeLabel = difference > 0 ? 'تحسن مسجل' : difference === 0 ? 'لا تغير' : 'انخفاض يحتاج مراجعة';
+        return '<details class="card saved-impact-card" style="margin-top:.6rem">' +
+          '<summary style="cursor:pointer;display:flex;justify-content:space-between;gap:.8rem;align-items:center;flex-wrap:wrap">' +
+          '<span><strong>' + esc(displaySkillName(skill)) + '</strong><small style="display:block;color:var(--muted,#667085);margin-top:.25rem">' + esc(studentName) + ' • ' + esc(formatDate(item.date)) + '</small></span>' +
+          '<span class="badge">' + esc(differenceLabel) + '</span></summary>' +
+          '<div style="margin-top:.8rem">' +
+          '<p><strong>النتيجة قبل التدخل:</strong> ' + esc(item.before) + '%</p>' +
+          '<p><strong>النتيجة بعد التدخل:</strong> ' + esc(item.after) + '%</p>' +
+          '<p><strong>الفرق:</strong> ' + esc(differenceLabel) + ' — ' + esc(outcomeLabel) + '</p>' +
+          '<p><strong>التدخل المرتبط:</strong> ' + esc(intervention?.skill || item.intervention_skill || 'تعذر العثور على سجل التدخل') + '</p>' +
+          (item.intervention_goal || intervention?.goal ? '<p><strong>هدف التدخل:</strong><br>' + esc(item.intervention_goal || intervention.goal) + '</p>' : '') +
+          (item.evidence_tool ? '<p><strong>أداة القياس:</strong> ' + esc(item.evidence_tool) + '</p>' : '') +
+          (item.before_date ? '<p><strong>تاريخ القياس القبلي:</strong> ' + esc(item.before_date) + '</p>' : '') +
+          (item.after_date ? '<p><strong>تاريخ القياس البعدي:</strong> ' + esc(item.after_date) + '</p>' : '') +
+          (item.activity_mode ? '<p><strong>طريقة التنفيذ:</strong> ' + esc(({offline:'ورقة وسبورة دون أجهزة أو إنترنت',shared:'جهاز المعلم وشاشة مشتركة',online:'أجهزة للطلبة وإنترنت'})[item.activity_mode] || item.activity_mode) + '</p>' : '') +
+          (item.sessions_planned || item.sessions_done ? '<p><strong>الجلسات المنفذة:</strong> ' + esc(item.sessions_done ?? 0) + ' من ' + esc(item.sessions_planned ?? 'غير محدد') + '</p>' : '') +
+          (item.evidence_note ? '<p><strong>دليل المعلم:</strong><br>' + esc(item.evidence_note) + '</p>' : '') +
+          (item.followup_score !== null && item.followup_score !== undefined ? '<p><strong>قياس المتابعة:</strong> ' + esc(item.followup_score) + '%</p>' : '') +
+          (item.evidence_status ? '<p class="note"><strong>حالة التوثيق:</strong> ' + esc(item.evidence_status) + '</p>' : '') +
+          '</div></details>';
+      }).join('')
+    : '<div class="root-map-empty">لا توجد قياسات أثر محفوظة بعد.</div>';
 }
 function applyAccess() {
   document.body.style.fontSize = document.getElementById('largeText')?.checked ? '1.15rem' : '';
