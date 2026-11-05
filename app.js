@@ -1044,7 +1044,9 @@ async function saveIntervention() {
       ...(existing || {}),
       student_id:existing ? existing.student_id : studentId,
       student_name:existing ? existing.student_name : (student?.name || null),
-      skill, goal, steps, enrichment, curriculum,
+      skill, goal, steps, enrichment,
+      observed_errors:document.getElementById('intObservedErrors')?.value.trim() || '',
+      curriculum,
       status:editingInterventionId
         ? (document.getElementById('intStatus')?.value || existing.status || 'active')
         : 'active',
@@ -1100,6 +1102,7 @@ function renderInt() {
         <p><strong>الهدف:</strong><br>${esc(i.goal || 'غير مسجل')}</p>
         <p><strong>خطوات التدخل:</strong><br>${esc(i.steps || 'غير مسجلة')}</p>
         ${i.enrichment ? `<p><strong>مسار الإثراء:</strong><br>${esc(i.enrichment)}</p>` : ''}
+        ${i.observed_errors ? `<p><strong>ملاحظة المعلم:</strong><br>${esc(i.observed_errors)}</p>` : ''}
         <p><strong>إمكانات التنفيذ:</strong> ${esc(modeLabel)} • <strong>الوقت:</strong> ${esc(i.activity_duration ?? 'غير محدد')} دقيقة</p>
         <p><strong>مصدر إعداد التدخل:</strong> ${i.suggestion_source === 'athar-analysis' ? 'من تحليل رادار التعثر' : 'إعداد المعلم'}</p>
         ${i.analysis_record_id ? `<p class="note">مرتبط بتحليل محفوظ في رادار التعثر (رقم السجل: ${esc(i.analysis_record_id)}).</p>` : ''}
@@ -1123,6 +1126,7 @@ function editIntervention(recordId) {
   setValue('intGoal', item.goal || '');
   setValue('intSteps', item.steps || '');
   setValue('intEnrich', item.enrichment || '');
+  setValue('intObservedErrors', item.observed_errors || '');
   setValue('activityMode', item.activity_mode || 'offline');
   setValue('activityDuration', [10,15,20].includes(Number(item.activity_duration)) ? item.activity_duration : 15);
   const curriculum = item.curriculum || {};
