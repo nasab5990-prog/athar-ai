@@ -493,9 +493,10 @@ async function saveAssessment() {
     if (isPrerequisiteAssessment) {
       try {
         const refreshed = await api('/api/analysis', { method:'POST', body:JSON.stringify(lastAnalysis) });
-        analyses.unshift({ student_id:lastAnalysis.student_id || null, skill:refreshed.analysis.skill, result:refreshed.analysis, date:new Date().toISOString(), recordId:refreshed.id });
+        const refreshedAnalysis = { ...refreshed.analysis, aiAssist:refreshed.aiAssist || null };
+        analyses.unshift({ student_id:lastAnalysis.student_id || null, skill:refreshedAnalysis.skill, result:refreshedAnalysis, date:new Date().toISOString(), recordId:refreshed.id });
         renderAnalysisHistory();
-        renderAnalysis(refreshed.analysis, 'analysisResult');
+        renderAnalysis(refreshedAnalysis, 'analysisResult');
         showToast('حُفظ التقويم وتحدّثت خريطة الجذور بالنتيجة الجديدة.');
       } catch (refreshError) {
         showToast(`حُفظ التقويم، لكن تعذر تحديث الخريطة تلقائيًا: ${refreshError.message}`);
@@ -694,14 +695,22 @@ function useAnalysisForIntervention(analysis) {
         ? `راجع مهارة ${name}؛ أظهرت النتائج مستوى ${Number(root.score)}%، ثم تحقق من عينة الإجابات قبل اعتمادها فجوة.`
         : `تحقق من استمرار إتقان مهارة ${name}؛ لا تظهر فجوة في النتائج المتاحة (${Number(root.score)}%).`;
   });
+  const ai = analysis.aiAssist && analysis.aiAssist.status === 'ok' ? analysis.aiAssist : null;
   const steps = [
     ...rootChecks,
     ...(analysis.recommendations || []),
+    ...(ai?.teacherChecks || []),
+    ai?.nextCheck ? `تحقق لاحق مقترح: ${ai.nextCheck}` : '',
     'نفّذ مهمة تحقق قصيرة في نهاية التدخل، وسجّل النتيجة لمقارنتها بخط الأساس.'
-  ];
-  const enrichment = score !== null && score >= 70
+  ].filter(Boolean);
+  const enrichment = ai?.differentiated?.enrichment || (score !== null && score >= 70
     ? 'قدّم مهمة أعمق تتطلب التفسير أو الاستدلال أو نقل المهارة إلى سياق جديد، مع متابعة ثبات الإتقان.'
-    : 'بعد تقدم المتعلم، انتقل تدريجيًا إلى مهمة أكثر تحديًا، مع إبقاء الدعم متاحًا عند الحاجة.';
+    : 'بعد تقدم المتعلم، انتقل تدريجيًا إلى مهمة أكثر تحديًا، مع إبقاء الدعم متاحًا عند الحاجة.');
+  const support = ai?.differentiated?.support || '';
+  const expected = ai?.differentiated?.expected || '';
+  if (support || expected) {
+    setValue('intSteps', [...new Set(steps)].join('\n') + (support ? `\n\nمستوى الدعم: ${support}` : '') + (expected ? `\nمستوى المتوقع: ${expected}` : ''));
+  }
   const setValue = (id, value) => {
     const field = document.getElementById(id);
     if (field) field.value = value;
@@ -762,7 +771,8 @@ function renderAnalysis(analysis, destinationId) {
     <div class="card" style="margin:.6rem 0"><strong>2 | نمط الخطأ الملحوظ</strong><p>${esc(teacherObservation)}</p>${patternHint ? `<p><strong>${esc(patternHint)}</strong></p>` : ''}<p class="note">الوصف من ملاحظة المعلم. والمؤشر المحتمل — إن ظهر — استنتاج مبدئي قائم على كلمات الملاحظة، وليس تشخيصًا آليًا أو نتيجة ذكاء اصطناعي.</p></div>
     <div class="card" style="margin:.6rem 0"><strong>3 | مهارات سابقة للتحقق من جذور التعثر</strong><p class="note">${esc(rootStatus)} لا يُعد غياب النتائج دليلًا على وجود فجوة أو سبب.</p><ul>${rootItems.map(item => `<li><strong>${esc(displaySkillName(item.skill))}</strong> — ${item.score === null || item.score === undefined ? 'لا توجد نتيجة مسجلة' : `متوسط الإتقان ${Number(item.score)}%`}<br><span class="note">${esc(item.displayStatus)} • ${esc(item.displayEvidence)}</span></li>`).join('') || '<li>لا توجد مهارات سابقة موثقة لهذه المهارة بعد.</li>'}</ul></div>
     <div class="card" style="margin:.6rem 0"><strong>4 | الدليل من السجلات</strong><ul>${evidenceItems.map(item => `<li>${esc(item)}</li>`).join('') || '<li>لا توجد نتائج تقويم مرتبطة بالمهارة بعد.</li>'}</ul></div>
-    <div class="card" style="margin:.6rem 0"><strong>5 | التدخل المقترح</strong><ol>${(analysis.recommendations || []).map(item => `<li>${esc(item)}</li>`).join('') || '<li>ابدأ بتقويم تشخيصي قصير قبل اختيار التدخل.</li>'}</ol></div>
+    <div class="card" style="margin:.6rem 0"><strong>5 | التدخل المقترح من التحليل القائم على البيانات</strong><ol>${(analysis.recommendations || []).map(item => `<li>${esc(item)}</li>`).join('') || '<li>ابدأ بتقويم تشخيصي قصير قبل اختيار التدخل.</li>'}</ol></div>
+    ${analysis.aiAssist?.status === 'ok' ? `<section class="card ai-assist-result" style="margin:.6rem 0;border-inline-start:4px solid var(--primary,#2878c8)"><h3>✨ المساعد التربوي الذكي</h3><p class="note">مقترحات مولّدة بالذكاء الاصطناعي، تُراجع وتُعتمد من المعلم ولا تُعد تشخيصًا نهائيًا.</p>${analysis.aiAssist.errorPattern ? `<p><strong>نمط الخطأ المحتمل:</strong> ${esc(analysis.aiAssist.errorPattern)}</p>` : ''}${analysis.aiAssist.possibleRoots?.length ? `<p><strong>جذور محتملة تحتاج إلى تحقق:</strong></p><ul>${analysis.aiAssist.possibleRoots.map(item => `<li>${esc(typeof item === 'string' ? item : item.description || item.root || JSON.stringify(item))}</li>`).join('')}</ul>` : ''}${analysis.aiAssist.teacherChecks?.length ? `<p><strong>ما الذي يراجعه المعلم؟</strong></p><ul>${analysis.aiAssist.teacherChecks.map(item => `<li>${esc(item)}</li>`).join('')}</ul>` : ''}<div class="card"><strong>التمايز في التدخل</strong>${analysis.aiAssist.differentiated?.support ? `<p><strong>الدعم:</strong> ${esc(analysis.aiAssist.differentiated.support)}</p>` : ''}${analysis.aiAssist.differentiated?.expected ? `<p><strong>المستوى المتوقع:</strong> ${esc(analysis.aiAssist.differentiated.expected)}</p>` : ''}${analysis.aiAssist.differentiated?.enrichment ? `<p><strong>الإثراء:</strong> ${esc(analysis.aiAssist.differentiated.enrichment)}</p>` : ''}</div>${analysis.aiAssist.nextCheck ? `<p><strong>التحقق التالي:</strong> ${esc(analysis.aiAssist.nextCheck)}</p>` : ''}${analysis.aiAssist.cautions?.length ? `<p class="note"><strong>تنبيهات:</strong> ${analysis.aiAssist.cautions.map(esc).join(' • ')}</p>` : ''}</section>` : analysis.aiAssist?.status === 'not_configured' ? '<p class="note">المساعد الذكي غير مهيأ حاليًا؛ يعرض النظام التحليل القائم على البيانات.</p>' : analysis.aiAssist?.status === 'unavailable' ? '<p class="note">تعذر الوصول إلى المساعد الذكي في هذه المحاولة؛ التحليل القائم على البيانات متاح.</p>' : ''}
     ${analysis.nextSkills?.length ? `<p><strong>المهارات اللاحقة:</strong> ${analysis.nextSkills.map(skill => esc(displaySkillName(skill))).join('، ')}</p>` : ''}
     <p class="note">${esc(analysis.disclaimer || 'النتيجة مساندة، ويعتمد القرار النهائي على مراجعة المعلم.')}</p>
     <button class="btn small" type="button" data-use-analysis>نقل التحليل إلى مصمم التدخل</button>
@@ -779,9 +789,10 @@ async function analyzeErrors() {
     const result = await api('/api/analysis', { method:'POST', body:JSON.stringify(analysisRequest) });
     window.atharLastAnalysisRequest = analysisRequest;
     window.atharLastAnalysisRecordId = result.id || null;
-    analyses.unshift({ student_id:studentId || null, skill:result.analysis.skill, result:result.analysis, date:new Date().toISOString(), recordId:result.id });
+    const analysisWithAI = { ...result.analysis, aiAssist:result.aiAssist || null };
+    analyses.unshift({ student_id:studentId || null, skill:analysisWithAI.skill, result:analysisWithAI, date:new Date().toISOString(), recordId:result.id });
     renderAnalysisHistory();
-    renderAnalysis(result.analysis, 'analysisResult'); updateCycle();
+    renderAnalysis(analysisWithAI, 'analysisResult'); updateCycle();
     showToast('اكتمل التحليل باستخدام نتائج التقويم وخريطة المهارات.');
   } catch (error) { showToast(error.message); }
 }
@@ -793,8 +804,9 @@ async function askAssistant() {
     const result = await api('/api/analysis', { method:'POST', body:JSON.stringify({ skill:question, question, student_id:studentId }) });
     window.atharLastAnalysisRequest = { skill:question, student_id:studentId, observedErrors:question };
     window.atharLastAnalysisRecordId = result.id || null;
-    analyses.unshift({ student_id:studentId || null, skill:result.analysis.skill, result:result.analysis, date:new Date().toISOString(), recordId:result.id });
-    renderAnalysis(result.analysis, 'assistantReply'); updateCycle();
+    const analysisWithAI = { ...result.analysis, aiAssist:result.aiAssist || null };
+    analyses.unshift({ student_id:studentId || null, skill:analysisWithAI.skill, result:analysisWithAI, date:new Date().toISOString(), recordId:result.id });
+    renderAnalysis(analysisWithAI, 'assistantReply'); updateCycle();
     showToast('أُعد الرد بالاستناد إلى بيانات المدرسة المتاحة.');
   } catch (error) { showToast(error.message); }
 }
