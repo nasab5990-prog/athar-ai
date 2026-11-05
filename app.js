@@ -1269,9 +1269,13 @@ async function calcImpact() {
     updateDashboard(); updateCycle(); updateAlerts(); renderReports(); showToast('تم حفظ قياس الأثر وربطه بالتدخل المحدد.');
   } catch (error) { showToast(error.message); }
 }
-function renderImpactTrendCharts() {
+function renderImpactTrendCharts(filterItem = null) {
   const groups = new Map();
-  impacts.forEach(item => {
+  const sourceImpacts = filterItem ? impacts.filter(item => {
+    if (filterItem.intervention_record_id !== undefined && filterItem.intervention_record_id !== null) return String(item.intervention_record_id) === String(filterItem.intervention_record_id);
+    return String(item.student_id || 'class') === String(filterItem.student_id || 'class') && String(item.intervention_skill || 'unknown') === String(filterItem.intervention_skill || 'unknown');
+  }) : impacts;
+  sourceImpacts.forEach(item => {
     const key = item.intervention_record_id !== undefined && item.intervention_record_id !== null
       ? String(item.intervention_record_id)
       : 'unlinked|' + String(item.student_id || 'class') + '|' + String(item.intervention_skill || 'unknown');
@@ -1340,8 +1344,7 @@ function renderImpactHistory() {
   if (!host) return;
   const saved = impacts.slice().sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
   host.innerHTML = saved.length
-    ? '<h3>مسار التقدم عبر القياسات</h3><p class="note">مقارنة زمنية لنتائج ما قبل التدخل وما بعده، مجمعة حسب التدخل.</p>' + renderImpactTrendCharts() +
-      '<h3 style="margin-top:1.2rem">سجل قياسات الأثر</h3><p class="note">افتح أي قياس لمراجعة نتائجه والتدخل والأدلة المرتبطة به.</p>' +
+    ? '<h3>سجل قياسات الأثر</h3><p class="note">افتح أي قياس لمراجعة نتائجه وأدلته ومسار التقدم الخاص بالتدخل المرتبط به.</p>' +
       saved.map(item => {
         const intervention = interventions.find(row => String(row.recordId) === String(item.intervention_record_id));
         const studentName = item.student_name || students.find(row => row.student_id === item.student_id)?.name || 'قياس صفي';
@@ -1367,6 +1370,7 @@ function renderImpactHistory() {
           (item.evidence_note ? '<p><strong>دليل المعلم:</strong><br>' + esc(item.evidence_note) + '</p>' : '') +
           (item.followup_score !== null && item.followup_score !== undefined ? '<p><strong>قياس المتابعة:</strong> ' + esc(item.followup_score) + '%</p>' : '') +
           (item.evidence_status ? '<p class="note"><strong>حالة التوثيق:</strong> ' + esc(item.evidence_status) + '</p>' : '') +
+          '<div class="impact-record-trend"><strong>مسار التقدم الخاص بهذا التدخل</strong>' + renderImpactTrendCharts(item) + '</div>' +
           (intervention ? '<button class="btn small secondary" type="button" onclick="viewInterventionRecord(' + Number(intervention.recordId) + ')">عرض التدخل المرتبط</button>' : '<p class="note">سجل التدخل المرتبط غير متاح حاليًا.</p>') +
           '</div></details>';
       }).join('')
