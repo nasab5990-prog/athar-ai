@@ -457,11 +457,85 @@ async function analyzeLearning(user,body) {
   if(safeText(body.observedErrors,1000))evidence.push(`ملاحظة المعلم: ${safeText(body.observedErrors,1000)}`);
   return {skill:mapped?.title||skill,level:targetScore===null?'لا تتوفر نتائج كافية':targetScore<50?'تعثر مرتفع':targetScore<70?'يحتاج إلى دعم':targetScore<85?'قريب من الإتقان':'متقن',targetScore,trend,sampleSize:scores.length,likelyRoots,prerequisiteEvidence,nextSkills:mapped?.next||[],evidence,recommendations,disclaimer:'تحليل مساند مبني على السجلات المتاحة وخريطة مهارات أولية؛ لا يمثل تشخيصًا نهائيًا، ويعتمد القرار على مراجعة المعلم.'};
 }
-app.post('/api/analysis',requireAuth,requireRole('teacher','senior_teacher','principal'),asyncRoute(async(req,res)=>{
+
+const aiAnalysisLimiter = rateLimit({ windowMs:60*1000, limit:8, standardHeaders:true, legacyHeaders:false, message:{message:'تم الوصول إلى حد التحليل الذكي المؤقت. حاول بعد قليل.'} });
+function extractResponseText(payload) {
+  if (typeof payload?.output_text === 'string') return payload.output_text;
+  for (const item of payload?.output || []) {
+    for (const part of item?.content || []) if (part?.type === 'output_text' && typeof part.text === 'string') return part.text;
+  }
+  return '';
+}
+async function generateTeachingAI(analysis, observedErrors, body) {
+  if (!process.env.OPENAI_API_KEY) return {status:'not_configured'};
+  const evidenceOnly = {
+    skill:analysis.skill,
+    level:analysis.level,
+    targetScore:analysis.targetScore,
+    trend:analysis.trend,
+    sampleSize:analysis.sampleSize,
+    prerequisiteEvidence:analysis.prerequisiteEvidence,
+    nextSkills:analysis.nextSkills,
+    recommendations:analysis.recommendations,
+    teacherObservation:safeText(observedErrors,1000),
+    grade:safeText(body.grade,30),
+    subject:safeText(body.subject,80),
+    lesson:safeText(body.lesson,120),
+    classSize:safeText(body.class_size,10),
+    deliveryMode:['offline','shared','digital'].includes(body.delivery_mode)?body.delivery_mode:'shared'
+  };
+  const response = await fetch('https://api.openai.com/v1/responses', {
+    method:'POST',
+    headers:{'Authorization':`Bearer ${process.env.OPENAI_API_KEY}`,'Content-Type':'application/json'},
+    body:JSON.stringify({
+      model:process.env.OPENAI_MODEL || 'gpt-4.1-mini',
+      store:false,
+      max_output_tokens:1200,
+      instructions:'أنت مساعد تربوي للمعلم في سلطنة عُمان. حلّل بيانات التعلم المقدمة فقط. لا تخترع نتائج أو أدلة أو بيانات منهجية. فرّق بوضوح بين الدليل والفرضية، ولا تصف أي جذر بأنه سبب مؤكد ما لم تدعمه نتائج مباشرة. لا تشخّص الطالب ولا تصدر أحكامًا عليه. اقترح إجراءات صفية قابلة للتنفيذ في صف كبير، مع بدائل دون أجهزة أو باستخدام جهاز المعلم/الشاشة المشتركة. اجعل المعلم صاحب القرار. أخرج JSON صالحًا باللغة العربية بالمفاتيح: errorPattern (string), possibleRoots (array of objects {skill:string,evidence:string,confidence:string}), teacherChecks (array of strings), differentiated (object {support:string,expected:string,enrichment:string}), nextCheck (string), cautions (array of strings).',
+      input:`حلّل هذه البيانات التعليمية المجمّعة والمجرّدة من أسماء الطلبة ومعرّفاتهم، وأعد JSON فقط:\n${JSON.stringify(evidenceOnly)}`,
+      text:{format:{type:'json_object'}}
+    })
+  });
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`OpenAI API ${response.status}: ${errorBody.slice(0,500)}`);
+  }
+  const payload = await response.json();
+  const raw = extractResponseText(payload);
+  if (!raw) throw new Error('لم تُرجع خدمة الذكاء الاصطناعي نصًا قابلًا للقراءة.');
+  const parsed = JSON.parse(raw);
+  const list = value => Array.isArray(value) ? value.map(x=>safeText(x,500)).filter(Boolean).slice(0,6) : [];
+  const roots = Array.isArray(parsed.possibleRoots) ? parsed.possibleRoots.slice(0,5).map(x=>({
+    skill:safeText(x?.skill,120),
+    evidence:safeText(x?.evidence,400),
+    confidence:['منخفضة','متوسطة','مرتفعة'].includes(x?.confidence)?x.confidence:'غير محددة'
+  })).filter(x=>x.skill) : [];
+  return {
+    status:'ready',
+    provider:'OpenAI API',
+    errorPattern:safeText(parsed.errorPattern,700),
+    possibleRoots:roots,
+    teacherChecks:list(parsed.teacherChecks),
+    differentiated:{
+      support:safeText(parsed.differentiated?.support,700),
+      expected:safeText(parsed.differentiated?.expected,700),
+      enrichment:safeText(parsed.differentiated?.enrichment,700)
+    },
+    nextCheck:safeText(parsed.nextCheck,500),
+    cautions:list(parsed.cautions),
+    disclaimer:'مقترحات مولّدة آليًا من بيانات مجمّعة وملاحظة المعلم؛ ليست تشخيصًا ولا تثبت السببية. راجعها وعدّلها قبل التطبيق.'
+  };
+}
+app.post('/api/analysis',requireAuth,requireRole('teacher','senior_teacher','principal'),aiAnalysisLimiter,asyncRoute(async(req,res)=>{
   try {
-    const result=await analyzeLearning(req.user,req.body||{}), studentId=safeText(req.body?.student_id,80)||null;
-    const saved=await query('INSERT INTO records(school_id,owner_id,kind,payload) VALUES($1,$2,$3,$4::jsonb) RETURNING id',[req.user.school_id,req.user.id,'analysis',JSON.stringify({student_id:studentId,skill:result.skill,result,date:new Date().toISOString()})]);
-    await audit(req.user.id,'learning.analysis',result.skill); res.json({analysis:result,id:saved.rows[0].id});
+    const requestBody=req.body||{};
+    const result=await analyzeLearning(req.user,requestBody), studentId=safeText(requestBody.student_id,80)||null;
+    let aiAssist={status:'not_configured'};
+    try { aiAssist=await generateTeachingAI(result,requestBody.observedErrors,requestBody); }
+    catch(error) { console.error('Teaching AI unavailable:',error.message); aiAssist={status:'unavailable',message:'تعذر إكمال التحليل الذكي الآن؛ ما زال التحليل القائم على نتائج التقويم متاحًا.'}; }
+    const saved=await query('INSERT INTO records(school_id,owner_id,kind,payload) VALUES($1,$2,$3,$4::jsonb) RETURNING id',[req.user.school_id,req.user.id,'analysis',JSON.stringify({student_id:studentId,skill:result.skill,result,aiAssist,date:new Date().toISOString()})]);
+    await audit(req.user.id,'learning.analysis',result.skill);
+    res.json({analysis:result,aiAssist,id:saved.rows[0].id});
   } catch(error) { res.status(error.status||500).json({message:error.status?error.message:'تعذر تحليل البيانات.'}); }
 }));
 app.use((error,req,res,next)=>{
