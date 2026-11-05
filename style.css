@@ -360,3 +360,22 @@ body.dark .impact-trend-head{border-color:#30475e}body.dark .impact-trend-head h
 body.dark .impact-trend-head p,body.dark .impact-trend-stats span,body.dark .impact-trend-footnote{color:#a9bacd}
 body.dark .impact-trend-stats>div,body.dark .impact-trend-chart{background:rgba(255,255,255,.04);border-color:#30475e}
 body.dark .impact-trend-status.improve{background:#123e36;color:#8ce0c8}body.dark .impact-trend-status.decline{background:#4b292b;color:#ffb7ae}body.dark .impact-trend-status.steady{background:#263c54;color:#c1d7ef}
+
+
+/* إظهار بطاقات ورسوم قياس الأثر عند فتح التدخل فقط */
+.impact-trend-disclosure{margin:.65rem 0;border:1px solid #dce7f4;border-radius:16px;background:#fff;overflow:hidden;box-shadow:0 5px 16px rgba(31,75,125,.045)}
+.impact-trend-summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:.8rem;padding:.9rem 1rem}
+.impact-trend-summary::-webkit-details-marker{display:none}
+.impact-trend-summary:after{content:"＋";margin-inline-start:.15rem;color:#3978c8;font-size:1.15rem;font-weight:800}
+.impact-trend-disclosure[open]>.impact-trend-summary:after{content:"－"}
+.impact-trend-summary-main{display:flex;flex-direction:column;gap:.2rem;min-width:0;flex:1}
+.impact-trend-summary-main strong{color:#183b62;font-size:.96rem;font-weight:850}
+.impact-trend-summary-main small,.impact-trend-summary-result small{color:#718198;font-size:.76rem}
+.impact-trend-summary-result{display:flex;flex-direction:column;align-items:flex-end;gap:.12rem}
+.impact-trend-summary-result strong{color:#168674;font-size:1.15rem;font-weight:900;font-variant-numeric:tabular-nums}
+.impact-trend-disclosure>.impact-trend-card{margin:0;border:0;border-top:1px solid #e3ebf5;border-radius:0;box-shadow:none}
+.impact-trend-disclosure>.impact-trend-card .impact-trend-head{display:none}
+body.dark .impact-trend-disclosure{background:#17283d;border-color:#30475e}
+body.dark .impact-trend-summary-main strong{color:#e7f0fa}
+body.dark .impact-trend-summary-main small,body.dark .impact-trend-summary-result small{color:#a9bacd}
+@media(max-width:520px){.impact-trend-summary{gap:.5rem;padding:.8rem}.impact-trend-summary-main strong{font-size:.88rem}.impact-trend-summary-result strong{font-size:1rem}.impact-trend-summary .impact-trend-icon{width:36px;height:36px;font-size:1.3rem}}
