@@ -262,8 +262,29 @@ const roleSections = {
   student: ['dashboard','studentProgress','guide','privacy','about']
 };
 function canOpenSection(id) { return (roleSections[currentRole] || []).includes(id); }
+function resetSectionView(section) {
+  if (!section) return;
+  section.querySelectorAll('details[open]').forEach(details => { details.open = false; });
+  const transientOutputs = {
+    radar:['analysisResult'],
+    assessment:['assessResult'],
+    assistant:['assistantResult'],
+    intervention:['intAiResult'],
+    impact:['impactResult'],
+    teacherdev:['pathResult'],
+    guide:['guideContent'],
+    studentProgress:['studentProgressContent'],
+    principalView:['principalData']
+  };
+  (transientOutputs[section.id] || []).forEach(id => {
+    const element = document.getElementById(id);
+    if (element) element.innerHTML = '';
+  });
+}
 function show(id) {
   if (!canOpenSection(id)) return showToast('هذه الصفحة غير متاحة لدور حسابك.');
+  const previousSection = document.querySelector('.section.active');
+  if (previousSection && previousSection.id !== id) resetSectionView(previousSection);
   document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
   document.getElementById(id)?.classList.add('active');
   document.querySelectorAll('.sidebar a[data-section]').forEach(link => link.classList.toggle('active', link.dataset.section === id));
@@ -278,10 +299,6 @@ function show(id) {
   if (id === 'studentProgress') renderStudentProgress();
   if (id === 'principalView') renderPrincipalView();
   if (id === 'roles' && currentRole === 'principal') loadSchoolUsers();
-  if (id === 'radar') {
-    const resultHost = document.getElementById('analysisResult');
-    if (resultHost) resultHost.innerHTML = '';
-  }
   if (id === 'reports') renderReports();
 }
 document.addEventListener('DOMContentLoaded', () => {
