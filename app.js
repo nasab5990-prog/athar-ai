@@ -1287,6 +1287,8 @@ function renderImpactTrendCharts() {
       const after = Number(item.after);
       if (Number.isFinite(before)) points.push({ value:before, label:'قبل ' + (index+1), date:item.before_date || item.date || '' });
       if (Number.isFinite(after)) points.push({ value:after, label:'بعد ' + (index+1), date:item.after_date || item.date || '' });
+      const followup = item.followup_score === null || item.followup_score === undefined || item.followup_score === '' ? NaN : Number(item.followup_score);
+      if (Number.isFinite(followup)) points.push({ value:followup, label:'متابعة ' + (index+1), date:item.followup_date || '' });
     });
     if (points.length < 2) return '';
     const width = Math.max(520, points.length * 92);
@@ -1307,9 +1309,16 @@ function renderImpactTrendCharts() {
       return '<g><title>' + esc(point.label + ' • ' + point.value + '% • ' + date) + '</title><circle cx="' + xx + '" cy="' + yy + '" r="5" fill="currentColor"/><text x="' + xx + '" y="' + (Number(yy)-11) + '" text-anchor="middle" font-size="11" font-weight="600" fill="currentColor">' + point.value + '%</text><text x="' + xx + '" y="' + (height-34) + '" text-anchor="middle" font-size="11" fill="currentColor">' + esc(point.label) + '</text><text x="' + xx + '" y="' + (height-17) + '" text-anchor="middle" font-size="9" fill="currentColor">' + esc(point.date ? point.date.slice(0,10) : '') + '</text></g>';
     }).join('');
     const first = points[0].value, latest = points[points.length-1].value;
-    const status = latest > first ? 'النتيجة الأخيرة أعلى من خط الأساس بمقدار ' + (latest-first) + ' نقطة' : latest < first ? 'النتيجة الأخيرة أقل من خط الأساس بمقدار ' + (first-latest) + ' نقطة؛ راجع أسباب التغير' : 'النتيجة الأخيرة مساوية لخط الأساس';
+    const previous = points.length > 1 ? points[points.length-2].value : first;
+    const status = latest < previous
+      ? 'تراجع في آخر قياس بمقدار ' + (previous-latest) + ' نقطة؛ يُنصح بمراجعة الأدلة وظروف التنفيذ'
+      : latest > first
+        ? 'النتيجة الأخيرة أعلى من خط الأساس بمقدار ' + (latest-first) + ' نقطة'
+        : latest === first
+          ? 'النتيجة الأخيرة مساوية لخط الأساس'
+          : 'لا يظهر تحسن مقارنة بخط الأساس';
     const studentName = sorted[sorted.length-1].student_name || students.find(row => row.student_id === sorted[sorted.length-1].student_id)?.name || 'قياس صفي';
-    return '<div class="card" style="margin-top:.7rem"><strong>' + esc(displaySkillName(intervention?.skill || sorted[0].intervention_skill || 'مسار قياس')) + '</strong><p class="note">' + esc(studentName) + ' • ' + sorted.length + ' قياس/قياسات محفوظة</p><p class="note">' + esc(status) + '</p><div style="overflow-x:auto"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="منحنى نتائج القياس قبل التدخل وبعده" viewBox="0 0 ' + width + ' ' + height + '" style="display:block;width:100%;min-width:' + width + 'px;height:auto;max-height:260px">' + grid + '<path d="' + path + '" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' + marks + '</svg></div><p class="note">كل نقطة تمثل نتيجة قبل التدخل أو بعده في أحد القياسات. يعرض المنحنى تغير النتائج ولا يثبت أن التدخل وحده سبب التحسن.</p></div>';
+    return '<div class="card" style="margin-top:.7rem"><strong>' + esc(displaySkillName(intervention?.skill || sorted[0].intervention_skill || 'مسار قياس')) + '</strong><p class="note">' + esc(studentName) + ' • ' + sorted.length + ' قياس/قياسات محفوظة</p><p class="note">' + esc(status) + '</p><div style="overflow-x:auto"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="منحنى نتائج القياس قبل التدخل وبعده" viewBox="0 0 ' + width + ' ' + height + '" style="display:block;width:100%;min-width:' + width + 'px;height:auto;max-height:260px">' + grid + '<path d="' + path + '" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' + marks + '</svg></div><p class="note">كل نقطة تمثل نتيجة قبل التدخل أو بعده أو قياس متابعة بعد أسبوعين. يعرض المنحنى تغير النتائج ولا يثبت أن التدخل وحده سبب التحسن.</p></div>';
   }).join('');
 }
 function renderImpactHistory() {
