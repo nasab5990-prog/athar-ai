@@ -1124,7 +1124,7 @@ function renderInt() {
     const editButton = Number.isInteger(recordId) && recordId > 0
       ? `<button class="btn small secondary" type="button" onclick="editIntervention(${recordId})">تعديل واستكمال التدخل</button>`
       : '';
-    return `<details class="card saved-intervention-card" style="margin-top:.6rem">
+    return `<details class="card saved-intervention-card" data-intervention-id="${esc(i.recordId)}" style="margin-top:.6rem">
       <summary style="cursor:pointer;display:flex;justify-content:space-between;gap:.8rem;align-items:center;flex-wrap:wrap">
         <span><strong>${esc(displaySkillName(i.skill))}</strong><small style="display:block;color:var(--muted,#667085);margin-top:.25rem">${esc(studentName)} • ${esc(formatDate(i.date))}</small>${observedErrors ? `<small style="display:block;margin-top:.3rem;color:var(--text,#344054)">ملاحظة المعلم: ${esc(observedErrors)}</small>` : ''}</span>
         <span class="badge">${esc(statusLabel)}</span>
@@ -1300,9 +1300,20 @@ function renderImpactHistory() {
           (item.evidence_note ? '<p><strong>دليل المعلم:</strong><br>' + esc(item.evidence_note) + '</p>' : '') +
           (item.followup_score !== null && item.followup_score !== undefined ? '<p><strong>قياس المتابعة:</strong> ' + esc(item.followup_score) + '%</p>' : '') +
           (item.evidence_status ? '<p class="note"><strong>حالة التوثيق:</strong> ' + esc(item.evidence_status) + '</p>' : '') +
+          (intervention ? '<button class="btn small secondary" type="button" onclick="viewInterventionRecord(' + Number(intervention.recordId) + ')">عرض التدخل المرتبط</button>' : '<p class="note">سجل التدخل المرتبط غير متاح حاليًا.</p>') +
           '</div></details>';
       }).join('')
     : '<div class="root-map-empty">لا توجد قياسات أثر محفوظة بعد.</div>';
+}
+function viewInterventionRecord(recordId) {
+  const item = interventions.find(row => String(row.recordId) === String(recordId));
+  if (!item) return showToast('تعذر العثور على التدخل المرتبط بهذا القياس.');
+  show('intervention');
+  const card = document.querySelector(`.saved-intervention-card[data-intervention-id="${CSS.escape(String(recordId))}"]`);
+  if (!card) return showToast('لم يظهر سجل التدخل في القائمة الحالية.');
+  card.open = true;
+  card.scrollIntoView({ behavior:'smooth', block:'center' });
+  showToast('تم فتح تفاصيل التدخل المرتبط بقياس الأثر.');
 }
 function applyAccess() {
   document.body.style.fontSize = document.getElementById('largeText')?.checked ? '1.15rem' : '';
