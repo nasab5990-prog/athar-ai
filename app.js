@@ -1540,12 +1540,34 @@ function updateCycle() {
 function updateAlerts() {
   const el = document.getElementById('smartAlerts');
   if (!el) return;
-  const messages = [];
-  if (!students.length) messages.push('أضف سجلات الطلبة لبدء المتابعة.');
-  if (!assessments.length) messages.push('لا توجد تقويمات؛ أضف تقويمًا تشخيصيًا.');
-  if (assessments.length && !interventions.length) messages.push('توجد تقويمات دون تدخلات مسجلة.');
-  if (interventions.length && !impacts.length) messages.push('توجد تدخلات لم يسجل لها قياس أثر بعد.');
-  el.innerHTML = messages.length ? messages.map(message => `<div class="note" style="margin:.3rem 0">${esc(message)}</div>`).join('') : '<span class="badge success">اكتملت السجلات الحالية للدورة.</span>';
+
+  // Give each role one clear next action without assuming every learner has a device.
+  if (currentRole === 'parent' || currentRole === 'student') {
+    el.innerHTML = `<div class="dashboard-next-step">
+      <div><strong>تابع التقدم الدراسي</strong><p>اطّلع على نتائج المهارات والتدخلات وقياسات الأثر المرتبطة بحسابك.</p></div>
+      <button class="btn small" type="button" onclick="show('studentProgress')">عرض التقدم الدراسي</button>
+    </div>`;
+    return;
+  }
+
+  const hasAnalysis = analyses.length > 0 || Boolean(window.atharLastAnalysis);
+  let step;
+  if (!assessments.length) {
+    step = { title:'ابدأ بتقويم تشخيصي', detail:'سجّل تقويمًا للصف أو لطالب محدد لتحديد مستوى المهارة.', section:'assessment', action:'إدخال تقويم' };
+  } else if (!hasAnalysis) {
+    step = { title:'حلّل نتائج التعلم', detail:'استخدم رادار التعثر لفهم أنماط الأخطاء والجذور المحتملة.', section:'radar', action:'فتح رادار التعثر' };
+  } else if (!interventions.length) {
+    step = { title:'حوّل التحليل إلى تدخل', detail:'أعدّ خطة دعم مناسبة وراجعها قبل اعتمادها.', section:'intervention', action:'تصميم تدخل' };
+  } else if (!impacts.length) {
+    step = { title:'قِس أثر التدخل', detail:'سجّل قياسًا بعد التنفيذ لمعرفة مقدار التقدم بالأدلة.', section:'impact', action:'قياس الأثر' };
+  } else {
+    step = { title:'راجع النتائج والتقدم', detail:'استخدم التقارير لمراجعة ما تحقق وتحديد الخطوة التعليمية التالية.', section:'reports', action:'عرض التقارير' };
+  }
+
+  el.innerHTML = `<div class="dashboard-next-step">
+    <div><span class="dashboard-next-label">الإجراء المقترح التالي</span><strong>${esc(step.title)}</strong><p>${esc(step.detail)}</p></div>
+    <button class="btn small" type="button" onclick="show('${step.section}')">${esc(step.action)}</button>
+  </div>`;
 }
 function updateStatus() {
   const el = document.getElementById('dataStatus');
