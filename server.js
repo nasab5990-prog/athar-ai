@@ -467,7 +467,9 @@ function extractResponseText(payload) {
   return '';
 }
 async function generateTeachingAI(analysis, observedErrors, body) {
-  if (!process.env.OPENAI_API_KEY) return {status:'not_configured'};
+  const provider=(process.env.AI_PROVIDER || (process.env.GROQ_API_KEY?'groq':process.env.OPENAI_API_KEY?'openai':'')).toLowerCase();
+  if (!provider || (provider==='groq'&&!process.env.GROQ_API_KEY) || (provider==='openai'&&!process.env.OPENAI_API_KEY)) return {status:'not_configured'};
+  if (!['groq','openai'].includes(provider)) throw new Error('AI_PROVIDER must be groq or openai.');
   const evidenceOnly = {
     skill:analysis.skill,
     level:analysis.level,
@@ -484,35 +486,42 @@ async function generateTeachingAI(analysis, observedErrors, body) {
     classSize:safeText(body.class_size,10),
     deliveryMode:['offline','shared','digital'].includes(body.delivery_mode)?body.delivery_mode:'shared'
   };
-  const response = await fetch('https://api.openai.com/v1/responses', {
-    method:'POST',
-    headers:{'Authorization':`Bearer ${process.env.OPENAI_API_KEY}`,'Content-Type':'application/json'},
-    body:JSON.stringify({
-      model:process.env.OPENAI_MODEL || 'gpt-4.1-mini',
-      store:false,
-      max_output_tokens:1200,
-      instructions:'أنت مساعد تربوي للمعلم في سلطنة عُمان. حلّل بيانات التعلم المقدمة فقط. لا تخترع نتائج أو أدلة أو بيانات منهجية. فرّق بوضوح بين الدليل والفرضية، ولا تصف أي جذر بأنه سبب مؤكد ما لم تدعمه نتائج مباشرة. لا تشخّص الطالب ولا تصدر أحكامًا عليه. اقترح إجراءات صفية قابلة للتنفيذ في صف كبير، مع بدائل دون أجهزة أو باستخدام جهاز المعلم/الشاشة المشتركة. اجعل المعلم صاحب القرار. أخرج JSON صالحًا باللغة العربية بالمفاتيح: errorPattern (string), possibleRoots (array of objects {skill:string,evidence:string,confidence:string}), teacherChecks (array of strings), differentiated (object {support:string,expected:string,enrichment:string}), nextCheck (string), cautions (array of strings).',
-      input:`حلّل هذه البيانات التعليمية المجمّعة والمجرّدة من أسماء الطلبة ومعرّفاتهم، وأعد JSON فقط:\n${JSON.stringify(evidenceOnly)}`,
-      text:{format:{type:'json_object'}}
-    })
-  });
+  const instructions='أنت مساعد تربوي للمعلم في سلطنة عُمان. حلّل بيانات التعلم المقدمة فقط. لا تخترع نتائج أو أدلة أو بيانات منهجية. فرّق بوضوح بين الدليل والفرضية، ولا تصف أي جذر بأنه سبب مؤكد ما لم تدعمه نتائج مباشرة. لا تشخّص الطالب ولا تصدر أحكامًا عليه. اقترح إجراءات صفية قابلة للتنفيذ في صف كبير، مع بدائل دون أجهزة أو باستخدام جهاز المعلم/الشاشة المشتركة. اجعل المعلم صاحب القرار. أخرج JSON صالحًا باللغة العربية بالمفاتيح: errorPattern (string), possibleRoots (array of objects {skill:string,evidence:string,confidence:string}), teacherChecks (array of strings), differentiated (object {support:string,expected:string,enrichment:string}), nextCheck (string), cautions (array of strings).';
+  const userPrompt=`حلّل هذه البيانات التعليمية المجمّعة والمجرّدة من أسماء الطلبة ومعرّفاتهم، وأعد JSON فقط:\n${JSON.stringify(evidenceOnly)}`;
+  const endpoint=provider==='groq'?'https://api.groq.com/openai/v1/chat/completions':'https://api.openai.com/v1/responses';
+  const headers={'Authorization':`Bearer ${provider==='groq'?process.env.GROQ_API_KEY:process.env.OPENAI_API_KEY}`,'Content-Type':'application/json'};
+  const requestBody=provider==='groq'?{
+    model:process.env.GROQ_MODEL || 'openai/gpt-oss-120b',
+    messages:[{role:'system',content:instructions},{role:'user',content:userPrompt}],
+    response_format:{type:'json_object'},
+    max_tokens:1200,
+    temperature:0.2
+  }:{
+    model:process.env.OPENAI_MODEL || 'gpt-4.1-mini',
+    store:false,
+    max_output_tokens:1200,
+    instructions,
+    input:userPrompt,
+    text:{format:{type:'json_object'}}
+  };
+  const response=await fetch(endpoint,{method:'POST',headers,body:JSON.stringify(requestBody)});
   if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(`OpenAI API ${response.status}: ${errorBody.slice(0,500)}`);
+    const errorBody=await response.text();
+    throw new Error(`${provider} API ${response.status}: ${errorBody.slice(0,500)}`);
   }
-  const payload = await response.json();
-  const raw = extractResponseText(payload);
-  if (!raw) throw new Error('لم تُرجع خدمة الذكاء الاصطناعي نصًا قابلًا للقراءة.');
-  const parsed = JSON.parse(raw);
-  const list = value => Array.isArray(value) ? value.map(x=>safeText(x,500)).filter(Boolean).slice(0,6) : [];
-  const roots = Array.isArray(parsed.possibleRoots) ? parsed.possibleRoots.slice(0,5).map(x=>({
+  const payload=await response.json();
+  const raw=provider==='groq'?payload?.choices?.[0]?.message?.content:extractResponseText(payload);
+  if (typeof raw!=='string' || !raw.trim()) throw new Error('لم تُرجع خدمة الذكاء الاصطناعي نصًا قابلًا للقراءة.');
+  const parsed=JSON.parse(raw);
+  const list=value=>Array.isArray(value)?value.map(x=>safeText(x,500)).filter(Boolean).slice(0,6):[];
+  const roots=Array.isArray(parsed.possibleRoots)?parsed.possibleRoots.slice(0,5).map(x=>({
     skill:safeText(x?.skill,120),
     evidence:safeText(x?.evidence,400),
     confidence:['منخفضة','متوسطة','مرتفعة'].includes(x?.confidence)?x.confidence:'غير محددة'
-  })).filter(x=>x.skill) : [];
+  })).filter(x=>x.skill):[];
   return {
     status:'ready',
-    provider:'OpenAI API',
+    provider:provider==='groq'?'Groq':'OpenAI API',
     errorPattern:safeText(parsed.errorPattern,700),
     possibleRoots:roots,
     teacherChecks:list(parsed.teacherChecks),
