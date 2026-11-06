@@ -237,11 +237,17 @@ function updateCurriculumOutcome() {
 }
 
 function toggleGroup(el) {
-  const group = el?.parentElement;
+  const group = el?.closest('.menu-group');
   if (!group) return;
   const wasOpen = group.classList.contains('open');
-  document.querySelectorAll('.menu-group.open').forEach(item => item.classList.remove('open'));
-  if (!wasOpen) group.classList.add('open');
+  document.querySelectorAll('.menu-group').forEach(item => {
+    item.classList.remove('open');
+    item.querySelector('.menu-title')?.setAttribute('aria-expanded', 'false');
+  });
+  if (!wasOpen) {
+    group.classList.add('open');
+    el.setAttribute('aria-expanded', 'true');
+  }
 }
 function toggleSidebar() {
   const sidebar = document.getElementById('sidebar');
@@ -315,6 +321,15 @@ function show(id) {
   document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
   document.getElementById(id)?.classList.add('active');
   document.querySelectorAll('.sidebar a[data-section]').forEach(link => link.classList.toggle('active', link.dataset.section === id));
+  const activeLink = document.querySelector(`.sidebar a[data-section="${id}"]`);
+  const activeGroup = activeLink?.closest('.menu-group');
+  if (activeGroup) {
+    document.querySelectorAll('.menu-group').forEach(group => {
+      const open = group === activeGroup;
+      group.classList.toggle('open', open);
+      group.querySelector('.menu-title')?.setAttribute('aria-expanded', String(open));
+    });
+  }
   window.scrollTo({ top:0, behavior:'smooth' });
   if (window.innerWidth <= 900) {
     document.getElementById('sidebar')?.classList.remove('open');
