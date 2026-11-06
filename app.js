@@ -174,8 +174,10 @@ function updateCurriculumSubjects() {
   const outcome = document.getElementById('intOutcome');
   const status = document.getElementById('curriculumCatalogStatus');
   const rows = ATHAR_CURRICULUM_CATALOG[grade] || {};
-  const subjects = Object.keys(rows);
-  const verifiedSubjects = subjects.length ? subjects : ATHAR_SUBJECTS_BY_GRADE[grade] || [];
+  const catalogSubjects = Object.keys(rows);
+  const indexedSubjects = ATHAR_SUBJECTS_BY_GRADE[grade] || [];
+  // اعرض قائمة مواد الصف كاملة، حتى إن كانت تفاصيل الوحدات متاحة لمادة واحدة فقط.
+  const verifiedSubjects = [...new Set([...indexedSubjects, ...catalogSubjects])];
   setCurriculumOptions(subject, grade ? 'اختر المادة' : 'اختر الصف أولًا', verifiedSubjects);
   setCurriculumOptions(unit, 'اختر المادة أولًا', []);
   setCurriculumOptions(lesson, 'اختر الوحدة أولًا', []);
