@@ -393,3 +393,26 @@ body.dark .impact-trend-summary-main small,body.dark .impact-trend-summary-resul
 .impact-record-trend{margin:1rem 0;padding-top:.85rem;border-top:1px solid var(--border)}
 .impact-record-trend>strong{display:block;margin:0 0 .55rem;color:var(--primary);font-size:.9rem;font-weight:850}
 .impact-record-trend .impact-trend-disclosure{margin:.45rem 0}
+
+/* لوحة القيادة: إبراز الإجراء التالي دون زيادة ازدحام الصفحة */
+.dashboard-next-step{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:1rem;
+  padding:1rem 1.1rem;
+  border:1px solid var(--border);
+  border-right:4px solid var(--accent);
+  border-radius:14px;
+  background:var(--surface-2);
+}
+.dashboard-next-step>div{min-width:0}
+.dashboard-next-step strong{display:block;margin:.15rem 0;color:var(--text);font-size:1.02rem}
+.dashboard-next-step p{margin:.25rem 0 0;color:var(--text-light);font-size:.88rem;line-height:1.7}
+.dashboard-next-label{color:var(--primary);font-size:.76rem;font-weight:800}
+.dashboard-next-step .btn{flex:none;margin:0}
+@media(max-width:620px){
+  .dashboard-next-step{align-items:stretch;flex-direction:column}
+  .dashboard-next-step .btn{width:100%}
+}
+
