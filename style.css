@@ -530,3 +530,33 @@ body.dark .card textarea:focus{
   .stat{font-size:1.8rem}
   .menu-btn{padding:9px 11px}
 }
+
+
+/* توحيد تباين الألوان في الوضع الداكن */
+body.dark .card:hover{border-color:#48617A}
+body.dark .btn.outline{
+  border-color:#49627F;
+  color:#BBD5F5;
+}
+body.dark .btn.outline:hover{
+  background:#263D58;
+  border-color:#78A6DC;
+  color:#EAF3FF;
+}
+body.dark input::placeholder,
+body.dark textarea::placeholder{color:#9AACC2;opacity:1}
+body.dark .note{
+  border-color:#344D6A;
+  border-right-color:#6FA3E5;
+}
+body.dark .note strong{color:#9FC5F5}
+body.dark .analysis-delete-btn{
+  background:#402B32;
+  border-color:#75434A;
+  color:#FFB8B1;
+}
+body.dark .analysis-delete-btn:hover{
+  background:#58343B;
+  border-color:#A45B62;
+  color:#FFE0DC;
+}
