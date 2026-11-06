@@ -44,9 +44,9 @@
 <aside class="sidebar" id="sidebar">
   <div class="logo">أثَر <small>ATHAR AI</small></div>
 
-  <div class="menu-group">
-    <div class="menu-title" onclick="toggleGroup(this)">🏠 الرئيسية</div>
-    <div class="menu-items">
+  <div class="menu-group open">
+    <button type="button" class="menu-title" onclick="toggleGroup(this)" aria-expanded="true" aria-controls="nav-home">🏠 الرئيسية</button>
+    <div class="menu-items" id="nav-home">
       <a href="#" data-section="dashboard" class="active">لوحة القيادة</a>
       <a href="#" data-section="reports">التقارير</a>
       <a href="#" data-section="principalView">متابعة الصفوف</a>
@@ -54,8 +54,8 @@
   </div>
 
   <div class="menu-group">
-    <div class="menu-title" onclick="toggleGroup(this)">👥 الطلبة والتقويم</div>
-    <div class="menu-items">
+    <button type="button" class="menu-title" onclick="toggleGroup(this)" aria-expanded="false" aria-controls="nav-students">👥 الطلبة والتقويم</button>
+    <div class="menu-items" id="nav-students">
       <a href="#" data-section="students">الطلبة والصفوف</a>
       <a href="#" data-section="assessment">إدخال التقويمات</a>
       <a href="#" data-section="radar">رادار التعثر</a>
@@ -63,8 +63,8 @@
   </div>
 
   <div class="menu-group">
-    <div class="menu-title" onclick="toggleGroup(this)">🤖 الذكاء والتدخل</div>
-    <div class="menu-items">
+    <button type="button" class="menu-title" onclick="toggleGroup(this)" aria-expanded="false" aria-controls="nav-intervention">🤖 الذكاء والتدخل</button>
+    <div class="menu-items" id="nav-intervention">
       <a href="#" data-section="assistant">المساعد الذكي</a>
       <a href="#" data-section="intervention">مصمم التدخلات</a>
       <a href="#" data-section="activities">بنك الأنشطة</a>
@@ -73,8 +73,8 @@
   </div>
 
   <div class="menu-group">
-    <div class="menu-title" onclick="toggleGroup(this)">⚙️ الإعدادات والدعم</div>
-    <div class="menu-items">
+    <button type="button" class="menu-title" onclick="toggleGroup(this)" aria-expanded="false" aria-controls="nav-support">⚙️ الإعدادات والدعم</button>
+    <div class="menu-items" id="nav-support">
       <a href="#" data-section="inclusive">التعلم الشامل</a>
       <a href="#" data-section="lowresource">وضع الإمكانات المنخفضة</a>
       <a href="#" data-section="roles">الأدوار</a>
