@@ -416,3 +416,85 @@ body.dark .impact-trend-summary-main small,body.dark .impact-trend-summary-resul
   .dashboard-next-step .btn{width:100%}
 }
 
+
+
+/* توحيد النماذج والبطاقات */
+.grid-two{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:.75rem 1rem;
+  align-items:start;
+}
+.card{
+  border-radius:16px;
+}
+.card>h3{
+  margin:0 0 1rem;
+  padding-bottom:.65rem;
+  border-bottom:1px solid var(--border);
+}
+.card label{
+  display:block;
+  margin:.65rem 0 .25rem;
+  color:var(--text);
+  font-size:.94rem;
+  font-weight:750;
+}
+.card input:not([type="checkbox"]):not([type="radio"]),
+.card select,
+.card textarea{
+  display:block;
+  width:100%;
+  min-width:0;
+  margin:.2rem 0 .8rem;
+  padding:.72rem .85rem;
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:var(--surface-2);
+  color:var(--text);
+  line-height:1.6;
+  box-shadow:none;
+}
+.card input:focus,
+.card select:focus,
+.card textarea:focus{
+  border-color:var(--primary);
+  background:var(--surface);
+  box-shadow:0 0 0 3px rgba(36,87,167,.11);
+}
+.card input:disabled,
+.card select:disabled,
+.card textarea:disabled{
+  opacity:.65;
+  cursor:not-allowed;
+}
+.card input::placeholder,
+.card textarea::placeholder{
+  color:var(--text-light);
+  opacity:.8;
+}
+.card textarea{
+  min-height:96px;
+}
+.card .btn{
+  margin:.35rem .15rem .15rem 0;
+}
+.card .note{
+  line-height:1.75;
+}
+body.dark .card input:not([type="checkbox"]):not([type="radio"]),
+body.dark .card select,
+body.dark .card textarea{
+  background:var(--surface-2);
+  border-color:var(--border);
+  color:var(--text);
+}
+body.dark .card input:focus,
+body.dark .card select:focus,
+body.dark .card textarea:focus{
+  background:var(--surface);
+}
+@media(max-width:680px){
+  .grid-two{grid-template-columns:1fr;gap:.2rem}
+  .card>h3{margin-bottom:.8rem}
+}
