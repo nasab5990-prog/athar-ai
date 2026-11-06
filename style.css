@@ -498,3 +498,35 @@ body.dark .card textarea:focus{
   .grid-two{grid-template-columns:1fr;gap:.2rem}
   .card>h3{margin-bottom:.8rem}
 }
+
+
+/* تحسين العرض على الهواتف الصغيرة */
+@media(max-width:560px){
+  html,body{width:100%;max-width:100%;overflow-x:hidden}
+  .main{width:100%;min-width:0;padding-top:4.25rem}
+  .section,.card,.cards,.grid-two{min-width:0;max-width:100%}
+  .card{overflow-wrap:anywhere}
+  .card table{
+    display:block;
+    width:100%;
+    max-width:100%;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+  .card pre,.card code{max-width:100%;overflow-x:auto}
+  .card .btn,.section>.btn{
+    max-width:100%;
+    white-space:normal;
+    line-height:1.5;
+  }
+  input,select,textarea{font-size:16px}
+  .sidebar{width:min(86vw,300px)}
+  body.sidebar-open .main{transform:none}
+  #toast{width:calc(100vw - 24px);border-radius:12px}
+}
+@media(max-width:380px){
+  .main{padding-right:.65rem;padding-left:.65rem}
+  .card{padding:.85rem}
+  .stat{font-size:1.8rem}
+  .menu-btn{padding:9px 11px}
+}
