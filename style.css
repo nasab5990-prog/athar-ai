@@ -40,6 +40,10 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .sidebar .logo small{font-size:.78rem;font-weight:600;opacity:.82;margin-right:.4rem;letter-spacing:.8px}
 .menu-group{margin-bottom:.55rem}
 .menu-title{padding:.78rem .9rem;font-weight:700;cursor:pointer;border-radius:12px;display:flex;justify-content:space-between;align-items:center;color:#F4F7FC;transition:background .2s}
+.menu-title{width:100%;border:0;background:transparent;text-align:right;font-family:inherit;font-size:1rem;line-height:1.5}
+.menu-title:focus-visible{outline:3px solid rgba(255,255,255,.55);outline-offset:2px}
+.menu-group.open .menu-title{color:#fff}
+
 .menu-title:hover,.menu-group.open .menu-title{background:rgba(255,255,255,.12)}
 .menu-title::after{content:'⌄';font-size:1.05rem;opacity:.75}
 .menu-group.open .menu-title::after{content:'⌃'}
