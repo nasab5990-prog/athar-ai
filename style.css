@@ -560,3 +560,41 @@ body.dark .analysis-delete-btn:hover{
   border-color:#A45B62;
   color:#FFE0DC;
 }
+
+
+/* تحسينات سهولة الوصول: وضوح التركيز، حجم أهداف اللمس، وتقليل الحركة */
+.menu-items a{
+  min-height:44px;
+  display:flex;
+  align-items:center;
+}
+summary:focus-visible,
+.menu-items a:focus-visible,
+.sidebar a:focus-visible{
+  outline:3px solid #159A91;
+  outline-offset:3px;
+  position:relative;
+  z-index:1;
+}
+.curriculum-disclosure > summary,
+.curriculum-extra > summary,
+.secondary-tools-disclosure > summary,
+.impact-trend-summary{
+  min-height:44px;
+}
+input::placeholder,
+textarea::placeholder{
+  color:var(--text-light);
+  opacity:1;
+}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,
+  *::before,
+  *::after{
+    animation-duration:.01ms!important;
+    animation-iteration-count:1!important;
+    transition-duration:.01ms!important;
+    scroll-behavior:auto!important;
+  }
+}
