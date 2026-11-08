@@ -361,7 +361,7 @@ function show(id) {
   if (id === 'intervention') renderInt();
   if (id === 'studentProgress') renderStudentProgress();
   if (id === 'principalView') renderPrincipalView();
-  if (id === 'roles' && currentRole === 'principal') loadSchoolUsers();
+  if (id === 'roles' && currentRole === 'principal') { loadSchoolGradeSections(); loadSchoolUsers(); }
   if (id === 'reports') renderReports();
 }
 document.addEventListener('DOMContentLoaded', () => {
@@ -1874,6 +1874,72 @@ function renderReports() {
   const reportDate = new Date().toLocaleDateString('ar-OM', {year:'numeric',month:'long',day:'numeric'});
   el.innerHTML = `<header class="report-print-header"><h2>منصة أثَر | التقرير التربوي</h2><p>تاريخ إعداد التقرير: ${reportDate}</p></header><p>الطلبة: ${students.length} • سجلات التقويم المحفوظة: ${assessments.length} • التدخلات: ${interventions.length} • قياسات الأثر المسجلة: ${impacts.length}</p><p>أحدث النتائج المحتسبة: ${currentAssessments.length} • متوسط الإتقان: ${latestAverage === null ? 'لا توجد بيانات' : `${latestAverage}%`}</p><h4>ملخص المهارات (أحدث نتيجة لكل طالب ولكل مهارة)</h4><ul>${skillRows || '<li>لا توجد نتائج مهارية كافية لإعداد الملخص.</li>'}</ul><h4>أثر التدخلات المرتبطة</h4><ul>${impactRowsHtml || '<li>لم تُسجل قياسات أثر مرتبطة بتدخلات بعد.</li>'}</ul><p class="report-print-note">تعكس هذه المؤشرات السجلات المتاحة وقت إعداد التقرير، وتُستخدم لدعم قرار المعلم ولا تمثل حكمًا نهائيًا على مستوى الطالب.</p><footer class="report-print-footer">حقوق التصميم والتطوير © أ. نصراء سعيد البهلولي | منصة أثَر</footer>`;
 }
+let schoolGradeSections = [];
+async function loadSchoolGradeSections() {
+  try {
+    const result=await api('/api/school/grade-sections');
+    schoolGradeSections=result.grades||[];
+    renderSchoolGradeSectionSettings();
+    populateStudentGradeSectionSelectors();
+  } catch(error) {
+    schoolGradeSections=[];
+    renderSchoolGradeSectionSettings();
+  }
+}
+function renderSchoolGradeSectionSettings() {
+  const host=document.getElementById('schoolGradeSectionsSettings');
+  if(!host)return;
+  const saved=new Map(schoolGradeSections.map(item=>[String(item.grade),Number(item.sectionCount)]));
+  host.innerHTML=Array.from({length:12},(_,i)=>{
+    const grade=String(i+1), count=saved.get(grade)||1, enabled=saved.has(grade);
+    return `<label class="school-grade-config-row"><input type="checkbox" id="schoolGradeEnabled-${grade}" ${enabled?'checked':''}> الصف ${['الأول','الثاني','الثالث','الرابع','الخامس','السادس','السابع','الثامن','التاسع','العاشر','الحادي عشر','الثاني عشر'][i]} <span>عدد الشعب</span><input type="number" id="schoolGradeCount-${grade}" min="1" max="30" value="${count}" ${enabled?'':'disabled'} onchange="this.value=Math.max(1,Math.min(30,Number(this.value)||1))"></label>`;
+  }).join('');
+  host.querySelectorAll('input[type="checkbox"]').forEach(check=>check.addEventListener('change',()=>{
+    const count=host.querySelector(`#schoolGradeCount-${check.id.split('-')[1]}`);
+    if(count)count.disabled=!check.checked;
+  }));
+}
+async function saveSchoolGradeSections() {
+  const grades=[];
+  for(let grade=1;grade<=12;grade++){
+    if(document.getElementById(`schoolGradeEnabled-${grade}`)?.checked){
+      grades.push({grade:String(grade),sectionCount:Number(document.getElementById(`schoolGradeCount-${grade}`)?.value||1)});
+    }
+  }
+  try{
+    const result=await api('/api/school/grade-sections',{method:'PUT',body:JSON.stringify({grades})});
+    schoolGradeSections=result.grades||[];
+    renderSchoolGradeSectionSettings();
+    populateStudentGradeSectionSelectors();
+    await loadSchoolUsers();
+    showToast('تم حفظ الصفوف والشعب المعتمدة للمدرسة.');
+  }catch(error){showToast(error.message);}
+}
+function populateStudentGradeSectionSelectors() {
+  const gradeNames=['الأول','الثاني','الثالث','الرابع','الخامس','السادس','السابع','الثامن','التاسع','العاشر','الحادي عشر','الثاني عشر'];
+  const gradeIds=['newGrade','bulkGrade'];
+  for(const id of gradeIds){
+    const select=document.getElementById(id);if(!select)continue;
+    const previous=select.value;
+    const options=schoolGradeSections.map(item=>`<option value="${gradeNames[Number(item.grade)-1]}">الصف ${gradeNames[Number(item.grade)-1]}</option>`).join('');
+    select.innerHTML='<option value="">اختر الصف المعتمد</option>'+options;
+    if([...select.options].some(o=>o.value===previous))select.value=previous;
+    if(currentRole==='teacher')select.disabled=!schoolGradeSections.length;
+  }
+  updateStudentSectionOptions('newGrade','newSection');
+  updateStudentSectionOptions('bulkGrade','bulkSection');
+}
+function updateStudentSectionOptions(gradeId,sectionId){
+  const grade=document.getElementById(gradeId),section=document.getElementById(sectionId);
+  if(!grade||!section)return;
+  const normalized=gradeNumber(grade.value);
+  const config=schoolGradeSections.find(item=>String(item.grade)===normalized);
+  const previous=section.value;
+  section.innerHTML='<option value="">اختر الشعبة</option>'+(config?.sections||[]).map(value=>`<option value="${esc(value)}">${esc(value)}</option>`).join('');
+  if([...section.options].some(o=>o.value===previous))section.value=previous;
+  section.disabled=!config?.sections?.length;
+}
+
 function teachingSubjectOptions() {
   const values = new Set();
   Object.values(ATHAR_SUBJECTS_BY_GRADE || {}).flat().forEach(value => values.add(String(value)));
@@ -1883,12 +1949,12 @@ function teachingSubjectOptions() {
 function teachingAssignmentRowHtml(userId,index,assignment,subjects,students) {
   const grade=String(assignment?.grade||'');
   const sections=[...(assignment?.sections||[])].map(String);
-  const availableSections=[...new Set(students.filter(student=>grade&&gradeNumber(student.grade)===grade).map(student=>String(student.section||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
-  const sectionOptions=`<option value="__all__" ${sections.length?'':'selected'}>كل الشعب</option>${availableSections.map(section=>`<option value="${esc(section)}" ${sections.includes(section)?'selected':''}>${esc(section)}</option>`).join('')}`;
+  const availableSections=schoolGradeSections.find(item=>String(item.grade)===grade)?.sections||[];
+  const sectionOptions=`<option value="__all__" ${sections.length?'':'selected'}>كل الشعب</option>${availableSections.map(section=>`<option value="${esc(section)}" ${sections.includes(section)?'selected':''}>الشعبة ${esc(section)}</option>`).join('')}`;
   return `<div class="teacher-assignment-row card" data-user-id="${userId}" data-index="${index}" style="margin:.5rem 0;padding:.75rem">
     <div class="grid-two">
       <div><label for="teacherSubject-${userId}-${index}">المادة</label><input id="teacherSubject-${userId}-${index}" list="teacherSubjects-${userId}" value="${esc(assignment?.subject||'')}" placeholder="اختر أو اكتب المادة"></div>
-      <div><label for="teacherGrade-${userId}-${index}">الصف</label><select id="teacherGrade-${userId}-${index}" onchange="refreshTeachingSections(${userId},${index})"><option value="">اختر الصف</option>${Array.from({length:12},(_,i)=>String(i+1)).map(value=>`<option value="${value}" ${grade===value?'selected':''}>الصف ${value}</option>`).join('')}</select></div>
+      <div><label for="teacherGrade-${userId}-${index}">الصف</label><select id="teacherGrade-${userId}-${index}" onchange="refreshTeachingSections(${userId},${index})"><option value="">اختر الصف</option>${schoolGradeSections.map(item=>`<option value="${item.grade}" ${grade===String(item.grade)?'selected':''}>الصف ${item.grade}</option>`).join('')}</select></div>
     </div>
     <label for="teacherSections-${userId}-${index}">الشعب</label>
     <select id="teacherSections-${userId}-${index}" multiple size="3" style="min-height:72px;width:100%" onchange="handleTeachingSectionsChange(this)">${sectionOptions}</select>
@@ -1908,7 +1974,7 @@ function refreshTeachingSections(userId,index) {
   const select=document.getElementById(`teacherSections-${userId}-${index}`);
   if(!select)return;
   const previous=[...select.selectedOptions].map(option=>option.value).filter(value=>value!=='__all__');
-  const available=[...new Set(students.filter(student=>grade&&gradeNumber(student.grade)===grade).map(student=>String(student.section||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
+  const available=schoolGradeSections.find(item=>String(item.grade)===grade)?.sections||[];
   select.innerHTML=`<option value="__all__" selected>كل الشعب</option>${available.map(section=>`<option value="${esc(section)}">${esc(section)}</option>`).join('')}`;
   if(previous.length&&previous.every(section=>available.includes(section))){
     select.options[0].selected=false;
