@@ -132,16 +132,6 @@
 
   <section id="students" class="section">
     <h1>إدارة الطلبة</h1>
-    <div id="schoolGradeSectionsAdmin" class="card" hidden>
-      <details class="secondary-tools-disclosure">
-        <summary><span>إعداد الصفوف والشعب</span></summary>
-        <div class="secondary-tools-content">
-          <p class="note">اختر الصفوف وحدد عدد الشعب في كل صف.</p>
-          <div id="schoolGradeSectionsSettings" class="school-grade-sections-grid"></div>
-          <button class="btn small" type="button" onclick="saveSchoolGradeSections()">حفظ الصفوف والشعب</button>
-        </div>
-      </details>
-    </div>
     <div class="card">
       <h3>إضافة طالب</h3>
       <div style="display:grid; grid-template-columns:1fr 1fr 1fr auto; gap:0.6rem; align-items:end;">
@@ -480,7 +470,17 @@
   </section>
 
   <section id="principalView" class="section">
-    <h1>متابعة الطلبة والصفوف</h1>
+    <h1>إدارة الصفوف</h1>
+    <div id="schoolGradeSectionsAdmin" class="card" hidden>
+      <details class="secondary-tools-disclosure">
+        <summary><span>إعداد الصفوف والشعب</span></summary>
+        <div class="secondary-tools-content">
+          <p class="note">اختر الصفوف وحدد عدد الشعب في كل صف.</p>
+          <div id="schoolGradeSectionsSettings" class="school-grade-sections-grid"></div>
+          <button class="btn small" type="button" onclick="saveSchoolGradeSections()">حفظ الصفوف والشعب</button>
+        </div>
+      </details>
+    </div>
     <p class="subtitle">مؤشرات مشتقة من سجلات المدرسة الفعلية، وليست بيانات افتراضية.</p>
     <div id="principalData"></div>
   </section>
