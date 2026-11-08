@@ -857,7 +857,8 @@ function renderAnalysis(analysis, destinationId) {
   });
   el.innerHTML = `<div class="card">
     <p><span class="badge ${analysis.targetScore !== null && analysis.targetScore < 50 ? 'danger' : 'info'}">${esc(analysis.level)}</span> <strong>${esc(displaySkillName(analysis.skill))}</strong></p>
-    <p>${esc(score + trend)} ${analysis.sampleSize ? ` • عينة التحليل: ${Number(analysis.sampleSize)}` : ''}</p>
+    <p><strong>نطاق التحليل:</strong> ${analysis.analysisScope === 'فردي' ? 'فردي — ' + esc(analysis.studentLabel || 'طالب محدد') : 'صفي — بيانات الصف المتاحة'} ${analysis.sampleSize ? ` • عينة التحليل: ${Number(analysis.sampleSize)}` : ''}</p>
+    <p>${esc(score + trend)}</p>
     <div class="card" style="margin:.6rem 0"><strong>1 | المهارة المتأثرة</strong><p>${esc(displaySkillName(analysis.skill))}</p></div>
 ${destinationId === 'analysisResult' ? '<div class="card root-map-card" style="margin:.6rem 0"><strong>خريطة جذور التعلم لهذه المهارة</strong><div id="learningRootMap" class="root-map-empty">جارٍ إعداد خريطة المهارات والأدلة.</div></div>' : ''}
     <div class="card" style="margin:.6rem 0"><strong>2 | نمط الخطأ الملحوظ</strong><p>${esc(teacherObservation)}</p>${patternHint ? `<p><strong>${esc(patternHint)}</strong></p>` : ''}<p class="note">الوصف من ملاحظة المعلم. والمؤشر المحتمل — إن ظهر — استنتاج مبدئي قائم على كلمات الملاحظة، وليس تشخيصًا آليًا أو نتيجة ذكاء اصطناعي.</p></div>
@@ -884,7 +885,10 @@ async function analyzeErrors() {
     const result = await api('/api/analysis', { method:'POST', body:JSON.stringify(analysisRequest) });
     window.atharLastAnalysisRequest = analysisRequest;
     window.atharLastAnalysisRecordId = result.id || null;
-    const analysisWithAI = { ...result.analysis, aiAssist:result.aiAssist || null };
+    const selectedStudentLabel = studentId
+      ? (document.querySelector('#analysisStudent option:checked')?.textContent?.trim() || 'طالب محدد')
+      : '';
+    const analysisWithAI = { ...result.analysis, aiAssist:result.aiAssist || null, analysisScope:studentId ? 'فردي' : 'صفي', studentLabel:selectedStudentLabel };
     analyses.unshift({ student_id:studentId || null, skill:analysisWithAI.skill, result:analysisWithAI, date:new Date().toISOString(), recordId:result.id });
     renderAnalysisHistory();
     renderAnalysis(analysisWithAI, 'analysisResult'); updateCycle();
