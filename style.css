@@ -776,3 +776,29 @@ body.dark .root-map-arrow { color:#91b6dc; }
   height:1.85rem;
   stroke-width:2;
 }
+
+
+/* اختيار الطالب وربط المنهج بواجهة مباشرة */
+.intervention-student-row,
+.intervention-curriculum-row{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:.7rem 1rem;
+  align-items:end;
+  margin-bottom:.85rem;
+}
+.intervention-curriculum-row{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  padding:0;
+}
+.intervention-student-row>div,
+.intervention-curriculum-row>div{min-width:0}
+.intervention-curriculum-row label,
+.intervention-student-row label{display:block;margin-bottom:.35rem}
+@media(max-width:680px){
+  .intervention-curriculum-row{grid-template-columns:1fr 1fr}
+}
+@media(max-width:480px){
+  .intervention-student-row,
+  .intervention-curriculum-row{grid-template-columns:1fr}
+}
