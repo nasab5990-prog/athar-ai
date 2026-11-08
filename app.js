@@ -1879,29 +1879,66 @@ function teachingSubjectOptions() {
   Object.values(ATHAR_CURRICULUM_CATALOG || {}).forEach(subjects => Object.keys(subjects || {}).forEach(value => values.add(value)));
   return [...values].filter(Boolean).sort((a,b) => a.localeCompare(b,'ar'));
 }
+function teachingAssignmentRowHtml(userId,index,assignment,subjects,students) {
+  const grade=String(assignment?.grade||'');
+  const sections=[...(assignment?.sections||[])].map(String);
+  const availableSections=[...new Set(students.filter(student=>grade&&gradeNumber(student.grade)===grade).map(student=>String(student.section||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
+  const sectionOptions=`<option value="__all__" ${sections.length?'':'selected'}>كل الشعب</option>${availableSections.map(section=>`<option value="${esc(section)}" ${sections.includes(section)?'selected':''}>${esc(section)}</option>`).join('')}`;
+  return `<div class="teacher-assignment-row card" data-user-id="${userId}" data-index="${index}" style="margin:.5rem 0;padding:.75rem">
+    <div class="grid-two">
+      <div><label for="teacherSubject-${userId}-${index}">المادة</label><input id="teacherSubject-${userId}-${index}" list="teacherSubjects-${userId}" value="${esc(assignment?.subject||'')}" placeholder="اختر أو اكتب المادة"></div>
+      <div><label for="teacherGrade-${userId}-${index}">الصف</label><select id="teacherGrade-${userId}-${index}" onchange="refreshTeachingSections(${userId},${index})"><option value="">اختر الصف</option>${Array.from({length:12},(_,i)=>String(i+1)).map(value=>`<option value="${value}" ${grade===value?'selected':''}>الصف ${value}</option>`).join('')}</select></div>
+    </div>
+    <label for="teacherSections-${userId}-${index}">الشعب</label>
+    <select id="teacherSections-${userId}-${index}" multiple size="3" style="min-height:72px;width:100%">${sectionOptions}</select>
+    <button type="button" class="btn small secondary" onclick="removeTeachingAssignmentRow(this)" aria-label="إزالة هذا التكليف">إزالة التكليف</button>
+  </div>`;
+}
+function refreshTeachingSections(userId,index) {
+  const grade=document.getElementById(`teacherGrade-${userId}-${index}`)?.value||'';
+  const select=document.getElementById(`teacherSections-${userId}-${index}`);
+  if(!select)return;
+  const previous=[...select.selectedOptions].map(option=>option.value).filter(value=>value!=='__all__');
+  const available=[...new Set(students.filter(student=>grade&&gradeNumber(student.grade)===grade).map(student=>String(student.section||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
+  select.innerHTML=`<option value="__all__" selected>كل الشعب</option>${available.map(section=>`<option value="${esc(section)}">${esc(section)}</option>`).join('')}`;
+  if(previous.length&&previous.every(section=>available.includes(section))){
+    select.options[0].selected=false;
+    [...select.options].forEach(option=>{if(option.value!=='__all__')option.selected=previous.includes(option.value);});
+  }
+}
+function removeTeachingAssignmentRow(button) {
+  const row=button.closest('.teacher-assignment-row');
+  if(row)row.remove();
+}
+function addTeachingAssignmentRow(userId) {
+  const container=document.getElementById(`teacherAssignments-${userId}`);
+  if(!container)return;
+  const index=container.querySelectorAll('.teacher-assignment-row').length ? Math.max(...[...container.querySelectorAll('.teacher-assignment-row')].map(row=>Number(row.dataset.index)||0))+1 : 0;
+  container.insertAdjacentHTML('beforeend',teachingAssignmentRowHtml(userId,index,{},teachingSubjectOptions(),students));
+}
 async function loadSchoolUsers() {
   const el = document.getElementById('usersList');
   if (!el) return;
   try {
     const result = await api('/api/users');
     const subjects = teachingSubjectOptions();
-    const grades = Array.from({length:12},(_,i)=>String(i+1));
     el.innerHTML = (result.users || []).map(user => {
       const linked = user.linkedStudentIds || [];
       const assigned = user.assignedStudentIds || [];
       const relation = linked.length ? `الطلبة المرتبطون بالحساب: ${linked.map(esc).join('، ')}` : assigned.length ? `طلبة مرتبطون مباشرة: ${assigned.length}` : 'لا يوجد ربط فردي بطالب';
       let editor = '';
       if (user.role === 'teacher') {
-        const subjectOptions = [...new Set([...subjects,user.teachingSubject].filter(Boolean))];
+        const subjectOptions = [...new Set([...subjects,(user.teachingAssignments||[]).map(item=>item.subject)].flat().filter(Boolean))];
+        const assignments=user.teachingAssignments||[];
+        const rows=assignments.length?assignments:[{}];
+        const summary=assignments.length?assignments.map(item=>`${esc(item.subject)} — الصف ${esc(item.grade)} — ${item.sections?.length?`الشعب ${item.sections.map(esc).join('، ')}`:'كل الشعب'}`).join('<br>'):'لم يُحدد التكليف الدراسي لهذا الحساب بعد.';
         editor = `<div class="teacher-assignment-editor">
-          <p class="note">التكليف الدراسي — المادة والصفوف التي يدرسها هذا المعلم</p>
-          <label for="teacherSubject-${Number(user.id)}">المادة</label>
-          <input id="teacherSubject-${Number(user.id)}" list="teacherSubjects-${Number(user.id)}" value="${esc(user.teachingSubject||'')}" placeholder="اكتب اسم المادة">
+          <p class="note">التكليف الدراسي — أضف سطرًا لكل مادة وصف، وحدد الشعب أو اختر كل الشعب.</p>
           <datalist id="teacherSubjects-${Number(user.id)}">${subjectOptions.map(subject=>`<option value="${esc(subject)}"></option>`).join('')}</datalist>
-          <label for="teacherGrades-${Number(user.id)}">الصفوف المسندة</label>
-          <select id="teacherGrades-${Number(user.id)}" multiple size="4" style="min-height:85px">${grades.map(grade=>`<option value="${grade}" ${(user.teachingGrades||[]).map(String).includes(grade)?'selected':''}>الصف ${grade}</option>`).join('')}</select>
-          <button class="btn small" onclick="saveTeachingAssignment(${Number(user.id)})">حفظ التكليف</button>
-          <p class="note">${user.teachingSubject && (user.teachingGrades||[]).length ? `المكلف حاليًا: ${esc(user.teachingSubject)} — الصفوف ${user.teachingGrades.map(esc).join('، ')}` : 'لم يُحدد التكليف الدراسي لهذا الحساب بعد.'}</p>
+          <div id="teacherAssignments-${Number(user.id)}">${rows.map((item,index)=>teachingAssignmentRowHtml(Number(user.id),index,item,subjects,students)).join('')}</div>
+          <button type="button" class="btn small secondary" onclick="addTeachingAssignmentRow(${Number(user.id)})">إضافة مادة أو صف</button>
+          <button type="button" class="btn small" onclick="saveTeachingAssignment(${Number(user.id)})">حفظ التكليفات</button>
+          <p class="note">التكليفات الحالية:<br>${summary}</p>
         </div>`;
       } else if (['parent','student'].includes(user.role)) {
         editor = `<label for="userLinks-${Number(user.id)}">ربط الطلبة بالحساب</label><select id="userLinks-${Number(user.id)}" multiple size="4" style="min-height:85px">${students.map(student => `<option value="${esc(student.student_id)}" ${linked.includes(student.student_id) ? 'selected' : ''}>${esc(student.name)} — ${esc(student.grade || '')} ${esc(student.section || '')}</option>`).join('')}</select><button class="btn small" onclick="saveUserLinks(${Number(user.id)},'${user.role}')">حفظ الربط</button>`;
@@ -1911,13 +1948,19 @@ async function loadSchoolUsers() {
   } catch (error) { el.textContent = error.message; }
 }
 async function saveTeachingAssignment(userId) {
-  const subject = document.getElementById(`teacherSubject-${userId}`)?.value || '';
-  const gradesSelect = document.getElementById(`teacherGrades-${userId}`);
-  const grades = gradesSelect ? [...gradesSelect.selectedOptions].map(option=>option.value) : [];
+  const container=document.getElementById(`teacherAssignments-${userId}`);
+  const assignments=[...(container?.querySelectorAll('.teacher-assignment-row')||[])].map(row=>{
+    const index=row.dataset.index;
+    const subject=document.getElementById(`teacherSubject-${userId}-${index}`)?.value.trim()||'';
+    const grade=document.getElementById(`teacherGrade-${userId}-${index}`)?.value||'';
+    const sectionSelect=document.getElementById(`teacherSections-${userId}-${index}`);
+    const selected=sectionSelect?[...sectionSelect.selectedOptions].map(option=>option.value):[];
+    return {subject,grade,sections:selected.includes('__all__')?[]:selected};
+  }).filter(item=>item.subject&&item.grade);
   try {
-    await api(`/api/users/${userId}/teaching-assignment`,{method:'PUT',body:JSON.stringify({subject,grades})});
+    await api(`/api/users/${userId}/teaching-assignment`,{method:'PUT',body:JSON.stringify({assignments})});
     await loadSchoolUsers();
-    showToast('تم حفظ المادة والصفوف المسندة للمعلم.');
+    showToast('تم حفظ المواد والصفوف والشعب المسندة للمعلم.');
   } catch(error) { showToast(error.message); }
 }
 async function saveUserLinks(userId, role) {
