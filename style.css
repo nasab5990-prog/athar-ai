@@ -321,7 +321,7 @@ body.dark .sidebar-actions .logout-action {
 .root-map-legend { display:flex; flex-wrap:wrap; gap:.8rem; margin:.8rem 0 1rem; font-size:.82rem; color:var(--muted,#64748b); }
 .root-map-legend span { display:inline-flex; align-items:center; gap:.35rem; }
 .root-map-legend i { width:.65rem; height:.65rem; border-radius:50%; display:inline-block; background:#cbd5e1; }
-.root-map-legend i.pending { background:#d69e36; } .root-map-legend i.review { background:#e07858; } .root-map-legend i.ok { background:#269b78; }
+.root-map-legend i.pending { background:#d69e36; } .root-map-legend i.review { background:#e07858; } .root-map-legend i.ok { background:#269b78; } .root-map-legend i.sequence { background:#4788c7; }
 .root-map-flow { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1.15fr) auto minmax(0,1fr); align-items:center; gap:.55rem; }
 .root-map-column { min-width:0; text-align:center; } .root-map-column h4 { margin:.2rem 0 .65rem; font-size:.95rem; }
 .root-map-nodes { display:grid; gap:.55rem; }
