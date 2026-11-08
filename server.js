@@ -377,6 +377,23 @@ app.delete('/api/records/:id',requireAuth,requireRole('teacher','senior_teacher'
   });
   await audit(req.user.id,'record.delete',row.kind); res.json({ok:true});
 }));
+app.get('/api/school/grade-sections',requireAuth,asyncRoute(async(req,res)=>{
+  const rows=await query('SELECT grade,section_count FROM school_grade_sections WHERE school_id=$1 ORDER BY grade',[req.user.school_id]);
+  res.json({grades:rows.rows.map(row=>({grade:String(row.grade),sectionCount:Number(row.section_count),sections:Array.from({length:Number(row.section_count)},(_,i)=>String(i+1))}))});
+}));
+app.put('/api/school/grade-sections',requireAuth,requireRole('principal'),asyncRoute(async(req,res)=>{
+  const grades=Array.isArray(req.body?.grades)?req.body.grades:[];
+  const clean=grades.map(item=>({grade:safeText(item?.grade,2),sectionCount:Number(item?.sectionCount)}))
+    .filter(item=>/^(?:[1-9]|1[0-2])$/.test(item.grade)&&Number.isInteger(item.sectionCount)&&item.sectionCount>=1&&item.sectionCount<=30);
+  if(!clean.length)return res.status(400).json({message:'حددي صفًا واحدًا على الأقل وعدد شعب من 1 إلى 30.'});
+  if(new Set(clean.map(x=>x.grade)).size!==clean.length)return res.status(400).json({message:'يوجد صف مكرر في الإعدادات.'});
+  await withTransaction(async client=>{
+    for(const item of clean)await client.query('INSERT INTO school_grade_sections(school_id,grade,section_count) VALUES($1,$2,$3) ON CONFLICT(school_id,grade) DO UPDATE SET section_count=EXCLUDED.section_count,updated_at=NOW()',[req.user.school_id,item.grade,item.sectionCount]);
+    await client.query('DELETE FROM school_grade_sections WHERE school_id=$1 AND grade<>ALL($2::text[])',[req.user.school_id,clean.map(x=>x.grade)]);
+  });
+  await audit(req.user.id,'school.grade_sections.update',clean.map(x=>x.grade+':'+x.sectionCount).join(','));
+  res.json({ok:true,grades:clean.map(item=>({...item,sections:Array.from({length:item.sectionCount},(_,i)=>String(i+1))}))});
+}));
 app.get('/api/users',requireAuth,requireRole('principal'),asyncRoute(async(req,res)=>{
   const [users,linked,assigned,teaching]=await Promise.all([
     query('SELECT id,email,name,role,school_id,active,created_at FROM users WHERE school_id=$1 ORDER BY name',[req.user.school_id]),
@@ -445,11 +462,10 @@ app.put('/api/users/:id/teaching-assignment',requireAuth,requireRole('principal'
     const key=`${item.subject.toLocaleLowerCase('ar')}|${item.grade}`;
     if (keys.has(key)) return res.status(400).json({message:'يوجد تكليف مكرر للمادة والصف نفسيهما.'});
     keys.add(key);
-    if (item.sections.length) {
-      const sectionRows=await query("SELECT DISTINCT payload->>'section' AS section FROM records WHERE school_id=$1 AND kind='student' AND payload->>'grade'=ANY($2::text[]) AND COALESCE(payload->>'section','')<>''",[req.user.school_id,assignedGradeLabels([item.grade])]);
-      const allowedSections=new Set(sectionRows.rows.map(row=>String(row.section)));
-      if (item.sections.some(section=>!allowedSections.has(section))) return res.status(400).json({message:`إحدى الشعب المحددة غير مسجلة في الصف ${item.grade}.`});
-    }
+    const configured=(await query('SELECT section_count FROM school_grade_sections WHERE school_id=$1 AND grade=$2',[req.user.school_id,item.grade])).rows[0];
+    if(!configured)return res.status(400).json({message:`لم يحدد المدير عدد الشعب للصف ${item.grade} بعد.`});
+    const allowedSections=new Set(Array.from({length:Number(configured.section_count)},(_,i)=>String(i+1)));
+    if(item.sections.some(section=>!allowedSections.has(section)))return res.status(400).json({message:`توجد شعبة غير معتمدة للصف ${item.grade}.`});
   }
   if (!clean.length) return res.status(400).json({message:'أضف تكليفًا واحدًا على الأقل يتضمن المادة والصف.'});
   await withTransaction(async client=>{
@@ -631,6 +647,9 @@ app.use((error,req,res,next)=>{
 });
 await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS teaching_subject TEXT');
 await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS teaching_grades TEXT[] NOT NULL DEFAULT '{}'::text[]");
+await query("CREATE TABLE IF NOT EXISTS school_grade_sections (" +
+  "school_id TEXT NOT NULL, grade TEXT NOT NULL, section_count INTEGER NOT NULL CHECK(section_count BETWEEN 1 AND 30), " +
+  "updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY(school_id,grade))");
 await query("CREATE TABLE IF NOT EXISTS teacher_teaching_assignments (" +
   "id BIGSERIAL PRIMARY KEY, " +
   "user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE, " +
