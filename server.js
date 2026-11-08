@@ -527,7 +527,9 @@ async function generateTeachingAI(analysis, observedErrors, body) {
     teacherChecks:list(parsed.teacherChecks),
     differentiated:{
       support:safeText(parsed.differentiated?.support,700),
-      expected:safeText(parsed.differentiated?.expected,700),
+      expected:Number.isFinite(Number(analysis.targetScore))
+        ? `المستوى المستهدف: رفع الإتقان من ${Number(analysis.targetScore)}% إلى 70% على الأقل خلال أسبوعين، ويُتحقق منه بقياس بعدي.`
+        : 'يُحدَّد المستوى المتوقع بعد تنفيذ تقويم تشخيصي قصير واعتماد خط أساس واضح.',
       enrichment:safeText(parsed.differentiated?.enrichment,700)
     },
     nextCheck:safeText(parsed.nextCheck,500),
