@@ -380,6 +380,20 @@ function togglePresentation() {
 function getRoleName(role) {
   return ({ teacher:'المعلم', senior_teacher:'المعلم الأول', principal:'المدير', parent:'ولي الأمر', student:'الطالب' })[role] || 'مستخدم';
 }
+function applyTeacherAssignmentFilters() {
+  const gradeIds = ['intGrade','interventionGradeFilter'];
+  const assigned = (currentUser?.teachingGrades || []).map(String);
+  gradeIds.forEach(id => {
+    const select = document.getElementById(id);
+    if (!select) return;
+    [...select.options].forEach(option => {
+      option.hidden = currentRole === 'teacher' && Boolean(option.value) && !assigned.includes(String(option.value));
+    });
+    if (currentRole === 'teacher' && select.value && !assigned.includes(String(select.value))) {
+      select.value = assigned[0] || '';
+    }
+  });
+}
 function applyRoleUI() {
   const allowed = roleSections[currentRole] || [];
   document.querySelectorAll('.sidebar a[data-section]').forEach(link => {
@@ -392,6 +406,7 @@ function applyRoleUI() {
   const roleInfo = document.getElementById('roleInfo');
   const teacherDescription = currentRole === 'teacher' ? (currentUser?.teachingSubject && (currentUser?.teachingGrades||[]).length ? `مادتك: ${esc(currentUser.teachingSubject)} • الصفوف: ${(currentUser.teachingGrades||[]).map(esc).join('، ')}. تظهر لك سجلات الطلبة في الصفوف المسندة.` : 'لم يحدد المدير مادتك وصفوفك بعد؛ اطلب منه إكمال التكليف الدراسي.') : null;
   if (roleInfo) roleInfo.innerHTML = `<div class="card"><strong>${esc(getRoleName(currentRole))}</strong><p>${teacherDescription || esc(({ senior_teacher:'متابعة سجلات المدرسة والتدخلات ومؤشرات الصفوف.', principal:'إدارة حسابات المدرسة ومتابعة المؤشرات والسجلات.', parent:'متابعة الأبناء المرتبطين بحسابك فقط.', student:'متابعة تقدمك ونتائجك الفردية فقط.' })[currentRole] || '')}</p></div>`;
+  applyTeacherAssignmentFilters();
   const accountAdmin = document.getElementById('accountAdmin');
   if (accountAdmin) accountAdmin.hidden = currentRole !== 'principal';
   document.getElementById('currentUserLabel') && (document.getElementById('currentUserLabel').textContent = `${currentUser?.name || ''} • ${getRoleName(currentRole)}`);
