@@ -1742,6 +1742,15 @@ function updateDashboard() {
   stat('gapCount', String(gaps)); stat('interventionCount', String(interventions.length)); stat('activeStudentCount', String(students.length));
   const bar = document.getElementById('avgMasteryBar');
   if (bar) bar.style.width = `${avg ?? 0}%`;
+  const heading = document.querySelector('#dashboard h1');
+  const subtitle = document.querySelector('#dashboard > .subtitle');
+  if (currentRole === 'principal') {
+    if (heading) heading.textContent = 'لوحة الإدارة المدرسية';
+    if (subtitle) subtitle.textContent = 'متابعة مؤشرات المدرسة والتكليفات وجودة تنفيذ دورة التعلم';
+  } else {
+    if (heading) heading.textContent = currentRole === 'senior_teacher' ? 'لوحة متابعة المعلم الأول' : 'لوحة القيادة التربوية';
+    if (subtitle) subtitle.textContent = 'من اكتشاف فجوة التعلم → التدخل المناسب → قياس الأثر بالأدلة';
+  }
   stat('dashboardScope', currentRole === 'parent' ? 'بيانات الأبناء المرتبطين بحسابك' : currentRole === 'student' ? 'بياناتك الفردية' : `مدرسة ${currentUser?.school_id || ''}`);
 }
 function updateCycle() {
@@ -1764,6 +1773,14 @@ function updateAlerts() {
     el.innerHTML = `<div class="dashboard-next-step">
       <div><strong>تابع التقدم الدراسي</strong><p>اطّلع على نتائج المهارات والتدخلات وقياسات الأثر المرتبطة بحسابك.</p></div>
       <button class="btn small" type="button" onclick="show('studentProgress')">عرض التقدم الدراسي</button>
+    </div>`;
+    return;
+  }
+
+  if (currentRole === 'principal') {
+    el.innerHTML = `<div class="dashboard-next-step">
+      <div><span class="dashboard-next-label">الإجراء الإداري المقترح</span><strong>راجع تكليفات المعلمين</strong><p>تحقق من إسناد المواد والصفوف للمعلمين، ثم تابع مؤشرات الصفوف من صفحة متابعة الصفوف.</p></div>
+      <button class="btn small" type="button" onclick="show('roles')">إدارة المعلمين والتكليفات</button>
     </div>`;
     return;
   }
