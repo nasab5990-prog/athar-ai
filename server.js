@@ -365,15 +365,17 @@ app.delete('/api/records/:id',requireAuth,requireRole('teacher','senior_teacher'
   await audit(req.user.id,'record.delete',row.kind); res.json({ok:true});
 }));
 app.get('/api/users',requireAuth,requireRole('principal'),asyncRoute(async(req,res)=>{
-  const [users,linked,assigned]=await Promise.all([
-    query('SELECT id,email,name,role,school_id,active,created_at,teaching_subject,teaching_grades FROM users WHERE school_id=$1 ORDER BY name',[req.user.school_id]),
+  const [users,linked,assigned,teaching]=await Promise.all([
+    query('SELECT id,email,name,role,school_id,active,created_at FROM users WHERE school_id=$1 ORDER BY name',[req.user.school_id]),
     query('SELECT user_id,student_id FROM account_students WHERE school_id=$1',[req.user.school_id]),
-    query('SELECT user_id,student_id FROM teacher_students WHERE school_id=$1',[req.user.school_id])
+    query('SELECT user_id,student_id FROM teacher_students WHERE school_id=$1',[req.user.school_id]),
+    query('SELECT user_id,subject,grade,sections FROM teacher_teaching_assignments WHERE school_id=$1 ORDER BY subject,grade',[req.user.school_id])
   ]);
-  const map=new Map(), assignmentMap=new Map();
+  const map=new Map(), assignmentMap=new Map(), teachingMap=new Map();
   for (const x of linked.rows) map.set(String(x.user_id),[...(map.get(String(x.user_id))||[]),x.student_id]);
   for (const x of assigned.rows) assignmentMap.set(String(x.user_id),[...(assignmentMap.get(String(x.user_id))||[]),x.student_id]);
-  res.json({users:users.rows.map(u=>({...u,teachingSubject:u.teaching_subject||'',teachingGrades:Array.isArray(u.teaching_grades)?u.teaching_grades:[],linkedStudentIds:map.get(String(u.id))||[],assignedStudentIds:assignmentMap.get(String(u.id))||[]}))});
+  for (const x of teaching.rows) teachingMap.set(String(x.user_id),[...(teachingMap.get(String(x.user_id))||[]),{subject:x.subject,grade:String(x.grade),sections:Array.isArray(x.sections)?x.sections:[]}]);
+  res.json({users:users.rows.map(u=>({...u,teachingAssignments:teachingMap.get(String(u.id))||[],linkedStudentIds:map.get(String(u.id))||[],assignedStudentIds:assignmentMap.get(String(u.id))||[]}))});
 }));
 app.post('/api/users',requireAuth,requireRole('principal'),asyncRoute(async(req,res)=>{
   if (req.user.school_id==='DEMO-SCHOOL') return res.status(403).json({message:'لا يمكن إنشاء حسابات مدرسية رسمية من بيئة الاختبار المعزولة.'});
@@ -415,12 +417,36 @@ app.put('/api/users/:id/assignments',requireAuth,requireRole('principal'),asyncR
 app.put('/api/users/:id/teaching-assignment',requireAuth,requireRole('principal'),asyncRoute(async(req,res)=>{
   const targetId=Number(req.params.id), target=(await query("SELECT id,role,school_id FROM users WHERE id=$1 AND school_id=$2",[targetId,req.user.school_id])).rows[0];
   if (!target || target.role!=='teacher') return res.status(404).json({message:'حساب المعلم غير موجود في المدرسة.'});
-  const subject=safeText(req.body?.subject,120);
-  const grades=Array.isArray(req.body?.grades)?[...new Set(req.body.grades.map(v=>safeText(v,20)).filter(Boolean))].slice(0,12):[];
-  if (!subject || !grades.length || grades.some(grade=>! /^(?:[1-9]|1[0-2])$/.test(grade))) return res.status(400).json({message:'حدد مادة صحيحة وصفًا واحدًا على الأقل من الصفوف 1 إلى 12.'});
-  await query('UPDATE users SET teaching_subject=$1,teaching_grades=$2::text[] WHERE id=$3 AND school_id=$4',[subject,grades,targetId,req.user.school_id]);
-  await audit(req.user.id,'user.teaching_assignment.update',`${target.role}:${targetId}:${subject}:${grades.join(',')}`);
-  res.json({ok:true,userId:targetId,teachingSubject:subject,teachingGrades:grades});
+  let assignments=Array.isArray(req.body?.assignments)?req.body.assignments:[];
+  // Backward compatibility for the previous single-subject form.
+  if (!assignments.length && req.body?.subject && Array.isArray(req.body?.grades)) {
+    assignments=req.body.grades.map(grade=>({subject:req.body.subject,grade,sections:[]}));
+  }
+  const clean=assignments.map(item=>({
+    subject:safeText(item?.subject,120),
+    grade:safeText(item?.grade,2),
+    sections:Array.isArray(item?.sections)?[...new Set(item.sections.map(v=>safeText(v,30)).filter(Boolean))].slice(0,30):[]
+  })).filter(item=>item.subject && /^(?:[1-9]|1[0-2])$/.test(item.grade));
+  const keys=new Set();
+  for (const item of clean) {
+    const key=`${item.subject.toLocaleLowerCase('ar')}|${item.grade}`;
+    if (keys.has(key)) return res.status(400).json({message:'يوجد تكليف مكرر للمادة والصف نفسيهما.'});
+    keys.add(key);
+    if (item.sections.length) {
+      const sectionRows=await query("SELECT DISTINCT payload->>'section' AS section FROM records WHERE school_id=$1 AND kind='student' AND payload->>'grade'=ANY($2::text[]) AND COALESCE(payload->>'section','')<>''",[req.user.school_id,assignedGradeLabels([item.grade])]);
+      const allowedSections=new Set(sectionRows.rows.map(row=>String(row.section)));
+      if (item.sections.some(section=>!allowedSections.has(section))) return res.status(400).json({message:`إحدى الشعب المحددة غير مسجلة في الصف ${item.grade}.`});
+    }
+  }
+  if (!clean.length) return res.status(400).json({message:'أضف تكليفًا واحدًا على الأقل يتضمن المادة والصف.'});
+  await withTransaction(async client=>{
+    await client.query('DELETE FROM teacher_teaching_assignments WHERE user_id=$1 AND school_id=$2',[targetId,req.user.school_id]);
+    for (const item of clean) await client.query('INSERT INTO teacher_teaching_assignments(user_id,school_id,subject,grade,sections) VALUES($1,$2,$3,$4,$5::text[])',[targetId,req.user.school_id,item.subject,item.grade,item.sections]);
+    const legacyGrades=[...new Set(clean.map(item=>item.grade))];
+    await client.query('UPDATE users SET teaching_subject=$1,teaching_grades=$2::text[] WHERE id=$3 AND school_id=$4',[clean[0].subject,legacyGrades,targetId,req.user.school_id]);
+  });
+  await audit(req.user.id,'user.teaching_assignment.update',`${target.role}:${targetId}:${clean.length} assignments`);
+  res.json({ok:true,userId:targetId,teachingAssignments:clean});
 }));
 app.put('/api/users/:id/student-links',requireAuth,requireRole('principal'),asyncRoute(async(req,res)=>{
   const targetId=Number(req.params.id), target=(await query('SELECT id,role,school_id FROM users WHERE id=$1 AND school_id=$2',[targetId,req.user.school_id])).rows[0];
@@ -592,6 +618,29 @@ app.use((error,req,res,next)=>{
 });
 await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS teaching_subject TEXT');
 await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS teaching_grades TEXT[] NOT NULL DEFAULT '{}'::text[]");
+await query(`CREATE TABLE IF NOT EXISTS teacher_teaching_assignments (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  school_id TEXT NOT NULL,
+  subject TEXT NOT NULL,
+  grade TEXT NOT NULL CHECK (grade ~ '^(?:[1-9]|1[0-2])
+const server=app.listen(port,()=>console.log(`ATHAR API PostgreSQL v3 listening on ${port}`));
+async function shutdown(signal) {
+  console.log(`${signal}: closing ATHAR API`);
+  server.close(async()=>{try{await pool.end();process.exit(0);}catch(error){console.error(error);process.exit(1);}});
+}
+process.on('SIGTERM',()=>shutdown('SIGTERM'));
+process.on('SIGINT',()=>shutdown('SIGINT'));
+),
+  sections TEXT[] NOT NULL DEFAULT '{}'::text[],
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(user_id,school_id,subject,grade)
+)`);
+await query(`INSERT INTO teacher_teaching_assignments(user_id,school_id,subject,grade,sections)
+  SELECT u.id,u.school_id,u.teaching_subject,grade,'{}'::text[]
+  FROM users u CROSS JOIN LATERAL unnest(u.teaching_grades) AS grade
+  WHERE u.role='teacher' AND COALESCE(u.teaching_subject,'')<>''
+  ON CONFLICT(user_id,school_id,subject,grade) DO NOTHING`);
 const server=app.listen(port,()=>console.log(`ATHAR API PostgreSQL v3 listening on ${port}`));
 async function shutdown(signal) {
   console.log(`${signal}: closing ATHAR API`);
