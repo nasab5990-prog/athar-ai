@@ -397,6 +397,28 @@ function applyRoleUI() {
   if (progressLabel) progressLabel.textContent = currentRole === 'student' ? 'سجلك الدراسي' : 'اختيار الابن';
 }
 
+function filterInterventionStudents() {
+  const select = document.getElementById('interventionStudent');
+  const gradeFilter = document.getElementById('interventionGradeFilter');
+  if (!select) return;
+  const grade = gradeFilter?.value || '';
+  const previous = select.value;
+  const filtered = students.filter(student => !grade || String(student.grade || '') === grade);
+  select.innerHTML = '<option value="">تدخل صفي — دون ربط بطالب محدد</option>';
+  filtered
+    .slice()
+    .sort((a,b) => String(a.name || '').localeCompare(String(b.name || ''), 'ar'))
+    .forEach(student => {
+      const option = document.createElement('option');
+      option.value = student.student_id;
+      option.textContent = `${student.name} — الصف ${student.grade || 'غير محدد'} — شعبة ${student.section || '—'}`;
+      select.appendChild(option);
+    });
+  if (previous && filtered.some(student => student.student_id === previous)) select.value = previous;
+  const count = filtered.length;
+  if (gradeFilter) gradeFilter.title = `عدد الطلبة في القائمة: ${count}`;
+}
+
 function fillStudentSelects() {
   const selectors = ['assessmentStudent','interventionStudent','impactStudent','analysisStudent','assistantStudent','progressStudent','accountStudentIds'];
   for (const id of selectors) {
@@ -414,6 +436,7 @@ function fillStudentSelects() {
     }
     if (id !== 'accountStudentIds' && previous && [...select.options].some(o => o.value === previous)) select.value = previous;
   }
+  filterInterventionStudents();
   fillImpactInterventions();
   if (currentRole === 'student' || currentRole === 'parent') {
     const progress = document.getElementById('progressStudent');
