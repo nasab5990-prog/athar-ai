@@ -726,3 +726,39 @@ body.dark .root-map-arrow { color:#91b6dc; }
     page-break-after: auto !important;
   }
 }
+
+
+/* إعدادات التنفيذ والطباعة بالأيقونات */
+.intervention-execution-row{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:.75rem 1rem;
+  align-items:end;
+}
+.intervention-execution-row>div{min-width:0}
+.icon-action-button{
+  display:inline-flex;
+  width:2.65rem;
+  min-width:2.65rem;
+  height:2.65rem;
+  padding:.55rem;
+  align-items:center;
+  justify-content:center;
+  vertical-align:middle;
+}
+.icon-action-button svg{
+  display:block;
+  width:1.35rem;
+  height:1.35rem;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.8;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.icon-action-button:focus-visible{
+  outline:3px solid rgba(36,87,167,.28);
+  outline-offset:2px;
+}
+@media(max-width:520px){
+  .intervention-execution-row{grid-template-columns:1fr}
+}
