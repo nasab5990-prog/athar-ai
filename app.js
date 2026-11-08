@@ -181,9 +181,9 @@ function updateCurriculumSubjects() {
   // اعرض قائمة مواد الصف كاملة، حتى إن كانت تفاصيل الوحدات متاحة لمادة واحدة فقط.
   let verifiedSubjects = [...new Set([...indexedSubjects, ...catalogSubjects])];
   if (currentRole === 'teacher') {
-    const assignedGrades = (currentUser?.teachingGrades || []).map(String);
-    const assignedSubject = String(currentUser?.teachingSubject || '');
-    verifiedSubjects = assignedSubject && assignedGrades.includes(String(grade)) ? [assignedSubject] : [];
+    verifiedSubjects = [...new Set((currentUser?.teachingAssignments || [])
+      .filter(item => String(item.grade) === String(grade))
+      .map(item => String(item.subject || '').trim()).filter(Boolean))];
   }
   setCurriculumOptions(subject, grade ? (currentRole === 'teacher' && !verifiedSubjects.length ? 'المادة غير مسندة لهذا الصف' : 'اختر المادة') : 'تُحدد حسب الصف والتكليف', verifiedSubjects);
   if (currentRole === 'teacher') {
