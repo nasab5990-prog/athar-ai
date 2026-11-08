@@ -1073,13 +1073,37 @@ function printInterventionGuide() {
   win.document.close(); win.focus(); win.print();
 }
 
+function setInterventionMode(mode) {
+  const aiPanel = document.getElementById('aiInterventionPanel');
+  const draft = document.getElementById('interventionDraftFields');
+  const result = document.getElementById('intAiResult');
+  const aiSkill = document.getElementById('aiSkill');
+  const skill = document.getElementById('intSkill');
+  const observed = document.getElementById('intObservedErrors');
+  if (!['manual','ai'].includes(mode)) return;
+  window.atharInterventionMode = mode;
+  if (aiPanel) aiPanel.hidden = mode !== 'ai';
+  if (draft) draft.hidden = mode !== 'manual' && !window.atharAiDraftReady;
+  if (mode === 'manual') {
+    if (result) result.innerHTML = '';
+    window.atharAiDraftReady = false;
+    if (aiSkill) aiSkill.value = '';
+    if (observed) observed.value = '';
+  } else {
+    if (skill) skill.value = '';
+    ['intGoal','intSteps','intEnrich'].forEach(id => { const field=document.getElementById(id); if(field) field.value=''; });
+    window.atharAiDraftReady = false;
+    if (draft) draft.hidden = true;
+  }
+}
+
 async function suggestIntervention() {
   const button = document.getElementById('suggestInterventionBtn');
   const resultEl = document.getElementById('intAiResult');
   const studentId = document.getElementById('interventionStudent')?.value || '';
   const student = students.find(item => item.student_id === studentId);
   const observedErrors = document.getElementById('intObservedErrors')?.value.trim() || '';
-  let skill = document.getElementById('intSkill')?.value.trim() || '';
+  let skill = document.getElementById('aiSkill')?.value.trim() || '';
 
   if (studentId && !student) return showToast('تعذر العثور على الطالب المحدد.');
   if (!skill && studentId) {
@@ -1117,6 +1141,9 @@ async function suggestIntervention() {
       : 'بعد تحسن الأداء، انتقل تدريجيًا إلى نصوص أطول وأسئلة استنتاجية، مع إبقاء الدعم متاحًا عند الحاجة.';
 
     document.getElementById('intSkill').value = displaySkillName(analysis.skill);
+    window.atharAiDraftReady = true;
+    const draftFields = document.getElementById('interventionDraftFields');
+    if (draftFields) draftFields.hidden = false;
     document.getElementById('intGoal').value = goal;
     document.getElementById('intSteps').value = [...new Set(steps)].join('\n');
     document.getElementById('intEnrich').value = enrichment;
@@ -1138,7 +1165,7 @@ async function suggestIntervention() {
 }
 
 function resetInterventionForm() {
-  const fields = ['interventionStudent','intGrade','intSubject','intUnit','intLesson','intOutcome','intSemester','intObservedErrors','intSkill','intGoal','intSteps','intEnrich'];
+  const fields = ['interventionStudent','intGrade','intSubject','intUnit','intLesson','intOutcome','intSemester','intObservedErrors','intSkill','aiSkill','intGoal','intSteps','intEnrich'];
   fields.forEach(id => {
     const field = document.getElementById(id);
     if (field) field.value = '';
@@ -1164,6 +1191,10 @@ function resetInterventionForm() {
   if (cancelButton) cancelButton.hidden = true;
   editingInterventionId = null;
   window.atharSuggestedIntervention = null;
+  window.atharAiDraftReady = false;
+  window.atharInterventionMode = null;
+  const aiPanel = document.getElementById('aiInterventionPanel'); if (aiPanel) aiPanel.hidden = true;
+  const draftFields = document.getElementById('interventionDraftFields'); if (draftFields) draftFields.hidden = true;
   updateCurriculumSubjects();
   fillStudentSelects();
 }
