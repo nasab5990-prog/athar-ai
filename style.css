@@ -762,3 +762,17 @@ body.dark .root-map-arrow { color:#91b6dc; }
 @media(max-width:520px){
   .intervention-execution-row{grid-template-columns:1fr}
 }
+
+/* إبراز أيقونة طباعة دليل التنفيذ */
+.guide-print-icon{
+  width:3.35rem;
+  min-width:3.35rem;
+  height:3.1rem;
+  padding:.55rem;
+  border-radius:11px;
+}
+.guide-print-icon svg{
+  width:1.85rem;
+  height:1.85rem;
+  stroke-width:2;
+}
