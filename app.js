@@ -101,6 +101,7 @@ async function acceptLogin(user) {
   applyRoleUI();
   try { await loadRecords(); }
   catch (error) { showToast(`تم الدخول، لكن تعذّر تحميل السجلات: ${error.message}`); }
+  show('dashboard');
   showToast(`مرحبًا ${user.name || user.email} — ${getRoleName(currentRole)}`);
 }
 async function restoreSession() {
@@ -122,6 +123,7 @@ async function restoreSession() {
   applyRoleUI();
   try { await loadRecords(); }
   catch (error) { showToast(`تعذّر تحميل السجلات: ${error.message}`); }
+  show('dashboard');
 }
 async function logout() {
   try { await api('/api/auth/logout', { method:'POST' }); } catch { /* Session may already have expired. */ }
@@ -282,7 +284,7 @@ function toggleSidebar() {
 const roleSections = {
   teacher: ['dashboard','students','assessment','radar','assistant','intervention','activities','impact','reports','inclusive','lowresource','privacy','teacherdev','curriculum','guide','about'],
   senior_teacher: ['dashboard','students','assessment','radar','assistant','intervention','activities','impact','reports','principalView','inclusive','lowresource','privacy','teacherdev','curriculum','guide','about'],
-  principal: ['dashboard','students','assessment','radar','assistant','intervention','activities','impact','reports','principalView','roles','inclusive','lowresource','privacy','teacherdev','curriculum','guide','about'],
+  principal: ['dashboard','students','reports','principalView','roles','privacy','guide','about'],
   parent: ['dashboard','studentProgress','guide','privacy','about'],
   student: ['dashboard','studentProgress','guide','privacy','about']
 };
