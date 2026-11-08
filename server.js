@@ -71,9 +71,16 @@ async function assignedStudentIds(user) {
   return r.rows.map(x=>x.student_id);
 }
 async function teacherTeachingAssignment(user) {
-  const r=await query('SELECT teaching_subject,teaching_grades FROM users WHERE id=$1 AND school_id=$2',[user.id,user.school_id]);
-  const row=r.rows[0] || {};
-  return { subject:row.teaching_subject || '', grades:Array.isArray(row.teaching_grades)?row.teaching_grades:[] };
+  const r=await query('SELECT subject,grade,sections FROM teacher_teaching_assignments WHERE user_id=$1 AND school_id=$2 ORDER BY subject,grade',[user.id,user.school_id]);
+  if (r.rows.length) return { assignments:r.rows.map(row=>({subject:row.subject,grade:String(row.grade),sections:Array.isArray(row.sections)?row.sections:[]})) };
+  const legacy=await query('SELECT teaching_subject,teaching_grades FROM users WHERE id=$1 AND school_id=$2',[user.id,user.school_id]);
+  const row=legacy.rows[0] || {};
+  return { assignments:(Array.isArray(row.teaching_grades)?row.teaching_grades:[]).map(grade=>({subject:row.teaching_subject||'',grade:String(grade),sections:[]})).filter(item=>item.subject) };
+}
+function teacherAssignmentMatches(assignments, student) {
+  const grade=String(student?.grade ?? '').trim();
+  const section=String(student?.section ?? '').trim();
+  return (assignments||[]).some(item=>String(item.grade)===grade && (!item.sections?.length || item.sections.map(String).includes(section)));
 }
 async function studentExistsInSchool(studentId,schoolId) {
   const r=await query("SELECT id FROM records WHERE school_id=$1 AND kind='student' AND payload->>'student_id'=$2 LIMIT 1",[schoolId,studentId]);
@@ -92,7 +99,7 @@ async function findStudentOwnedBy(user,studentId) {
   if (user.role==='teacher') {
     if (String(record.owner_id)===String(user.id) || (await assignedStudentIds(user)).includes(studentId)) return record;
     const teaching=await teacherTeachingAssignment(user);
-    if (assignedGradeLabels(teaching.grades).includes(String(record.payload?.grade || ''))) return record;
+    if (teacherAssignmentMatches(teaching.assignments,record.payload)) return record;
   }
   if (['senior_teacher','principal'].includes(user.role)) return record;
   return null;
@@ -102,10 +109,14 @@ async function getRecordsForUser(user) {
     return (await query('SELECT id,kind,payload,created_at FROM records WHERE school_id=$1 ORDER BY id DESC LIMIT 1000',[user.school_id])).rows;
   }
   if (user.role==='teacher') {
-    const [assigned,teaching]=await Promise.all([assignedStudentIds(user),teacherTeachingAssignment(user)]);
-    if (teaching.grades.length) {
-      const visibleStudents=(await query("SELECT payload->>'student_id' AS student_id FROM records WHERE school_id=$1 AND kind='student' AND payload->>'grade'=ANY($2::text[])",[user.school_id,assignedGradeLabels(teaching.grades)])).rows.map(x=>x.student_id);
-      const visible=[...new Set([...assigned,...visibleStudents])];
+    const [assigned,teaching,studentRows]=await Promise.all([
+      assignedStudentIds(user),
+      teacherTeachingAssignment(user),
+      query("SELECT payload FROM records WHERE school_id=$1 AND kind='student'",[user.school_id])
+    ]);
+    const visibleStudents=studentRows.rows.filter(row=>teacherAssignmentMatches(teaching.assignments,row.payload)).map(row=>String(row.payload?.student_id||'')).filter(Boolean);
+    const visible=[...new Set([...assigned,...visibleStudents])];
+    if (visible.length) {
       const r=await query(`SELECT id,kind,payload,created_at FROM records WHERE school_id=$1 AND
         ((owner_id=$2 AND (payload->>'student_id' IS NULL OR payload->>'student_id'=ANY($3::text[]))) OR
          kind IN ('shared_assessment','shared_intervention') OR payload->>'student_id'=ANY($3::text[]))
@@ -131,8 +142,9 @@ async function sessionLogin(req,res,user,extra={}) {
     req.session.user={ id:user.id };
     try {
       await audit(user.id,extra.demo ? 'demo.login':'login',user.role);
-      const [linked,assigned,teaching]=await Promise.all([linkedStudentIds(user),assignedStudentIds(user),user.role==='teacher'?teacherTeachingAssignment(user):Promise.resolve({subject:'',grades:[]})]);
-      res.json({ user:{ ...user,roleName:roleNames[user.role],linkedStudentIds:linked,assignedStudentIds:assigned,teachingSubject:teaching.subject,teachingGrades:teaching.grades,...(extra.demo ? {isDemo:true}:{}) }, ...(extra.warning ? {warning:extra.warning}:{}) });
+      const [linked,assigned,teaching]=await Promise.all([linkedStudentIds(user),assignedStudentIds(user),user.role==='teacher'?teacherTeachingAssignment(user):Promise.resolve({assignments:[]})]);
+      const assignments=teaching.assignments||[];
+      res.json({ user:{ ...user,roleName:roleNames[user.role],linkedStudentIds:linked,assignedStudentIds:assigned,teachingAssignments:assignments,teachingSubjects:[...new Set(assignments.map(x=>x.subject))],teachingGrades:[...new Set(assignments.map(x=>x.grade))],...(extra.demo ? {isDemo:true}:{}) }, ...(extra.warning ? {warning:extra.warning}:{}) });
     } catch(e) { res.status(500).json({ message:'تعذر إكمال تسجيل الدخول.' }); }
   });
 }
@@ -245,8 +257,9 @@ app.post('/api/auth/demo',loginLimiter,asyncRoute(async(req,res)=>{
   await sessionLogin(req,res,user,{demo:true,warning:'وضع اختبار فقط مع بيانات اصطناعية في مدرسة معزولة. لا تستخدم بيانات حقيقية.'});
 }));
 app.get('/api/auth/me',requireAuth,asyncRoute(async(req,res)=>{
-  const [linked,assigned,teaching]=await Promise.all([linkedStudentIds(req.user),assignedStudentIds(req.user),req.user.role==='teacher'?teacherTeachingAssignment(req.user):Promise.resolve({subject:'',grades:[]})]);
-  res.json({ user:{...req.user,roleName:roleNames[req.user.role],linkedStudentIds:linked,assignedStudentIds:assigned,teachingSubject:teaching.subject,teachingGrades:teaching.grades,isDemo:req.user.school_id==='DEMO-SCHOOL'} });
+  const [linked,assigned,teaching]=await Promise.all([linkedStudentIds(req.user),assignedStudentIds(req.user),req.user.role==='teacher'?teacherTeachingAssignment(req.user):Promise.resolve({assignments:[]})]);
+  const assignments=teaching.assignments||[];
+  res.json({ user:{...req.user,roleName:roleNames[req.user.role],linkedStudentIds:linked,assignedStudentIds:assigned,teachingAssignments:assignments,teachingSubjects:[...new Set(assignments.map(x=>x.subject))],teachingGrades:[...new Set(assignments.map(x=>x.grade))],isDemo:req.user.school_id==='DEMO-SCHOOL'} });
 }));
 app.post('/api/auth/logout',requireAuth,asyncRoute(async(req,res)=>{
   await audit(req.user.id,'logout');
