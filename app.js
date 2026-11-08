@@ -917,7 +917,23 @@ function buildSuggestedActivityOptions(analysis) {
   const mode = document.getElementById('activityMode')?.value || 'offline';
   const duration = Number(document.getElementById('activityDuration')?.value || 15);
   const isReading = /الفهم المقروء|فهم المقروء|الفهم القرائي/.test(skill);
+  const subjectSelect = document.getElementById('intSubject');
+  const subject = (subjectSelect?.selectedOptions?.[0]?.textContent || subjectSelect?.value || '').trim();
+  const isPracticalSubject = /العلوم|الفيزياء|الكيمياء|الأحياء|الأحياء|تقنية المعلومات|الحاسوب|التقانة|الفنون|التربية الفنية|التربية البدنية|الرياضة|المهارات الحياتية|التصميم|الزراعة|المجال المهني/.test(subject);
   let activities;
+  if (isPracticalSubject) {
+    const materialLabel = /العلوم|الفيزياء|الكيمياء|الأحياء/.test(subject) ? 'أدوات آمنة بسيطة أو صور/عينات متاحة' :
+      /تقنية المعلومات|الحاسوب|التقانة/.test(subject) ? (mode === 'offline' ? 'بطاقات ورقية تمثل خطوات الإجراء أو أجزاء النظام' : 'جهاز المعلم أو أجهزة الطلبة بحسب المتاح') :
+      /التربية البدنية|الرياضة/.test(subject) ? 'مساحة آمنة وأدوات رياضية مناسبة' :
+      /الفنون|التربية الفنية|التصميم/.test(subject) ? 'ورق وأقلام وخامات فنية متاحة' :
+      'أدوات وخامات صفية آمنة مرتبطة بموضوع الدرس';
+    const modeNote = mode === 'offline' ? 'دون أجهزة أو إنترنت' : mode === 'shared' ? 'جهاز المعلم/شاشة مشتركة عند الحاجة للعرض فقط' : 'تستخدم الأجهزة كأداة مساندة ولا تستبدل التطبيق العملي';
+    activities = [
+      {title:'نفّذ المهارة عمليًا',steps:`نشاط تطبيقي لمهارة ${skill} في مادة ${subject} (${modeNote}، ${duration} دقيقة). الأدوات: ${materialLabel}. اعرض نموذجًا قصيرًا، ثم ينفذ الطلبة المهارة بأنفسهم أو ضمن مجموعات صغيرة باستخدام الأدوات المتاحة. سجّل تحقق خطوات الأداء في بطاقة ملاحظة.`},
+      {title:'جرّب ولاحظ وسجّل',steps:`نشاط استقصاء وتطبيق لمهارة ${skill} في مادة ${subject} (${duration} دقيقة). جهّز مهمة عملية آمنة مرتبطة بالدرس. يتوقع الطلبة ما سيحدث، وينفذون التجربة/الإجراء، ثم يسجلون الملاحظة أو الناتج في جدول ورقي أو رقمي بحسب الإمكانات. قيّم صحة التنفيذ وتفسير النتيجة.`},
+      {title:'حل مشكلة من واقع الحياة',steps:`مهمة أداء لمهارة ${skill} في مادة ${subject} (${duration} دقيقة). قدّم موقفًا واقعيًا يحتاج استخدام المهارة، واطلب من كل مجموعة اختيار الأدوات، وتنفيذ الحل، وعرض الناتج أو توضيح خطواته. استخدم معيارًا مختصرًا للدقة والسلامة وجودة التطبيق.`}
+    ];
+  }
   if (isReading && mode === 'offline') {
     activities = [
       {title:'بطاقات الفكرة والدليل',steps:'نشاط: بطاقات الفكرة والدليل (دون أجهزة، 10–15 دقيقة). اكتب الفكرة الرئيسة وثلاثة تفاصيل على قصاصات ورقية. يطابق الطالب كل تفصيل بالفكرة، ثم يختار الدليل من النص. سجّل عدد المطابقات الصحيحة.'},
@@ -1058,7 +1074,7 @@ function buildInterventionGuide(analysis, observedErrors = '') {
   const activityOptions = buildSuggestedActivityOptions(analysis);
   const html = `<div class="card" style="margin-top:.8rem;border-right:4px solid var(--primary)">
     <h3>دليل تنفيذ عملي للمعلم</h3>${content}${activityOptions}
-    <button class="btn small outline icon-action-button" type="button" onclick="printInterventionGuide()" aria-label="طباعة دليل التنفيذ" title="طباعة دليل التنفيذ"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 8V3h10v5M7 17H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M7 14h10v7H7z"/><path d="M17 11h.01"/></svg></button>
+    <button class="btn small outline icon-action-button guide-print-icon" type="button" onclick="printInterventionGuide()" aria-label="طباعة دليل التنفيذ" title="طباعة دليل التنفيذ"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 8V3h10v5M7 17H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M7 14h10v7H7z"/><path d="M17 11h.01"/></svg></button>
   </div>`;
   window.atharInterventionGuideHtml = html;
   return html;
