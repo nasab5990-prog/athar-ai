@@ -82,6 +82,19 @@ function teacherAssignmentMatches(assignments, student) {
   const section=String(student?.section ?? '').trim();
   return (assignments||[]).some(item=>assignedGradeLabels([item.grade]).includes(grade) && (!item.sections?.length || item.sections.map(String).includes(section)));
 }
+async function validateStudentPlacement(user,gradeValue,sectionValue) {
+  const grade=assignedGradeLabels([gradeValue]).find(value=>/^(?:[1-9]|1[0-2])$/.test(value))||String(gradeValue||'').trim();
+  const section=String(sectionValue||'').trim();
+  const config=(await query('SELECT section_count FROM school_grade_sections WHERE school_id=$1 AND grade=$2',[user.school_id,grade])).rows[0];
+  if(!config)throw Object.assign(new Error('لم يحدد المدير إعداد الصف وعدد شعبه بعد.'),{status:403});
+  const allowed=new Set(Array.from({length:Number(config.section_count)},(_,i)=>String(i+1)));
+  if(!allowed.has(section))throw Object.assign(new Error('هذه الشعبة غير معتمدة من المدير لهذا الصف.'),{status:403});
+  if(user.role==='teacher'){
+    const teaching=await teacherTeachingAssignment(user);
+    const permitted=teaching.assignments.some(item=>assignedGradeLabels([item.grade]).includes(String(gradeValue).trim())&&(!item.sections?.length||item.sections.includes(section)));
+    if(!permitted)throw Object.assign(new Error('لا يمكنك تسجيل طلبة خارج الصفوف والشعب المسندة إليك.'),{status:403});
+  }
+}
 async function studentExistsInSchool(studentId,schoolId) {
   const r=await query("SELECT id FROM records WHERE school_id=$1 AND kind='student' AND payload->>'student_id'=$2 LIMIT 1",[schoolId,studentId]);
   return Boolean(r.rowCount);
@@ -276,6 +289,7 @@ app.post('/api/records',recordLimiter,requireAuth,requireRole('teacher','senior_
   if (kind==='student') {
     clean.student_id=safeText(clean.student_id,80); clean.name=safeText(clean.name,140);
     if (!clean.student_id || !clean.name) return res.status(400).json({message:'اسم الطالب ومعرّفه مطلوبان.'});
+    try { await validateStudentPlacement(req.user,clean.grade,clean.section); } catch(error) { return res.status(error.status||400).json({message:error.message}); }
     if (await studentExistsInSchool(clean.student_id,req.user.school_id)) return res.status(409).json({message:'معرّف الطالب مستخدم بالفعل في المدرسة.'});
   } else if (clean.student_id) {
     clean.student_id=safeText(clean.student_id,80);
@@ -297,6 +311,7 @@ app.post('/api/records/bulk',recordLimiter,requireAuth,requireRole('teacher','se
     if (kind==='student') {
       clean.student_id=safeText(clean.student_id,80); clean.name=safeText(clean.name,140);
       if (!clean.student_id || !clean.name || batchStudentIds.has(clean.student_id) || await studentExistsInSchool(clean.student_id,req.user.school_id)) return res.status(409).json({message:'يوجد طالب مكرر أو سجل طالب ينقصه الاسم أو المعرّف.'});
+      try { await validateStudentPlacement(req.user,clean.grade,clean.section); } catch(error) { return res.status(error.status||400).json({message:error.message}); }
       batchStudentIds.add(clean.student_id);
     } else if (clean.student_id) clean.student_id=safeText(clean.student_id,80);
     if (JSON.stringify(clean).length>30000) return res.status(413).json({message:'أحد السجلات أكبر من الحد المسموح.'});
