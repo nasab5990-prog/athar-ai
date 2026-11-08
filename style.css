@@ -630,7 +630,7 @@ body.dark .root-map-arrow { color:#91b6dc; }
     background: #fff !important; color: #20334b !important;
     color-scheme: light !important;
     font-family: "Tajawal", Tahoma, Arial, sans-serif !important;
-    font-size: 11.5pt !important; line-height: 1.75 !important;
+    font-size: 12.5pt !important; line-height: 1.85 !important;
     -webkit-print-color-adjust: exact; print-color-adjust: exact;
   }
   body * { box-shadow: none !important; }
@@ -653,7 +653,7 @@ body.dark .root-map-arrow { color:#91b6dc; }
     display: flex !important; flex-direction: column !important;
     width: 100% !important; min-height: 0 !important;
     padding: 0 !important; background: #fff !important; color: #20334b !important;
-    font-size: 11.5pt !important; line-height: 1.75 !important;
+    font-size: 12.5pt !important; line-height: 1.85 !important;
   }
   #reportSummary .report-print-header {
     display: block !important; visibility: visible !important;
@@ -666,12 +666,12 @@ body.dark .root-map-arrow { color:#91b6dc; }
   }
   #reportSummary .report-print-header p { margin: 0 !important; color: #64778a !important; font-size: 9.5pt !important; }
   #reportSummary > p:not(.report-print-note) {
-    margin: 0 0 3mm !important; padding: 2.5mm 3mm !important;
+    margin: 0 0 3.5mm !important; padding: 3mm 3.5mm !important;
     border-right: 3px solid #2d9b91 !important; border-radius: 2mm !important;
     background: #f2f7fb !important; color: #263b52 !important; break-inside: avoid;
   }
   #reportSummary h4 {
-    margin: 5mm 0 2.5mm !important; padding-bottom: 2mm !important;
+    margin: 6mm 0 3mm !important; padding-bottom: 2mm !important;
     border-bottom: 1px solid #dce6ef !important; color: #174b78 !important;
     font-size: 12.5pt !important; font-weight: 800 !important; break-after: avoid;
   }
@@ -680,7 +680,7 @@ body.dark .root-map-arrow { color:#91b6dc; }
     margin: 0 0 2mm !important; padding: 2.5mm 3mm !important;
     border: 1px solid #e3eaf1 !important; border-radius: 2mm !important;
     background: #fbfcfe !important; color: #263b52 !important;
-    font-size: 11pt !important; line-height: 1.7 !important; break-inside: avoid;
+    font-size: 12pt !important; line-height: 1.8 !important; break-inside: avoid;
   }
   #reportSummary li strong { color: #174b78 !important; font-weight: 800 !important; }
   #reportSummary .report-print-note {
