@@ -301,8 +301,8 @@ function toggleSidebar() {
   }
 }
 const roleSections = {
-  teacher: ['dashboard','students','assessment','radar','assistant','intervention','activities','impact','reports','inclusive','lowresource','privacy','teacherdev','curriculum','guide','about'],
-  senior_teacher: ['dashboard','students','assessment','radar','assistant','intervention','activities','impact','reports','principalView','inclusive','lowresource','privacy','teacherdev','curriculum','guide','about'],
+  teacher: ['dashboard','assessment','radar','assistant','intervention','activities','impact','reports','inclusive','lowresource','privacy','teacherdev','curriculum','guide','about'],
+  senior_teacher: ['dashboard','assessment','radar','assistant','intervention','activities','impact','reports','principalView','inclusive','lowresource','privacy','teacherdev','curriculum','guide','about'],
   principal: ['dashboard','students','reports','principalView','roles','privacy','guide','about'],
   parent: ['dashboard','studentProgress','guide','privacy','about'],
   student: ['dashboard','studentProgress','guide','privacy','about']
