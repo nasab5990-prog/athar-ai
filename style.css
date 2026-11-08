@@ -328,6 +328,13 @@ body.dark .sidebar-actions .logout-action {
 .root-map-node { display:flex; flex-direction:column; gap:.3rem; min-width:0; padding:.8rem; border:1px solid #dbe4ef; border-radius:13px; background:#f8fafc; text-align:center; overflow-wrap:anywhere; }
 .root-map-node strong { color:#183b62; } .root-map-node span,.root-map-node small { font-size:.78rem; color:#526579; }
 .root-map-node.pending { border-color:#e7c77e; background:#fffaf0; } .root-map-node.review { border-color:#e8b3a5; background:#fff6f3; } .root-map-node.ok { border-color:#9bd5c1; background:#f1fbf7; } .root-map-node.future { border-color:#b9c9ec; background:#f4f7ff; }
+/* اربط لون الحالة بوسمها داخل بطاقة المهارة، مع إبقاء ألوان التسلسل منفصلة */
+.root-map-node.pending > span,.root-map-node.review > span,.root-map-node.ok > span { display:inline-flex; align-items:center; justify-content:center; align-self:center; gap:.4rem; width:max-content; max-width:100%; padding:.18rem .6rem; border-radius:999px; font-weight:800; }
+.root-map-node.pending > span { color:#8a5a0a; background:#f8e8bd; }
+.root-map-node.review > span { color:#a84432; background:#f8ddd6; }
+.root-map-node.ok > span { color:#176b50; background:#d9f0e5; }
+.root-map-node.pending > span::before,.root-map-node.review > span::before,.root-map-node.ok > span::before { content:""; width:.5rem; height:.5rem; border-radius:50%; background:currentColor; flex:none; }
+.root-map-node.focus > span,.root-map-node.future > span { display:inline-flex; align-self:center; width:max-content; max-width:100%; padding:.18rem .6rem; border-radius:999px; color:#2457A7; background:#e3edfc; font-weight:800; }
 .root-map-node.focus { padding:1rem; border:2px solid #4788c7; background:linear-gradient(145deg,#edf6ff,#f3f0ff); box-shadow:0 5px 18px #244a7412; }
 .root-map-node.focus strong { font-size:1.05rem; } .root-map-arrow { color:#6b8eb2; font-size:1.45rem; font-weight:700; }
 .root-map-empty { padding:1rem; border:1px dashed #cbd5e1; border-radius:12px; color:#64748b; text-align:center; }
