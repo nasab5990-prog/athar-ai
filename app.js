@@ -366,6 +366,8 @@ function show(id) {
   if (id === 'reports') renderReports();
 }
 document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('newGrade')?.addEventListener('change',()=>updateStudentSectionOptions('newGrade','newSection'));
+  document.getElementById('bulkGrade')?.addEventListener('change',()=>updateStudentSectionOptions('bulkGrade','bulkSection'));
   document.getElementById('intGrade')?.addEventListener('change', updateCurriculumSubjects);
   document.getElementById('intSubject')?.addEventListener('change', updateCurriculumUnits);
   document.getElementById('intUnit')?.addEventListener('change', updateCurriculumLessons);
