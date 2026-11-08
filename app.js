@@ -1136,8 +1136,43 @@ function printInterventionGuide() {
   if (!html) return showToast('أنشئ المقترح الذكي أولًا.');
   const win = window.open('', '_blank');
   if (!win) return showToast('اسمح بفتح نافذة الطباعة.');
-  win.document.write(`<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><title>دليل تنفيذ — أثَر</title><style>body{font-family:Arial,sans-serif;line-height:1.8;padding:24px;color:#172b45}h3,h4{color:#174a83}li{margin:.35rem 0}blockquote{border-right:3px solid #8aa;padding:.4rem 1rem;background:#f5f8fc}button{display:none}@page{size:A4;margin:16mm}</style><body><h2>أثَر | دليل تنفيذ التدخل</h2>${html}</body></html>`);
-  win.document.close(); win.focus(); win.print();
+  const printStyles = `
+    @page{size:A4 portrait;margin:15mm 14mm 18mm}
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:#fff!important;color:#24364b!important}
+    body{font-family:"Noto Naskh Arabic","Arial",sans-serif;font-size:11.5pt;line-height:1.85;direction:rtl;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .print-header{border-bottom:3px solid #2f6598;padding:0 0 12px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;gap:18px}
+    .print-brand{font-size:21pt;font-weight:800;color:#174a78;letter-spacing:.2px}
+    .print-brand small{display:block;font-size:8.5pt;font-weight:600;color:#6d7f91;letter-spacing:1.5px;direction:ltr;text-align:right}
+    .print-meta{text-align:left;color:#607286;font-size:9pt}
+    .print-meta strong{display:block;color:#294b6d;font-size:11pt}
+    .guide-document{width:100%;max-width:none;margin:0;padding:0;border:0!important;box-shadow:none!important;background:#fff!important}
+    .guide-document h3{font-size:17pt;color:#174a78;border-right:4px solid #4d83b4;padding:4px 11px;margin:0 0 14px;break-after:avoid}
+    .guide-document h4{font-size:12.5pt;color:#245b88;margin:18px 0 7px;padding-bottom:4px;border-bottom:1px solid #dce5ee;break-after:avoid}
+    .guide-document p{margin:6px 0 10px}
+    .guide-document ul,.guide-document ol{padding-right:25px;margin:7px 0 12px}
+    .guide-document li{padding-right:3px;margin:5px 0;break-inside:avoid}
+    .guide-document blockquote{margin:12px 0;padding:12px 16px;background:#f2f6fa!important;border-right:4px solid #78a0c4;border-radius:7px;break-inside:avoid}
+    .guide-document .card{background:#fff!important;border:1px solid #dce5ee!important;border-radius:9px!important;padding:13px 15px!important;margin:12px 0!important;box-shadow:none!important;break-inside:avoid}
+    .guide-document .note{background:#f5f8fb!important;border:1px solid #e1e8ef!important;color:#465b70!important;padding:9px 12px;border-radius:7px}
+    .guide-document strong{color:#1f456b}
+    .guide-document button,.guide-document .guide-print-icon{display:none!important}
+    .print-footer{margin-top:22px;padding-top:9px;border-top:1px solid #cbd7e2;text-align:center;color:#68798a;font-size:9pt}
+    .print-footer strong{color:#365a7a;font-weight:700}
+    @media print{body{background:#fff!important}.guide-document .card{break-inside:avoid}h3,h4{break-after:avoid}}
+  `;
+  win.document.open();
+  win.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>دليل تنفيذ التدخل | منصة أثَر</title><style>${printStyles}</style></head><body>
+    <header class="print-header">
+      <div class="print-brand">أثَر<small>ATHAR AI</small></div>
+      <div class="print-meta"><strong>دليل تنفيذ التدخل</strong><span>دليل إرشادي للمعلم — قابل للتعديل</span></div>
+    </header>
+    <main class="guide-document">${html}</main>
+    <footer class="print-footer">حقوق التصميم والتطوير <strong>© أ. نصراء سعيد البهلولي | منصة أثَر</strong></footer>
+  </body></html>`);
+  win.document.close();
+  win.focus();
+  win.print();
 }
 
 function setInterventionMode(mode) {
