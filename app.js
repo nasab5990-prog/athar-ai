@@ -528,7 +528,9 @@ function updateAssessmentScope() {
   const currentAssignment=assignments.filter(item=>String(item.grade)===activeGrade&&String(item.subject||'')===subjectEl.value);
   const config=(schoolGradeSections||[]).find(item=>String(item.grade)===activeGrade);
   const sections=teacher
-    ? [...new Set(currentAssignment.flatMap(item=>(item.sections||[]).map(String)))].filter(Boolean)
+    ? (currentAssignment.some(item=>!(item.sections||[]).length)
+        ? (config?.sections||[]).map(String)
+        : [...new Set(currentAssignment.flatMap(item=>(item.sections||[]).map(String)))].filter(Boolean))
     : (config?.sections||[]).map(String);
   const previousSection=sectionEl.value;
   sectionEl.innerHTML='<option value="">اختر الشعبة</option>'+sections.map(value=>'<option value="'+esc(value)+'">الشعبة '+esc(value)+'</option>').join('');
