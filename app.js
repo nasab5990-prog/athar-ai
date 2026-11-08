@@ -1634,7 +1634,8 @@ function renderReports() {
     const delta = Number(item.difference ?? (Number(item.after)-Number(item.before)));
     return `<li><strong>${esc(skill)}</strong> — ${esc(studentName)}: ${Number(item.before)}% إلى ${Number(item.after)}% (${delta > 0 ? '+' : ''}${delta} نقطة) <span class="note">${esc(getImpactEvidenceStatus(item))}</span></li>`;
   }).join('');
-  el.innerHTML = `<p>الطلبة: ${students.length} • التقويمات: ${assessments.length} • التدخلات: ${interventions.length} • قياسات الأثر: ${impacts.length}</p><p>متوسط أحدث نتائج المهارات المسجلة: ${currentAssessments.length ? `${Math.round(currentAssessments.reduce((sum,a)=>sum+Number(a.pct||0),0)/currentAssessments.length)}%` : 'لا توجد بيانات'}</p><h4>ملخص المهارات</h4><ul>${skillRows || '<li>لا توجد نتائج مهارية كافية لإعداد الملخص.</li>'}</ul><h4>أثر التدخلات المرتبطة</h4><ul>${impactRowsHtml || '<li>لم تُسجل قياسات أثر مرتبطة بتدخلات بعد.</li>'}</ul>`;
+  const latestAverage = currentAssessments.length ? Math.round(currentAssessments.reduce((sum,a)=>sum+Number(a.pct||0),0)/currentAssessments.length) : null;
+  el.innerHTML = `<p>الطلبة: ${students.length} • سجلات التقويم المحفوظة: ${assessments.length} • التدخلات: ${interventions.length} • قياسات الأثر المسجلة: ${impacts.length}</p><p>أحدث النتائج المحتسبة: ${currentAssessments.length} • متوسط الإتقان: ${latestAverage === null ? 'لا توجد بيانات' : `${latestAverage}%`}</p><h4>ملخص المهارات (أحدث نتيجة لكل طالب ولكل مهارة)</h4><ul>${skillRows || '<li>لا توجد نتائج مهارية كافية لإعداد الملخص.</li>'}</ul><h4>أثر التدخلات المرتبطة</h4><ul>${impactRowsHtml || '<li>لم تُسجل قياسات أثر مرتبطة بتدخلات بعد.</li>'}</ul>`;
 }
 async function loadSchoolUsers() {
   const el = document.getElementById('usersList');
