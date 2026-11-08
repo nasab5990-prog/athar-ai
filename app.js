@@ -384,6 +384,7 @@ function show(id) {
   if (id === 'reports') renderReports();
 }
 document.addEventListener('DOMContentLoaded', () => {
+  ['assessmentSubject','assessmentGrade','assessmentSection','assessmentScope'].forEach(id=>document.getElementById(id)?.addEventListener('change',updateAssessmentScope));
   document.getElementById('newGrade')?.addEventListener('change',()=>updateStudentSectionOptions('newGrade','newSection'));
   document.getElementById('bulkGrade')?.addEventListener('change',()=>updateStudentSectionOptions('bulkGrade','bulkSection'));
   document.getElementById('intGrade')?.addEventListener('change', updateCurriculumSubjects);
@@ -488,6 +489,68 @@ function filterInterventionStudents() {
   if (gradeFilter) gradeFilter.title = `عدد الطلبة في القائمة: ${filtered.length}`;
 }
 
+function updateAssessmentScope() {
+  const subjectEl=document.getElementById('assessmentSubject');
+  const gradeEl=document.getElementById('assessmentGrade');
+  const sectionEl=document.getElementById('assessmentSection');
+  const scopeEl=document.getElementById('assessmentScope');
+  const studentField=document.getElementById('assessmentStudentField');
+  const studentEl=document.getElementById('assessmentStudent');
+  if(!subjectEl||!gradeEl||!sectionEl||!scopeEl||!studentEl)return;
+  const teacher=['teacher','senior_teacher'].includes(currentRole);
+  const assignments=currentUser?.teachingAssignments||[];
+  const grade=gradeEl.value;
+  const selectedSubject=subjectEl.value;
+  const allowedAssignments=assignments.filter(item=>
+    (!grade||String(item.grade)===grade) &&
+    (!selectedSubject||String(item.subject||'')===selectedSubject)
+  );
+  if(teacher){
+    const grades=[...new Set(assignments.map(item=>String(item.grade)))];
+    const prior=gradeEl.value;
+    gradeEl.innerHTML='<option value="">اختر الصف</option>'+grades.map(value=>'<option value="'+esc(value)+'">الصف '+esc(value)+'</option>').join('');
+    if(grades.includes(prior))gradeEl.value=prior;
+    else if(grades.length===1)gradeEl.value=grades[0];
+  }else{
+    const grades=(schoolGradeSections||[]).map(item=>String(item.grade));
+    const prior=gradeEl.value;
+    gradeEl.innerHTML='<option value="">اختر الصف</option>'+grades.map(value=>'<option value="'+esc(value)+'">الصف '+esc(value)+'</option>').join('');
+    if(grades.includes(prior))gradeEl.value=prior;
+  }
+  const activeGrade=gradeEl.value;
+  const subjectValues=teacher
+    ? [...new Set(assignments.filter(item=>!activeGrade||String(item.grade)===activeGrade).map(item=>String(item.subject||'')).filter(Boolean))]
+    : teachingSubjectOptions();
+  const priorSubject=subjectEl.value;
+  subjectEl.innerHTML='<option value="">اختر المادة</option>'+subjectValues.map(value=>'<option value="'+esc(value)+'">'+esc(value)+'</option>').join('');
+  if(subjectValues.includes(priorSubject))subjectEl.value=priorSubject;
+  else if(subjectValues.length===1)subjectEl.value=subjectValues[0];
+  const currentAssignment=assignments.filter(item=>String(item.grade)===activeGrade&&String(item.subject||'')===subjectEl.value);
+  const config=(schoolGradeSections||[]).find(item=>String(item.grade)===activeGrade);
+  const sections=teacher
+    ? [...new Set(currentAssignment.flatMap(item=>(item.sections||[]).map(String)))].filter(Boolean)
+    : (config?.sections||[]).map(String);
+  const previousSection=sectionEl.value;
+  sectionEl.innerHTML='<option value="">اختر الشعبة</option>'+sections.map(value=>'<option value="'+esc(value)+'">الشعبة '+esc(value)+'</option>').join('');
+  if(sections.includes(previousSection))sectionEl.value=previousSection;
+  sectionEl.disabled=!sections.length;
+  const individual=scopeEl.value==='individual';
+  if(studentField)studentField.hidden=!individual;
+  const chosenGrade=gradeEl.value, chosenSection=sectionEl.value;
+  const visibleStudents=students.filter(student=>
+    gradeNumber(student.grade)===chosenGrade &&
+    String(student.section||'')===chosenSection &&
+    (!teacher || currentAssignment.some(item=>
+      String(item.grade)===chosenGrade &&
+      (!(item.sections||[]).length || (item.sections||[]).map(String).includes(chosenSection))
+    ))
+  ).sort((x,y)=>String(x.name||'').localeCompare(String(y.name||''),'ar'));
+  const previousStudent=studentEl.value;
+  studentEl.innerHTML='<option value="">اختر طالبًا من الشعبة</option>'+visibleStudents.map(student=>'<option value="'+esc(student.student_id)+'">'+esc(student.name)+'</option>').join('');
+  if(visibleStudents.some(student=>student.student_id===previousStudent))studentEl.value=previousStudent;
+  studentEl.disabled=!visibleStudents.length;
+  if(individual&&!chosenGrade)studentEl.innerHTML='<option value="">حدد المادة والصف والشعبة أولًا</option>';
+}
 function fillStudentSelects() {
   const selectors = ['assessmentStudent','interventionStudent','impactStudent','analysisStudent','assistantStudent','progressStudent','accountStudentIds'];
   for (const id of selectors) {
@@ -603,8 +666,15 @@ async function removeStudent(studentId) {
 }
 async function saveAssessment() {
   const skill = document.getElementById('assessName')?.value.trim() || '';
-  const studentId = document.getElementById('assessmentStudent')?.value || null;
+  const scope = document.getElementById('assessmentScope')?.value || 'class';
+  const subject = document.getElementById('assessmentSubject')?.value || '';
+  const grade = document.getElementById('assessmentGrade')?.value || '';
+  const section = document.getElementById('assessmentSection')?.value || '';
+  const studentId = scope === 'individual' ? (document.getElementById('assessmentStudent')?.value || null) : null;
   const student = students.find(s => s.student_id === studentId);
+  if(!subject||!grade||!section)return showToast('حدد المادة والصف والشعبة أولًا.');
+  if(scope==='individual'&&!studentId)return showToast('اختر الطالب للتقويم الفردي.');
+  if(scope==='individual'&&(!student||gradeNumber(student.grade)!==grade||String(student.section||'')!==section))return showToast('الطالب المحدد لا ينتمي إلى الشعبة المختارة.');
   const diagnosticFields = [...document.querySelectorAll('[data-diagnostic-question]')];
   const diagnosticRatings = [...document.querySelectorAll('[data-diagnostic-rating]')];
   let total, correct, pct, diagnosticQuestions = [];
@@ -631,7 +701,7 @@ async function saveAssessment() {
   }
   if (!skill) return showToast('أدخل اسم التقويم أو المهارة أولًا.');
   const payload = {
-    student_id:studentId, student_name:student?.name || null, skill, name:skill,
+    student_id:studentId, student_name:student?.name || null, subject, grade, section, assessment_scope:scope, skill, name:skill,
     total, correct, pct, date:new Date().toISOString(),
     diagnostic_questions:diagnosticQuestions,
     diagnostic_source:diagnosticQuestions.length ? 'قوالب إرشادية قابلة للتحرير مع تقدير المعلم لكل سؤال' : null,
@@ -751,6 +821,7 @@ function prepareDiagnosticAssessment(skill) {
   field?.focus();
 }
 function renderAssess() {
+  updateAssessmentScope();
   const el = document.getElementById('assessList');
   if (!el) return;
   el.innerHTML = assessments.slice(0, 50).map((a, index) => {
