@@ -299,12 +299,12 @@
       </select>
       <label>الوقت المتاح للنشاط</label>
       <select id="activityDuration"><option value="10">10 دقائق</option><option value="15" selected>15 دقيقة</option><option value="20">20 دقيقة</option></select>
+      <label>المهارة المستهدفة</label>
+      <input type="text" id="intSkill" placeholder="مثال: الفهم المقروء">
       <label>ملاحظة المعلم عن موضع الصعوبة (اختياري)</label>
       <textarea id="intObservedErrors" rows="2" placeholder="مثال: يحدد التفاصيل لكنه لا يميز الفكرة الرئيسة..."></textarea>
       <button class="btn" id="suggestInterventionBtn" type="button" onclick="suggestIntervention()">✨ اقترح تدخلًا ذكيًا لهذه الحالة</button>
       <div id="intAiResult" style="margin-top:.8rem" aria-live="polite"></div>
-      <label>المهارة / الفجوة</label>
-      <input type="text" id="intSkill" placeholder="المهارة المستهدفة">
       <label>الهدف</label>
       <textarea id="intGoal" rows="2" placeholder="اكتب هدفًا قابلًا للقياس"></textarea>
       <label>خطوات التدخل</label>
