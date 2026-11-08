@@ -47,7 +47,7 @@ async function audit(userId,event,details='') {
   await query('INSERT INTO audit_log(user_id,event,details) VALUES($1,$2,$3)',[userId || null,event,safeText(details,500)]);
 }
 async function freshUser(id) {
-  const r=await query('SELECT id,email,name,role,school_id,student_id,active FROM users WHERE id=$1',[id]);
+  const r=await query('SELECT id,email,name,role,school_id,student_id,active,teaching_subject,teaching_grades FROM users WHERE id=$1',[id]);
   return r.rows[0] || null;
 }
 const requireAuth = asyncRoute(async (req,res,next) => {
@@ -70,6 +70,11 @@ async function assignedStudentIds(user) {
   const r=await query('SELECT student_id FROM teacher_students WHERE user_id=$1 AND school_id=$2 ORDER BY student_id',[user.id,user.school_id]);
   return r.rows.map(x=>x.student_id);
 }
+async function teacherTeachingAssignment(user) {
+  const r=await query('SELECT teaching_subject,teaching_grades FROM users WHERE id=$1 AND school_id=$2',[user.id,user.school_id]);
+  const row=r.rows[0] || {};
+  return { subject:row.teaching_subject || '', grades:Array.isArray(row.teaching_grades)?row.teaching_grades:[] };
+}
 async function studentExistsInSchool(studentId,schoolId) {
   const r=await query("SELECT id FROM records WHERE school_id=$1 AND kind='student' AND payload->>'student_id'=$2 LIMIT 1",[schoolId,studentId]);
   return Boolean(r.rowCount);
@@ -86,7 +91,16 @@ async function getRecordsForUser(user) {
     return (await query('SELECT id,kind,payload,created_at FROM records WHERE school_id=$1 ORDER BY id DESC LIMIT 1000',[user.school_id])).rows;
   }
   if (user.role==='teacher') {
-    const assigned=await assignedStudentIds(user);
+    const [assigned,teaching]=await Promise.all([assignedStudentIds(user),teacherTeachingAssignment(user)]);
+    if (teaching.grades.length) {
+      const visibleStudents=(await query("SELECT payload->>'student_id' AS student_id FROM records WHERE school_id=$1 AND kind='student' AND payload->>'grade'=ANY($2::text[])",[user.school_id,teaching.grades])).rows.map(x=>x.student_id);
+      const visible=[...new Set([...assigned,...visibleStudents])];
+      const r=await query(`SELECT id,kind,payload,created_at FROM records WHERE school_id=$1 AND
+        ((owner_id=$2 AND (payload->>'student_id' IS NULL OR payload->>'student_id'=ANY($3::text[]))) OR
+         kind IN ('shared_assessment','shared_intervention') OR payload->>'student_id'=ANY($3::text[]))
+        ORDER BY id DESC LIMIT 800`,[user.school_id,user.id,visible]);
+      return r.rows;
+    }
     const r=await query(`SELECT id,kind,payload,created_at FROM records WHERE school_id=$1 AND
       (owner_id=$2 OR kind IN ('shared_assessment','shared_intervention') OR payload->>'student_id'=ANY($3::text[]))
       ORDER BY id DESC LIMIT 800`,[user.school_id,user.id,assigned]);
@@ -106,8 +120,8 @@ async function sessionLogin(req,res,user,extra={}) {
     req.session.user={ id:user.id };
     try {
       await audit(user.id,extra.demo ? 'demo.login':'login',user.role);
-      const [linked,assigned]=await Promise.all([linkedStudentIds(user),assignedStudentIds(user)]);
-      res.json({ user:{ ...user,roleName:roleNames[user.role],linkedStudentIds:linked,assignedStudentIds:assigned,...(extra.demo ? {isDemo:true}:{}) }, ...(extra.warning ? {warning:extra.warning}:{}) });
+      const [linked,assigned,teaching]=await Promise.all([linkedStudentIds(user),assignedStudentIds(user),user.role==='teacher'?teacherTeachingAssignment(user):Promise.resolve({subject:'',grades:[]})]);
+      res.json({ user:{ ...user,roleName:roleNames[user.role],linkedStudentIds:linked,assignedStudentIds:assigned,teachingSubject:teaching.subject,teachingGrades:teaching.grades,...(extra.demo ? {isDemo:true}:{}) }, ...(extra.warning ? {warning:extra.warning}:{}) });
     } catch(e) { res.status(500).json({ message:'تعذر إكمال تسجيل الدخول.' }); }
   });
 }
@@ -220,8 +234,8 @@ app.post('/api/auth/demo',loginLimiter,asyncRoute(async(req,res)=>{
   await sessionLogin(req,res,user,{demo:true,warning:'وضع اختبار فقط مع بيانات اصطناعية في مدرسة معزولة. لا تستخدم بيانات حقيقية.'});
 }));
 app.get('/api/auth/me',requireAuth,asyncRoute(async(req,res)=>{
-  const [linked,assigned]=await Promise.all([linkedStudentIds(req.user),assignedStudentIds(req.user)]);
-  res.json({ user:{...req.user,roleName:roleNames[req.user.role],linkedStudentIds:linked,assignedStudentIds:assigned,isDemo:req.user.school_id==='DEMO-SCHOOL'} });
+  const [linked,assigned,teaching]=await Promise.all([linkedStudentIds(req.user),assignedStudentIds(req.user),req.user.role==='teacher'?teacherTeachingAssignment(req.user):Promise.resolve({subject:'',grades:[]})]);
+  res.json({ user:{...req.user,roleName:roleNames[req.user.role],linkedStudentIds:linked,assignedStudentIds:assigned,teachingSubject:teaching.subject,teachingGrades:teaching.grades,isDemo:req.user.school_id==='DEMO-SCHOOL'} });
 }));
 app.post('/api/auth/logout',requireAuth,asyncRoute(async(req,res)=>{
   await audit(req.user.id,'logout');
@@ -341,14 +355,14 @@ app.delete('/api/records/:id',requireAuth,requireRole('teacher','senior_teacher'
 }));
 app.get('/api/users',requireAuth,requireRole('principal'),asyncRoute(async(req,res)=>{
   const [users,linked,assigned]=await Promise.all([
-    query('SELECT id,email,name,role,school_id,active,created_at FROM users WHERE school_id=$1 ORDER BY name',[req.user.school_id]),
+    query('SELECT id,email,name,role,school_id,active,created_at,teaching_subject,teaching_grades FROM users WHERE school_id=$1 ORDER BY name',[req.user.school_id]),
     query('SELECT user_id,student_id FROM account_students WHERE school_id=$1',[req.user.school_id]),
     query('SELECT user_id,student_id FROM teacher_students WHERE school_id=$1',[req.user.school_id])
   ]);
   const map=new Map(), assignmentMap=new Map();
   for (const x of linked.rows) map.set(String(x.user_id),[...(map.get(String(x.user_id))||[]),x.student_id]);
   for (const x of assigned.rows) assignmentMap.set(String(x.user_id),[...(assignmentMap.get(String(x.user_id))||[]),x.student_id]);
-  res.json({users:users.rows.map(u=>({...u,linkedStudentIds:map.get(String(u.id))||[],assignedStudentIds:assignmentMap.get(String(u.id))||[]}))});
+  res.json({users:users.rows.map(u=>({...u,teachingSubject:u.teaching_subject||'',teachingGrades:Array.isArray(u.teaching_grades)?u.teaching_grades:[],linkedStudentIds:map.get(String(u.id))||[],assignedStudentIds:assignmentMap.get(String(u.id))||[]}))});
 }));
 app.post('/api/users',requireAuth,requireRole('principal'),asyncRoute(async(req,res)=>{
   if (req.user.school_id==='DEMO-SCHOOL') return res.status(403).json({message:'لا يمكن إنشاء حسابات مدرسية رسمية من بيئة الاختبار المعزولة.'});
@@ -386,6 +400,16 @@ app.put('/api/users/:id/assignments',requireAuth,requireRole('principal'),asyncR
     for (const sid of ids) await client.query('INSERT INTO teacher_students(user_id,student_id,school_id) VALUES($1,$2,$3)',[targetId,sid,req.user.school_id]);
   });
   await audit(req.user.id,'user.assignments.update',String(targetId)); res.json({ok:true,userId:targetId,assignedStudentIds:ids});
+}));
+app.put('/api/users/:id/teaching-assignment',requireAuth,requireRole('principal'),asyncRoute(async(req,res)=>{
+  const targetId=Number(req.params.id), target=(await query("SELECT id,role,school_id FROM users WHERE id=$1 AND school_id=$2",[targetId,req.user.school_id])).rows[0];
+  if (!target || !['teacher','senior_teacher'].includes(target.role)) return res.status(404).json({message:'حساب المعلم غير موجود في المدرسة.'});
+  const subject=safeText(req.body?.subject,120);
+  const grades=Array.isArray(req.body?.grades)?[...new Set(req.body.grades.map(v=>safeText(v,20)).filter(Boolean))].slice(0,12):[];
+  if (!subject || !grades.length) return res.status(400).json({message:'حدد مادة واحدة وصفًا واحدًا على الأقل.'});
+  await query('UPDATE users SET teaching_subject=$1,teaching_grades=$2::text[] WHERE id=$3 AND school_id=$4',[subject,grades,targetId,req.user.school_id]);
+  await audit(req.user.id,'user.teaching_assignment.update',`${target.role}:${targetId}:${subject}:${grades.join(',')}`);
+  res.json({ok:true,userId:targetId,teachingSubject:subject,teachingGrades:grades});
 }));
 app.put('/api/users/:id/student-links',requireAuth,requireRole('principal'),asyncRoute(async(req,res)=>{
   const targetId=Number(req.params.id), target=(await query('SELECT id,role,school_id FROM users WHERE id=$1 AND school_id=$2',[targetId,req.user.school_id])).rows[0];
@@ -555,6 +579,8 @@ app.use((error,req,res,next)=>{
   if(error.code==='23505')return res.status(409).json({message:'يوجد سجل مكرر.'});
   res.status(error.status||500).json({message:error.status?error.message:'حدث خطأ داخلي. راجع سجل الخادم.'});
 });
+await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS teaching_subject TEXT');
+await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS teaching_grades TEXT[] NOT NULL DEFAULT '{}'::text[]");
 const server=app.listen(port,()=>console.log(`ATHAR API PostgreSQL v3 listening on ${port}`));
 async function shutdown(signal) {
   console.log(`${signal}: closing ATHAR API`);
