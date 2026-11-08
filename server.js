@@ -631,29 +631,20 @@ app.use((error,req,res,next)=>{
 });
 await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS teaching_subject TEXT');
 await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS teaching_grades TEXT[] NOT NULL DEFAULT '{}'::text[]");
-await query(`CREATE TABLE IF NOT EXISTS teacher_teaching_assignments (
-  id BIGSERIAL PRIMARY KEY,
-  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  school_id TEXT NOT NULL,
-  subject TEXT NOT NULL,
-  grade TEXT NOT NULL CHECK (grade ~ '^(?:[1-9]|1[0-2])
-const server=app.listen(port,()=>console.log(`ATHAR API PostgreSQL v3 listening on ${port}`));
-async function shutdown(signal) {
-  console.log(`${signal}: closing ATHAR API`);
-  server.close(async()=>{try{await pool.end();process.exit(0);}catch(error){console.error(error);process.exit(1);}});
-}
-process.on('SIGTERM',()=>shutdown('SIGTERM'));
-process.on('SIGINT',()=>shutdown('SIGINT'));
-),
-  sections TEXT[] NOT NULL DEFAULT '{}'::text[],
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE(user_id,school_id,subject,grade)
-)`);
-await query(`INSERT INTO teacher_teaching_assignments(user_id,school_id,subject,grade,sections)
-  SELECT u.id,u.school_id,u.teaching_subject,grade,'{}'::text[]
-  FROM users u CROSS JOIN LATERAL unnest(u.teaching_grades) AS grade
-  WHERE u.role='teacher' AND COALESCE(u.teaching_subject,'')<>''
-  ON CONFLICT(user_id,school_id,subject,grade) DO NOTHING`);
+await query("CREATE TABLE IF NOT EXISTS teacher_teaching_assignments (" +
+  "id BIGSERIAL PRIMARY KEY, " +
+  "user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE, " +
+  "school_id TEXT NOT NULL, " +
+  "subject TEXT NOT NULL, " +
+  "grade TEXT NOT NULL, " +
+  "sections TEXT[] NOT NULL DEFAULT '{}'::text[], " +
+  "created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), " +
+  "UNIQUE(user_id,school_id,subject,grade))");
+await query("INSERT INTO teacher_teaching_assignments(user_id,school_id,subject,grade,sections) " +
+  "SELECT u.id,u.school_id,u.teaching_subject,grade,'{}'::text[] " +
+  "FROM users u CROSS JOIN LATERAL unnest(u.teaching_grades) AS grade " +
+  "WHERE u.role='teacher' AND COALESCE(u.teaching_subject,'')<>'' " +
+  "ON CONFLICT(user_id,school_id,subject,grade) DO NOTHING");
 const server=app.listen(port,()=>console.log(`ATHAR API PostgreSQL v3 listening on ${port}`));
 async function shutdown(signal) {
   console.log(`${signal}: closing ATHAR API`);
