@@ -1961,10 +1961,11 @@ function teachingAssignmentRowHtml(userId,index,assignment,subjects,students) {
   return `<div class="teacher-assignment-row card" data-user-id="${userId}" data-index="${index}" style="margin:.5rem 0;padding:.75rem">
     <div class="grid-two">
       <div><label for="teacherSubject-${userId}-${index}">المادة</label><input id="teacherSubject-${userId}-${index}" list="teacherSubjects-${userId}" value="${esc(assignment?.subject||'')}" placeholder="اختر أو اكتب المادة"></div>
-      <div><label for="teacherGrade-${userId}-${index}">الصف</label><select id="teacherGrade-${userId}-${index}" onchange="refreshTeachingSections(${userId},${index})"><option value="">اختر الصف</option>${schoolGradeSections.map(item=>`<option value="${item.grade}" ${grade===String(item.grade)?'selected':''}>الصف ${item.grade}</option>`).join('')}</select></div>
+      <div><label for="teacherGrade-${userId}-${index}">الصف</label><select id="teacherGrade-${userId}-${index}" onchange="refreshTeachingSections(${userId},${index});renderTeachingAssignmentStudents(${userId},${index})"><option value="">اختر الصف</option>${schoolGradeSections.map(item=>`<option value="${item.grade}" ${grade===String(item.grade)?'selected':''}>الصف ${item.grade}</option>`).join('')}</select></div>
     </div>
     <label for="teacherSections-${userId}-${index}">الشعب</label>
-    <select id="teacherSections-${userId}-${index}" multiple size="3" style="min-height:72px;width:100%" onchange="handleTeachingSectionsChange(this)">${sectionOptions}</select>
+    <select id="teacherSections-${userId}-${index}" multiple size="3" style="min-height:72px;width:100%" onchange="handleTeachingSectionsChange(this);renderTeachingAssignmentStudents(${userId},${index})">${sectionOptions}</select>
+    <div id="teacherAssignmentStudents-${userId}-${index}" class="teacher-assignment-students note" aria-live="polite"></div>
     <button type="button" class="btn small" onclick="removeTeachingAssignmentRow(this)" aria-label="إزالة هذا التكليف">إزالة التكليف</button>
   </div>`;
 }
@@ -1975,6 +1976,24 @@ function handleTeachingSectionsChange(select) {
   if(allOption?.selected) specific.forEach(option=>option.selected=false);
   else if(specific.some(option=>option.selected)) { if(allOption)allOption.selected=false; }
   else if(allOption) allOption.selected=true;
+}
+function renderTeachingAssignmentStudents(userId,index) {
+  const host=document.getElementById(`teacherAssignmentStudents-${userId}-${index}`);
+  const grade=document.getElementById(`teacherGrade-${userId}-${index}`)?.value||'';
+  const sectionSelect=document.getElementById(`teacherSections-${userId}-${index}`);
+  if(!host)return;
+  if(!grade){host.textContent='اختر الصف لعرض أسماء طلبته.';return;}
+  const selected=[...(sectionSelect?.selectedOptions||[])].map(option=>option.value);
+  const allSections=!selected.length||selected.includes('__all__');
+  const sectionValues=new Set(selected.filter(value=>value!=='__all__'));
+  const matches=students.filter(student=>
+    gradeNumber(student.grade)===grade &&
+    (allSections || sectionValues.has(String(student.section||'')))
+  ).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar'));
+  const sectionLabel=allSections?'كل الشعب':`الشعب ${[...sectionValues].join('، ')}`;
+  host.innerHTML=matches.length
+    ? `<strong>طلبة الصف ${esc(grade)} — ${esc(sectionLabel)} (${matches.length})</strong><div class="teacher-assignment-student-names">${matches.map(student=>esc(student.name)).join('، ')}</div>`
+    : `لا توجد أسماء طلبة مسجلة للصف ${esc(grade)} — ${esc(sectionLabel)} حتى الآن.`;
 }
 function refreshTeachingSections(userId,index) {
   const grade=document.getElementById(`teacherGrade-${userId}-${index}`)?.value||'';
@@ -2027,6 +2046,11 @@ async function loadSchoolUsers() {
       }
       return `<div class="card" style="margin-top:.5rem"><strong>${esc(user.name)}</strong><p>${esc(user.email)} • ${esc(getRoleName(user.role))}</p><p class="note">${relation}</p>${editor}</div>`;
     }).join('') || '<p class="note">لا توجد حسابات إضافية.</p>';
+    (result.users || []).filter(user=>user.role==='teacher').forEach(user=>{
+      (user.teachingAssignments?.length ? user.teachingAssignments : [{}]).forEach((item,index)=>{
+        renderTeachingAssignmentStudents(Number(user.id),index);
+      });
+    });
   } catch (error) { el.textContent = error.message; }
 }
 async function saveTeachingAssignment(userId) {
