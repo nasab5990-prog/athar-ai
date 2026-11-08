@@ -220,6 +220,11 @@
         <label for="assessmentStudent">الطالب</label>
         <select id="assessmentStudent"><option value="">اختر طالبًا من الشعبة</option></select>
       </div>
+      <div class="grid-two">
+        <div id="assessmentUnitField" hidden><label for="assessmentUnit">الوحدة</label><select id="assessmentUnit"><option value="">اختر الوحدة</option></select></div>
+        <div id="assessmentLessonField" hidden><label for="assessmentLesson">الدرس</label><select id="assessmentLesson"><option value="">اختر الدرس</option></select></div>
+      </div>
+      <div id="assessmentOutcomeField" hidden><label for="assessmentOutcome">ناتج التعلم</label><textarea id="assessmentOutcome" rows="2" readonly></textarea></div>
       <label>اسم التقويم / المهارة</label>
       <input type="text" id="assessName" placeholder="أدخل اسم المهارة">
       <button class="btn secondary" type="button" onclick="generateDiagnosticQuestions()">إعداد أسئلة تشخيصية مقترحة</button>
