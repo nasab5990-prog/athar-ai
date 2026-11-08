@@ -410,7 +410,7 @@ app.put('/api/users/:id/teaching-assignment',requireAuth,requireRole('principal'
   if (!target || target.role!=='teacher') return res.status(404).json({message:'حساب المعلم غير موجود في المدرسة.'});
   const subject=safeText(req.body?.subject,120);
   const grades=Array.isArray(req.body?.grades)?[...new Set(req.body.grades.map(v=>safeText(v,20)).filter(Boolean))].slice(0,12):[];
-  if (!subject || !grades.length) return res.status(400).json({message:'حدد مادة واحدة وصفًا واحدًا على الأقل.'});
+  if (!subject || !grades.length || grades.some(grade=>! /^(?:[1-9]|1[0-2])$/.test(grade))) return res.status(400).json({message:'حدد مادة صحيحة وصفًا واحدًا على الأقل من الصفوف 1 إلى 12.'});
   await query('UPDATE users SET teaching_subject=$1,teaching_grades=$2::text[] WHERE id=$3 AND school_id=$4',[subject,grades,targetId,req.user.school_id]);
   await audit(req.user.id,'user.teaching_assignment.update',`${target.role}:${targetId}:${subject}:${grades.join(',')}`);
   res.json({ok:true,userId:targetId,teachingSubject:subject,teachingGrades:grades});
