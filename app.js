@@ -903,7 +903,10 @@ async function askAssistant() {
     const result = await api('/api/analysis', { method:'POST', body:JSON.stringify({ skill:question, question, student_id:studentId }) });
     window.atharLastAnalysisRequest = { skill:question, student_id:studentId, observedErrors:question };
     window.atharLastAnalysisRecordId = result.id || null;
-    const analysisWithAI = { ...result.analysis, aiAssist:result.aiAssist || null };
+    const selectedStudentLabel = studentId
+      ? (document.querySelector('#assistantStudent option:checked')?.textContent?.trim() || 'طالب محدد')
+      : '';
+    const analysisWithAI = { ...result.analysis, aiAssist:result.aiAssist || null, analysisScope:studentId ? 'فردي' : 'صفي', studentLabel:selectedStudentLabel };
     analyses.unshift({ student_id:studentId || null, skill:analysisWithAI.skill, result:analysisWithAI, date:new Date().toISOString(), recordId:result.id });
     renderAnalysis(analysisWithAI, 'assistantReply'); updateCycle();
     showToast('أُعد الرد بالاستناد إلى بيانات المدرسة المتاحة.');
