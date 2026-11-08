@@ -106,6 +106,16 @@ async function acceptLogin(user) {
 }
 async function restoreSession() {
   await refreshLoginMode();
+  // In demo mode, always start at the demo login screen rather than silently
+  // restoring a previous session from the browser.
+  if (loginMode === 'demo') {
+    currentUser = null;
+    currentRole = null;
+    linkedStudentIds = [];
+    document.getElementById('demoEnvironmentBanner')?.setAttribute('hidden', '');
+    document.getElementById('loginScreen')?.classList.remove('hidden');
+    return;
+  }
   let result;
   try { result = await api('/api/auth/me'); }
   catch {
