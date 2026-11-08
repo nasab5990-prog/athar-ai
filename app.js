@@ -1891,9 +1891,17 @@ function teachingAssignmentRowHtml(userId,index,assignment,subjects,students) {
       <div><label for="teacherGrade-${userId}-${index}">الصف</label><select id="teacherGrade-${userId}-${index}" onchange="refreshTeachingSections(${userId},${index})"><option value="">اختر الصف</option>${Array.from({length:12},(_,i)=>String(i+1)).map(value=>`<option value="${value}" ${grade===value?'selected':''}>الصف ${value}</option>`).join('')}</select></div>
     </div>
     <label for="teacherSections-${userId}-${index}">الشعب</label>
-    <select id="teacherSections-${userId}-${index}" multiple size="3" style="min-height:72px;width:100%">${sectionOptions}</select>
-    <button type="button" class="btn small secondary" onclick="removeTeachingAssignmentRow(this)" aria-label="إزالة هذا التكليف">إزالة التكليف</button>
+    <select id="teacherSections-${userId}-${index}" multiple size="3" style="min-height:72px;width:100%" onchange="handleTeachingSectionsChange(this)">${sectionOptions}</select>
+    <button type="button" class="btn small" onclick="removeTeachingAssignmentRow(this)" aria-label="إزالة هذا التكليف">إزالة التكليف</button>
   </div>`;
+}
+function handleTeachingSectionsChange(select) {
+  if(!select)return;
+  const allOption=[...select.options].find(option=>option.value==='__all__');
+  const specific=[...select.options].filter(option=>option.value!=='__all__');
+  if(allOption?.selected) specific.forEach(option=>option.selected=false);
+  else if(specific.some(option=>option.selected)) { if(allOption)allOption.selected=false; }
+  else if(allOption) allOption.selected=true;
 }
 function refreshTeachingSections(userId,index) {
   const grade=document.getElementById(`teacherGrade-${userId}-${index}`)?.value||'';
