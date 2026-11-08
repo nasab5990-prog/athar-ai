@@ -520,7 +520,7 @@ async function generateTeachingAI(analysis, observedErrors, body) {
     confidence:['منخفضة','متوسطة','مرتفعة'].includes(x?.confidence)?x.confidence:'غير محددة'
   })).filter(x=>x.skill):[];
   return {
-    status:'ready',
+    status:'ok',
     provider:provider==='groq'?'Groq':'OpenAI API',
     errorPattern:safeText(parsed.errorPattern,700),
     possibleRoots:roots,
