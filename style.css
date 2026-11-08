@@ -802,3 +802,20 @@ body.dark .root-map-arrow { color:#91b6dc; }
   .intervention-student-row,
   .intervention-curriculum-row{grid-template-columns:1fr}
 }
+
+
+/* Teacher teaching assignment — compact school account controls */
+.teacher-assignment-editor {
+  margin-top: .75rem;
+  padding: .85rem;
+  border: 1px solid var(--border, #d9e1e8);
+  border-radius: 12px;
+  background: var(--surface-soft, #f7f9fb);
+}
+.teacher-assignment-editor select {
+  width: 100%;
+  margin: .25rem 0 .65rem;
+}
+.teacher-assignment-editor .note {
+  margin: .35rem 0 .6rem;
+}
