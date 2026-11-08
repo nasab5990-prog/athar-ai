@@ -701,3 +701,28 @@ body.dark .root-map-arrow { color:#91b6dc; }
   }
   #reportSummary::after { content: none !important; display: none !important; }
 }
+
+
+/* منع ارتفاع الشاشة الكامل من إنشاء صفحة طباعة ثانية فارغة */
+@media print {
+  html, body {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+  .main {
+    height: auto !important;
+    min-height: 0 !important;
+  }
+  #reports {
+    min-height: 0 !important;
+    height: auto !important;
+    break-after: auto !important;
+    page-break-after: auto !important;
+  }
+  #reports > .card,
+  #reportSummary {
+    break-after: auto !important;
+    page-break-after: auto !important;
+  }
+}
