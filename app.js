@@ -48,7 +48,15 @@ function setLoginMode(mode) {
 }
 async function refreshLoginMode() {
   try {
-    const result = await api('/api/auth/mode');
+    // This public GET must not send Content-Type: application/json.
+    // That header triggers a CORS preflight before the browser can read the mode.
+    const response = await fetch(apiUrl('/api/auth/mode'), {
+      method: 'GET',
+      credentials: 'include',
+      headers: { Accept: 'application/json' }
+    });
+    if (!response.ok) throw new Error(`تعذر تحديد وضع الدخول (${response.status}).`);
+    const result = await response.json();
     setLoginMode(result.mode === 'demo' ? 'demo' : 'otp');
     if (result.mode !== 'demo' && !result.otpAvailable) setAuthMessage('الدخول الرسمي غير جاهز: يلزم إعداد خدمة البريد في الخادم.', true);
   } catch {
