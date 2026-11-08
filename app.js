@@ -428,6 +428,8 @@ function applyRoleUI() {
   if (currentRole === 'teacher') updateCurriculumSubjects();
   const accountAdmin = document.getElementById('accountAdmin');
   if (accountAdmin) accountAdmin.hidden = currentRole !== 'principal';
+  const accountAdminList = document.getElementById('accountAdminList');
+  if (accountAdminList) accountAdminList.hidden = currentRole !== 'principal';
   const schoolGradeSectionsAdmin = document.getElementById('schoolGradeSectionsAdmin');
   if (schoolGradeSectionsAdmin) schoolGradeSectionsAdmin.hidden = currentRole !== 'principal';
   document.getElementById('currentUserLabel') && (document.getElementById('currentUserLabel').textContent = `${currentUser?.name || ''} • ${getRoleName(currentRole)}`);
