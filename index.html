@@ -299,18 +299,31 @@
       </select>
       <label>الوقت المتاح للنشاط</label>
       <select id="activityDuration"><option value="10">10 دقائق</option><option value="15" selected>15 دقيقة</option><option value="20">20 دقيقة</option></select>
-      <label>المهارة المستهدفة</label>
-      <input type="text" id="intSkill" placeholder="مثال: الفهم المقروء">
-      <label>ملاحظة المعلم عن موضع الصعوبة (اختياري)</label>
-      <textarea id="intObservedErrors" rows="2" placeholder="مثال: يحدد التفاصيل لكنه لا يميز الفكرة الرئيسة..."></textarea>
-      <button class="btn" id="suggestInterventionBtn" type="button" onclick="suggestIntervention()">✨ اقترح تدخلًا ذكيًا لهذه الحالة</button>
-      <div id="intAiResult" style="margin-top:.8rem" aria-live="polite"></div>
-      <label>الهدف</label>
-      <textarea id="intGoal" rows="2" placeholder="اكتب هدفًا قابلًا للقياس"></textarea>
-      <label>خطوات التدخل</label>
-      <textarea id="intSteps" rows="3" placeholder="اكتب خطوات التدخل"></textarea>
-      <label>مسار إثرائي</label>
-      <textarea id="intEnrich" rows="2" placeholder="مثال: مسائل أكثر تعقيدًا"></textarea>
+      <div class="intervention-mode-picker">
+        <p><strong>كيف ترغب في إعداد التدخل؟</strong></p>
+        <div class="grid-two">
+          <button class="btn outline" type="button" onclick="setInterventionMode('manual')">✍️ إعداد يدوي</button>
+          <button class="btn outline" type="button" onclick="setInterventionMode('ai')">✨ اقتراح ذكي</button>
+        </div>
+      </div>
+      <div id="aiInterventionPanel" hidden>
+        <label for="aiSkill">المهارة المستهدفة</label>
+        <input type="text" id="aiSkill" placeholder="مثال: الفهم المقروء">
+        <label for="intObservedErrors">ملاحظة المعلم عن موضع الصعوبة (اختياري)</label>
+        <textarea id="intObservedErrors" rows="2" placeholder="مثال: يحدد التفاصيل لكنه لا يميز الفكرة الرئيسة..."></textarea>
+        <button class="btn" id="suggestInterventionBtn" type="button" onclick="suggestIntervention()">✨ اقترح تدخلًا ذكيًا لهذه الحالة</button>
+        <div id="intAiResult" style="margin-top:.8rem" aria-live="polite"></div>
+      </div>
+      <div id="interventionDraftFields" hidden>
+        <label for="intSkill">المهارة المستهدفة</label>
+        <input type="text" id="intSkill" placeholder="مثال: الفهم المقروء">
+        <label for="intGoal">الهدف</label>
+        <textarea id="intGoal" rows="2" placeholder="اكتب هدفًا قابلًا للقياس"></textarea>
+        <label for="intSteps">خطوات التدخل</label>
+        <textarea id="intSteps" rows="3" placeholder="اكتب خطوات التدخل"></textarea>
+        <label for="intEnrich">مسار إثرائي</label>
+        <textarea id="intEnrich" rows="2" placeholder="مثال: مسائل أكثر تعقيدًا"></textarea>
+      </div>
       <div id="intStatusField" hidden>
         <label for="intStatus">حالة التدخل</label>
         <select id="intStatus"><option value="active">نشط</option><option value="paused">متوقف مؤقتًا</option><option value="completed">مكتمل</option></select>
