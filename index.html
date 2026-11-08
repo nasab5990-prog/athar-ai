@@ -49,14 +49,14 @@
     <div class="menu-items" id="nav-home">
       <a href="#" data-section="dashboard" class="active">لوحة القيادة</a>
       <a href="#" data-section="reports">التقارير</a>
-      <a href="#" data-section="principalView">متابعة الصفوف</a>
+      <a href="#" data-section="principalView">أداء الصفوف</a>
     </div>
   </div>
 
   <div class="menu-group">
     <button type="button" class="menu-title" onclick="toggleGroup(this)" aria-expanded="false" aria-controls="nav-students">👥 الطلبة والتقويم</button>
     <div class="menu-items" id="nav-students">
-      <a href="#" data-section="students">الطلبة والصفوف</a>
+      <a href="#" data-section="students">الطلبة</a>
       <a href="#" data-section="assessment">إدخال التقويمات</a>
       <a href="#" data-section="radar">رادار التعثر</a>
     </div>
@@ -131,12 +131,12 @@
   </section>
 
   <section id="students" class="section">
-    <h1>إدارة الطلبة والصفوف</h1>
+    <h1>إدارة الطلبة</h1>
     <div id="schoolGradeSectionsAdmin" class="card" hidden>
-      <details class="secondary-tools-disclosure" open>
-        <summary><span>إعداد صفوف المدرسة وشعبها</span><small>إعداد المدير للصفوف والشعب المعتمدة</small></summary>
+      <details class="secondary-tools-disclosure">
+        <summary><span>إعداد الصفوف والشعب</span></summary>
         <div class="secondary-tools-content">
-          <p class="note">فعّل الصفوف الموجودة في المدرسة، ثم حدّد عدد الشعب في كل صف. ستُنشأ الشعب تلقائيًا بالأرقام 1، 2، 3…</p>
+          <p class="note">اختر الصفوف وحدد عدد الشعب في كل صف.</p>
           <div id="schoolGradeSectionsSettings" class="school-grade-sections-grid"></div>
           <button class="btn small" type="button" onclick="saveSchoolGradeSections()">حفظ الصفوف والشعب</button>
         </div>
