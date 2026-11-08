@@ -977,8 +977,14 @@ function useSuggestedActivity(steps) {
   showToast('أُضيف النشاط إلى خطة التدخل؛ راجعه قبل الحفظ.');
 }
 function getImpactEvidenceStatus(item) {
-  if (item.evidence_status) return item.evidence_status;
-  return 'تحسن مسجل — الأدلة غير مكتملة';
+  const before = Number(item.before);
+  const after = Number(item.after);
+  const outcome = after > before ? 'تحسن مسجل' : after < before ? 'انخفاض مسجل' : 'لا تغير مسجل';
+  const savedEvidence = String(item.evidence_status || '');
+  const evidence = /الأدلة غير مكتملة/.test(savedEvidence) || !savedEvidence
+    ? 'الأدلة غير مكتملة'
+    : /موثق|مستم/.test(savedEvidence) ? 'الأدلة موثقة' : savedEvidence;
+  return `${outcome} — ${evidence}`;
 }
 
 function buildInterventionGuide(analysis, observedErrors = '') {
@@ -1342,11 +1348,13 @@ async function calcImpact() {
   const followup = followupRaw === '' || followupRaw === undefined ? null : Number(followupRaw);
   if (followup !== null && (!Number.isFinite(followup) || followup < 0 || followup > 100)) return showToast('أدخل نتيجة متابعة من 0 إلى 100.');
   const hasCoreEvidence = Boolean(tool && beforeDate && afterDate && activityMode && sessionsPlanned > 0 && sessionsDone >= sessionsPlanned && evidenceNote);
-  const evidenceStatus = hasCoreEvidence && followup !== null && followup >= after
-    ? 'تحسن مستمر — قياس متابعة يؤكد بقاء النتيجة أو ارتفاعها'
+  const outcomeLabel = difference > 0 ? 'تحسن' : difference < 0 ? 'انخفاض' : 'لا تغير';
+  const evidenceLabel = hasCoreEvidence && followup !== null && followup >= after
+    ? 'الأدلة موثقة — قياس متابعة يؤكد بقاء النتيجة أو ارتفاعها'
     : hasCoreEvidence
-      ? 'تحسن موثق — أداة وتواريخ وتنفيذ موثقة'
-      : 'تحسن مسجل — الأدلة غير مكتملة';
+      ? 'الأدلة موثقة — أداة وتواريخ وتنفيذ موثقة'
+      : 'الأدلة غير مكتملة';
+  const evidenceStatus = `${outcomeLabel} مسجل — ${evidenceLabel}`;
   const payload = {
     student_id:studentId || intervention.student_id || null,
     student_name:student?.name || intervention.student_name || null,
