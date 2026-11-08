@@ -624,6 +624,13 @@ body.dark .root-map-arrow { color:#91b6dc; }
 /* تقرير أثَر — إخراج طباعة أنيق وواضح */
 @media print {
   @page { size:A4 portrait; margin:16mm 15mm 17mm; }
+  html, body, body.dark {
+    background:#ffffff !important;
+    color:#20334b !important;
+  }
+  .main, #reports, #reports.section, #reports > .card {
+    background:#ffffff !important;
+  }
   html, body {
     font-family:"Noto Sans Arabic","Noto Naskh Arabic",Tahoma,Arial,sans-serif !important;
     font-size:11.5pt !important;
