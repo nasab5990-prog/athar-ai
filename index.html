@@ -271,26 +271,25 @@
   <section id="intervention" class="section">
     <h1>مصمم التدخلات</h1>
     <div class="card">
-      <label>الطالب (اختياري — يربط التدخل بملف الطالب)</label>
-      <select id="interventionStudent"><option value="">تدخل صفي</option></select>
-      <details class="curriculum-disclosure">
-        <summary><span>ربط التدخل بالمنهج</span><small>اختياري — افتحه عند الحاجة لتوثيق الصف والمادة والدرس</small></summary>
-        <div class="curriculum-fields">
-          <div class="grid-two">
-            <div><label for="intGrade">الصف</label><select id="intGrade"><option value="">اختر الصف</option><option value="1">الصف الأول</option><option value="2">الصف الثاني</option><option value="3">الصف الثالث</option><option value="4">الصف الرابع</option><option value="5">الصف الخامس</option><option value="6">الصف السادس</option><option value="7">الصف السابع</option><option value="8">الصف الثامن</option><option value="9">الصف التاسع</option><option value="10">الصف العاشر</option><option value="11">الصف الحادي عشر</option><option value="12">الصف الثاني عشر</option></select></div>
-            <div><label for="intSubject">المادة</label><select id="intSubject" disabled><option value="">اختر الصف أولًا</option></select></div>
-          </div>
-          <div id="curriculumUnitField" hidden><label for="intUnit">الوحدة</label><select id="intUnit" disabled><option value="">اختر المادة أولًا</option></select></div>
-          <div id="curriculumLessonField" hidden><label for="intLesson">الدرس</label><select id="intLesson" disabled><option value="">اختر الوحدة أولًا</option></select></div>
-          <div id="curriculumOutcomeField" hidden><label for="intOutcome">ناتج التعلم</label><textarea id="intOutcome" rows="2" readonly placeholder="يظهر تلقائيًا عند توفر ناتج موثق"></textarea></div>
-          <details class="curriculum-extra">
-            <summary>الفصل الدراسي</summary>
-            <label for="intSemester">الفصل الدراسي</label>
-            <select id="intSemester"><option value="">غير محدد</option><option value="الأول">الفصل الدراسي الأول</option><option value="الثاني">الفصل الدراسي الثاني</option><option value="سنوي">سنوي</option></select>
-          </details>
-          <div id="curriculumCatalogStatus" class="note" aria-live="polite" hidden></div>
+      <div class="grid-two intervention-student-row">
+        <div>
+          <label for="interventionGradeFilter">اختر الصف لتصفية الطلبة</label>
+          <select id="interventionGradeFilter" onchange="filterInterventionStudents()"><option value="">جميع الصفوف</option><option value="1">الصف الأول</option><option value="2">الصف الثاني</option><option value="3">الصف الثالث</option><option value="4">الصف الرابع</option><option value="5">الصف الخامس</option><option value="6">الصف السادس</option><option value="7">الصف السابع</option><option value="8">الصف الثامن</option><option value="9">الصف التاسع</option><option value="10">الصف العاشر</option><option value="11">الصف الحادي عشر</option><option value="12">الصف الثاني عشر</option></select>
         </div>
-      </details>
+        <div>
+          <label for="interventionStudent">الطالب (اختياري)</label>
+          <select id="interventionStudent"><option value="">تدخل صفي — اختر الصف أولًا لتقليل القائمة</option></select>
+        </div>
+      </div>
+      <div class="curriculum-fields intervention-curriculum-row">
+        <div><label for="intGrade">الصف الدراسي</label><select id="intGrade"><option value="">اختر الصف</option><option value="1">الصف الأول</option><option value="2">الصف الثاني</option><option value="3">الصف الثالث</option><option value="4">الصف الرابع</option><option value="5">الصف الخامس</option><option value="6">الصف السادس</option><option value="7">الصف السابع</option><option value="8">الصف الثامن</option><option value="9">الصف التاسع</option><option value="10">الصف العاشر</option><option value="11">الصف الحادي عشر</option><option value="12">الصف الثاني عشر</option></select></div>
+        <div><label for="intSubject">المادة</label><select id="intSubject" disabled><option value="">اختر الصف أولًا</option></select></div>
+        <div><label for="intSemester">الفصل الدراسي</label><select id="intSemester"><option value="">غير محدد</option><option value="الأول">الأول</option><option value="الثاني">الثاني</option><option value="سنوي">سنوي</option></select></div>
+      </div>
+      <div id="curriculumUnitField" hidden><label for="intUnit">الوحدة</label><select id="intUnit" disabled><option value="">اختر المادة أولًا</option></select></div>
+      <div id="curriculumLessonField" hidden><label for="intLesson">الدرس</label><select id="intLesson" disabled><option value="">اختر الوحدة أولًا</option></select></div>
+      <div id="curriculumOutcomeField" hidden><label for="intOutcome">ناتج التعلم</label><textarea id="intOutcome" rows="2" readonly placeholder="يظهر تلقائيًا عند توفر ناتج موثق"></textarea></div>
+      <div id="curriculumCatalogStatus" class="note" aria-live="polite" hidden></div>
       <div class="grid-two intervention-execution-row">
         <div>
           <label for="activityMode">إمكانات التنفيذ في المدرسة</label>
