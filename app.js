@@ -1835,7 +1835,7 @@ async function loadSchoolUsers() {
       const assigned = user.assignedStudentIds || [];
       const relation = linked.length ? `الطلبة المرتبطون بالحساب: ${linked.map(esc).join('، ')}` : assigned.length ? `طلبة مرتبطون مباشرة: ${assigned.length}` : 'لا يوجد ربط فردي بطالب';
       let editor = '';
-      if (['teacher','senior_teacher'].includes(user.role)) {
+      if (user.role === 'teacher') {
         const subjectOptions = [...new Set([...subjects,user.teachingSubject].filter(Boolean))];
         editor = `<div class="teacher-assignment-editor">
           <p class="note">التكليف الدراسي — المادة والصفوف التي يدرسها هذا المعلم</p>
