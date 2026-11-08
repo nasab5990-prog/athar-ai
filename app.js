@@ -177,8 +177,13 @@ function updateCurriculumSubjects() {
   const catalogSubjects = Object.keys(rows);
   const indexedSubjects = ATHAR_SUBJECTS_BY_GRADE[grade] || [];
   // اعرض قائمة مواد الصف كاملة، حتى إن كانت تفاصيل الوحدات متاحة لمادة واحدة فقط.
-  const verifiedSubjects = [...new Set([...indexedSubjects, ...catalogSubjects])];
-  setCurriculumOptions(subject, grade ? 'اختر المادة' : 'اختر الصف أولًا', verifiedSubjects);
+  let verifiedSubjects = [...new Set([...indexedSubjects, ...catalogSubjects])];
+  if (currentRole === 'teacher') {
+    const assignedGrades = (currentUser?.teachingGrades || []).map(String);
+    const assignedSubject = String(currentUser?.teachingSubject || '');
+    verifiedSubjects = assignedSubject && assignedGrades.includes(String(grade)) ? [assignedSubject] : [];
+  }
+  setCurriculumOptions(subject, grade ? (currentRole === 'teacher' && !verifiedSubjects.length ? 'المادة غير مسندة لهذا الصف' : 'اختر المادة') : 'اختر الصف أولًا', verifiedSubjects);
   setCurriculumOptions(unit, 'اختر المادة أولًا', []);
   setCurriculumOptions(lesson, 'اختر الوحدة أولًا', []);
   if (outcome) outcome.value = '';
@@ -385,7 +390,8 @@ function applyRoleUI() {
     group.style.display = visible ? '' : 'none';
   });
   const roleInfo = document.getElementById('roleInfo');
-  if (roleInfo) roleInfo.innerHTML = `<div class="card"><strong>${esc(getRoleName(currentRole))}</strong><p>${esc(({ teacher:'إدارة طلبة الفصول والتقويمات والتدخلات المسندة إليك.', senior_teacher:'متابعة سجلات المدرسة والتدخلات ومؤشرات الصفوف.', principal:'إدارة حسابات المدرسة ومتابعة المؤشرات والسجلات.', parent:'متابعة الأبناء المرتبطين بحسابك فقط.', student:'متابعة تقدمك ونتائجك الفردية فقط.' })[currentRole] || '')}</p></div>`;
+  const teacherDescription = currentRole === 'teacher' ? (currentUser?.teachingSubject && (currentUser?.teachingGrades||[]).length ? `مادتك: ${esc(currentUser.teachingSubject)} • الصفوف: ${(currentUser.teachingGrades||[]).map(esc).join('، ')}. تظهر لك سجلات الطلبة في الصفوف المسندة.` : 'لم يحدد المدير مادتك وصفوفك بعد؛ اطلب منه إكمال التكليف الدراسي.') : null;
+  if (roleInfo) roleInfo.innerHTML = `<div class="card"><strong>${esc(getRoleName(currentRole))}</strong><p>${teacherDescription || esc(({ senior_teacher:'متابعة سجلات المدرسة والتدخلات ومؤشرات الصفوف.', principal:'إدارة حسابات المدرسة ومتابعة المؤشرات والسجلات.', parent:'متابعة الأبناء المرتبطين بحسابك فقط.', student:'متابعة تقدمك ونتائجك الفردية فقط.' })[currentRole] || '')}</p></div>`;
   const accountAdmin = document.getElementById('accountAdmin');
   if (accountAdmin) accountAdmin.hidden = currentRole !== 'principal';
   document.getElementById('currentUserLabel') && (document.getElementById('currentUserLabel').textContent = `${currentUser?.name || ''} • ${getRoleName(currentRole)}`);
@@ -1811,21 +1817,51 @@ function renderReports() {
   const reportDate = new Date().toLocaleDateString('ar-OM', {year:'numeric',month:'long',day:'numeric'});
   el.innerHTML = `<header class="report-print-header"><h2>منصة أثَر | التقرير التربوي</h2><p>تاريخ إعداد التقرير: ${reportDate}</p></header><p>الطلبة: ${students.length} • سجلات التقويم المحفوظة: ${assessments.length} • التدخلات: ${interventions.length} • قياسات الأثر المسجلة: ${impacts.length}</p><p>أحدث النتائج المحتسبة: ${currentAssessments.length} • متوسط الإتقان: ${latestAverage === null ? 'لا توجد بيانات' : `${latestAverage}%`}</p><h4>ملخص المهارات (أحدث نتيجة لكل طالب ولكل مهارة)</h4><ul>${skillRows || '<li>لا توجد نتائج مهارية كافية لإعداد الملخص.</li>'}</ul><h4>أثر التدخلات المرتبطة</h4><ul>${impactRowsHtml || '<li>لم تُسجل قياسات أثر مرتبطة بتدخلات بعد.</li>'}</ul><p class="report-print-note">تعكس هذه المؤشرات السجلات المتاحة وقت إعداد التقرير، وتُستخدم لدعم قرار المعلم ولا تمثل حكمًا نهائيًا على مستوى الطالب.</p><footer class="report-print-footer">حقوق التصميم والتطوير © أ. نصراء سعيد البهلولي | منصة أثَر</footer>`;
 }
+function teachingSubjectOptions() {
+  const values = new Set();
+  Object.values(ATHAR_SUBJECTS_BY_GRADE || {}).flat().forEach(value => values.add(String(value)));
+  Object.values(ATHAR_CURRICULUM_CATALOG || {}).forEach(subjects => Object.keys(subjects || {}).forEach(value => values.add(value)));
+  return [...values].filter(Boolean).sort((a,b) => a.localeCompare(b,'ar'));
+}
 async function loadSchoolUsers() {
   const el = document.getElementById('usersList');
   if (!el) return;
   try {
     const result = await api('/api/users');
+    const subjects = teachingSubjectOptions();
+    const grades = Array.from({length:12},(_,i)=>String(i+1));
     el.innerHTML = (result.users || []).map(user => {
       const linked = user.linkedStudentIds || [];
       const assigned = user.assignedStudentIds || [];
-      const relation = linked.length ? `الطلبة المرتبطون بالحساب: ${linked.map(esc).join('، ')}` : assigned.length ? `الطلبة المسندون للمعلم: ${assigned.map(esc).join('، ')}` : 'لا يوجد ربط فردي بطالب';
-      const manageable = ['teacher','parent','student'].includes(user.role);
-      const selectedIds = user.role === 'teacher' ? assigned : linked;
-      const assignmentEditor = manageable ? `<label for="userLinks-${Number(user.id)}">تعديل ربط الطلبة</label><select id="userLinks-${Number(user.id)}" multiple size="4" style="min-height:85px">${students.map(student => `<option value="${esc(student.student_id)}" ${selectedIds.includes(student.student_id) ? 'selected' : ''}>${esc(student.name)} — ${esc(student.grade || '')} ${esc(student.section || '')}</option>`).join('')}</select><button class="btn small" onclick="saveUserLinks(${Number(user.id)},'${user.role}')">حفظ الربط</button>` : '';
-      return `<div class="card" style="margin-top:.5rem"><strong>${esc(user.name)}</strong><p>${esc(user.email)} • ${esc(getRoleName(user.role))}</p><p class="note">${relation}</p>${assignmentEditor}</div>`;
+      const relation = linked.length ? `الطلبة المرتبطون بالحساب: ${linked.map(esc).join('، ')}` : assigned.length ? `طلبة مرتبطون مباشرة: ${assigned.length}` : 'لا يوجد ربط فردي بطالب';
+      let editor = '';
+      if (['teacher','senior_teacher'].includes(user.role)) {
+        const subjectOptions = [...new Set([...subjects,user.teachingSubject].filter(Boolean))];
+        editor = `<div class="teacher-assignment-editor">
+          <p class="note">التكليف الدراسي — المادة والصفوف التي يدرسها هذا المعلم</p>
+          <label for="teacherSubject-${Number(user.id)}">المادة</label>
+          <select id="teacherSubject-${Number(user.id)}"><option value="">اختر المادة</option>${subjectOptions.map(subject=>`<option value="${esc(subject)}" ${user.teachingSubject===subject?'selected':''}>${esc(subject)}</option>`).join('')}</select>
+          <label for="teacherGrades-${Number(user.id)}">الصفوف المسندة</label>
+          <select id="teacherGrades-${Number(user.id)}" multiple size="4" style="min-height:85px">${grades.map(grade=>`<option value="${grade}" ${(user.teachingGrades||[]).map(String).includes(grade)?'selected':''}>الصف ${grade}</option>`).join('')}</select>
+          <button class="btn small" onclick="saveTeachingAssignment(${Number(user.id)})">حفظ التكليف</button>
+          <p class="note">${user.teachingSubject && (user.teachingGrades||[]).length ? `المكلف حاليًا: ${esc(user.teachingSubject)} — الصفوف ${user.teachingGrades.map(esc).join('، ')}` : 'لم يُحدد التكليف الدراسي لهذا الحساب بعد.'}</p>
+        </div>`;
+      } else if (['parent','student'].includes(user.role)) {
+        editor = `<label for="userLinks-${Number(user.id)}">ربط الطلبة بالحساب</label><select id="userLinks-${Number(user.id)}" multiple size="4" style="min-height:85px">${students.map(student => `<option value="${esc(student.student_id)}" ${linked.includes(student.student_id) ? 'selected' : ''}>${esc(student.name)} — ${esc(student.grade || '')} ${esc(student.section || '')}</option>`).join('')}</select><button class="btn small" onclick="saveUserLinks(${Number(user.id)},'${user.role}')">حفظ الربط</button>`;
+      }
+      return `<div class="card" style="margin-top:.5rem"><strong>${esc(user.name)}</strong><p>${esc(user.email)} • ${esc(getRoleName(user.role))}</p><p class="note">${relation}</p>${editor}</div>`;
     }).join('') || '<p class="note">لا توجد حسابات إضافية.</p>';
   } catch (error) { el.textContent = error.message; }
+}
+async function saveTeachingAssignment(userId) {
+  const subject = document.getElementById(`teacherSubject-${userId}`)?.value || '';
+  const gradesSelect = document.getElementById(`teacherGrades-${userId}`);
+  const grades = gradesSelect ? [...gradesSelect.selectedOptions].map(option=>option.value) : [];
+  try {
+    await api(`/api/users/${userId}/teaching-assignment`,{method:'PUT',body:JSON.stringify({subject,grades})});
+    await loadSchoolUsers();
+    showToast('تم حفظ المادة والصفوف المسندة للمعلم.');
+  } catch(error) { showToast(error.message); }
 }
 async function saveUserLinks(userId, role) {
   const select = document.getElementById(`userLinks-${userId}`);
