@@ -209,8 +209,17 @@
   <section id="assessment" class="section">
     <h1>إدخال التقويمات</h1>
     <div class="card">
-      <label>الطالب (اختياري — اتركه فارغًا للتقويم الصفي)</label>
-      <select id="assessmentStudent"><option value="">تقويم صفي (دون ربط بطالب)</option></select>
+      <h3>نطاق التقويم</h3>
+      <div class="grid-two">
+        <div><label for="assessmentSubject">المادة</label><select id="assessmentSubject"><option value="">اختر المادة</option></select></div>
+        <div><label for="assessmentGrade">الصف</label><select id="assessmentGrade"><option value="">اختر الصف</option></select></div>
+        <div><label for="assessmentSection">الشعبة</label><select id="assessmentSection" disabled><option value="">اختر الشعبة</option></select></div>
+        <div><label for="assessmentScope">نوع التقويم</label><select id="assessmentScope"><option value="class">تقويم صفي</option><option value="individual">تقويم فردي</option></select></div>
+      </div>
+      <div id="assessmentStudentField" hidden>
+        <label for="assessmentStudent">الطالب</label>
+        <select id="assessmentStudent"><option value="">اختر طالبًا من الشعبة</option></select>
+      </div>
       <label>اسم التقويم / المهارة</label>
       <input type="text" id="assessName" placeholder="أدخل اسم المهارة">
       <button class="btn secondary" type="button" onclick="generateDiagnosticQuestions()">إعداد أسئلة تشخيصية مقترحة</button>
