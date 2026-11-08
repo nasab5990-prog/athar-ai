@@ -80,7 +80,7 @@ async function teacherTeachingAssignment(user) {
 function teacherAssignmentMatches(assignments, student) {
   const grade=String(student?.grade ?? '').trim();
   const section=String(student?.section ?? '').trim();
-  return (assignments||[]).some(item=>String(item.grade)===grade && (!item.sections?.length || item.sections.map(String).includes(section)));
+  return (assignments||[]).some(item=>assignedGradeLabels([item.grade]).includes(grade) && (!item.sections?.length || item.sections.map(String).includes(section)));
 }
 async function studentExistsInSchool(studentId,schoolId) {
   const r=await query("SELECT id FROM records WHERE school_id=$1 AND kind='student' AND payload->>'student_id'=$2 LIMIT 1",[schoolId,studentId]);
