@@ -291,14 +291,20 @@
           <div id="curriculumCatalogStatus" class="note" aria-live="polite" hidden></div>
         </div>
       </details>
-      <label>إمكانات التنفيذ في المدرسة</label>
-      <select id="activityMode">
-        <option value="offline">دون أجهزة أو إنترنت — ورقة وسبورة وأدوات صفية</option>
-        <option value="shared">جهاز المعلم مع شاشة أو سبورة تفاعلية — دون أجهزة للطلبة</option>
-        <option value="online">إنترنت وأجهزة متاحة للطلبة</option>
-      </select>
-      <label>الوقت المتاح للنشاط</label>
-      <select id="activityDuration"><option value="10">10 دقائق</option><option value="15" selected>15 دقيقة</option><option value="20">20 دقيقة</option></select>
+      <div class="grid-two intervention-execution-row">
+        <div>
+          <label for="activityMode">إمكانات التنفيذ في المدرسة</label>
+          <select id="activityMode">
+            <option value="offline">دون أجهزة أو إنترنت — ورقة وسبورة وأدوات صفية</option>
+            <option value="shared">جهاز المعلم مع شاشة أو سبورة تفاعلية — دون أجهزة للطلبة</option>
+            <option value="online">إنترنت وأجهزة متاحة للطلبة</option>
+          </select>
+        </div>
+        <div>
+          <label for="activityDuration">الوقت المتاح للنشاط</label>
+          <select id="activityDuration"><option value="10">10 دقائق</option><option value="15" selected>15 دقيقة</option><option value="20">20 دقيقة</option></select>
+        </div>
+      </div>
       <div class="intervention-mode-picker">
         <p><strong>كيف ترغب في إعداد التدخل؟</strong></p>
         <div class="grid-two">
@@ -330,7 +336,7 @@
       </div>
       <button class="btn" id="saveInterventionBtn" type="button" onclick="saveIntervention()">حفظ التدخل</button>
       <button class="btn outline" id="cancelInterventionEditBtn" type="button" onclick="cancelInterventionEdit()" hidden>إلغاء التعديل</button>
-      <button class="btn outline" onclick="printWorksheet()">طباعة ورقة عمل</button>
+      <button class="btn outline icon-action-button" type="button" onclick="printWorksheet()" aria-label="طباعة ورقة العمل" title="طباعة ورقة العمل"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 8V3h10v5M7 17H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M7 14h10v7H7z"/><path d="M17 11h.01"/></svg></button>
     </div>
     <div id="intList"></div>
   </section>
