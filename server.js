@@ -79,13 +79,20 @@ async function studentExistsInSchool(studentId,schoolId) {
   const r=await query("SELECT id FROM records WHERE school_id=$1 AND kind='student' AND payload->>'student_id'=$2 LIMIT 1",[schoolId,studentId]);
   return Boolean(r.rowCount);
 }
+function assignedGradeLabels(grades) {
+  const labels={1:'الأول',2:'الثاني',3:'الثالث',4:'الرابع',5:'الخامس',6:'السادس',7:'السابع',8:'الثامن',9:'التاسع',10:'العاشر',11:'الحادي عشر',12:'الثاني عشر'};
+  return [...new Set((grades || []).flatMap(value => {
+    const number=String(value);
+    return labels[number] ? [number,labels[number],`الصف ${labels[number]}`] : [number];
+  }))];
+}
 async function findStudentOwnedBy(user,studentId) {
   const r=await query("SELECT id,owner_id,payload FROM records WHERE school_id=$1 AND kind='student' AND payload->>'student_id'=$2 LIMIT 1",[user.school_id,studentId]);
   const record=r.rows[0]; if (!record) return null;
   if (user.role==='teacher') {
     if (String(record.owner_id)===String(user.id) || (await assignedStudentIds(user)).includes(studentId)) return record;
     const teaching=await teacherTeachingAssignment(user);
-    if (teaching.grades.includes(String(record.payload?.grade || ''))) return record;
+    if (assignedGradeLabels(teaching.grades).includes(String(record.payload?.grade || ''))) return record;
   }
   if (['senior_teacher','principal'].includes(user.role)) return record;
   return null;
@@ -97,7 +104,7 @@ async function getRecordsForUser(user) {
   if (user.role==='teacher') {
     const [assigned,teaching]=await Promise.all([assignedStudentIds(user),teacherTeachingAssignment(user)]);
     if (teaching.grades.length) {
-      const visibleStudents=(await query("SELECT payload->>'student_id' AS student_id FROM records WHERE school_id=$1 AND kind='student' AND payload->>'grade'=ANY($2::text[])",[user.school_id,teaching.grades])).rows.map(x=>x.student_id);
+      const visibleStudents=(await query("SELECT payload->>'student_id' AS student_id FROM records WHERE school_id=$1 AND kind='student' AND payload->>'grade'=ANY($2::text[])",[user.school_id,assignedGradeLabels(teaching.grades)])).rows.map(x=>x.student_id);
       const visible=[...new Set([...assigned,...visibleStudents])];
       const r=await query(`SELECT id,kind,payload,created_at FROM records WHERE school_id=$1 AND
         ((owner_id=$2 AND (payload->>'student_id' IS NULL OR payload->>'student_id'=ANY($3::text[]))) OR
