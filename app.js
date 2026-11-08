@@ -183,7 +183,19 @@ function updateCurriculumSubjects() {
     const assignedSubject = String(currentUser?.teachingSubject || '');
     verifiedSubjects = assignedSubject && assignedGrades.includes(String(grade)) ? [assignedSubject] : [];
   }
-  setCurriculumOptions(subject, grade ? (currentRole === 'teacher' && !verifiedSubjects.length ? 'المادة غير مسندة لهذا الصف' : 'اختر المادة') : 'اختر الصف أولًا', verifiedSubjects);
+  setCurriculumOptions(subject, grade ? (currentRole === 'teacher' && !verifiedSubjects.length ? 'المادة غير مسندة لهذا الصف' : 'اختر المادة') : 'تُحدد حسب الصف والتكليف');
+  if (currentRole === 'teacher') {
+    if (subject) {
+      subject.value = verifiedSubjects[0] || '';
+      subject.disabled = true;
+    }
+    const field = document.getElementById('intSubjectField');
+    if (field) field.hidden = !verifiedSubjects.length;
+  } else if (subject) {
+    subject.disabled = !verifiedSubjects.length;
+    const field = document.getElementById('intSubjectField');
+    if (field) field.hidden = false;
+  }
   setCurriculumOptions(unit, 'اختر المادة أولًا', []);
   setCurriculumOptions(lesson, 'اختر الوحدة أولًا', []);
   if (outcome) outcome.value = '';
@@ -381,7 +393,7 @@ function getRoleName(role) {
   return ({ teacher:'المعلم', senior_teacher:'المعلم الأول', principal:'المدير', parent:'ولي الأمر', student:'الطالب' })[role] || 'مستخدم';
 }
 function applyTeacherAssignmentFilters() {
-  const gradeIds = ['intGrade','interventionGradeFilter'];
+  const gradeIds = ['intGrade'];
   const assigned = (currentUser?.teachingGrades || []).map(String);
   gradeIds.forEach(id => {
     const select = document.getElementById(id);
@@ -419,13 +431,19 @@ function applyRoleUI() {
   if (progressLabel) progressLabel.textContent = currentRole === 'student' ? 'سجلك الدراسي' : 'اختيار الابن';
 }
 
+function gradeNumber(value) {
+  const raw = String(value ?? '').trim();
+  if (/^(?:[1-9]|1[0-2])$/.test(raw)) return raw;
+  const names = {'الأول':'1','الاول':'1','الثاني':'2','الثالث':'3','الرابع':'4','الخامس':'5','السادس':'6','السابع':'7','الثامن':'8','التاسع':'9','العاشر':'10','الحادي عشر':'11','الثاني عشر':'12'};
+  return names[raw.replace(/^الصف\s*/,'')] || '';
+}
 function filterInterventionStudents() {
   const select = document.getElementById('interventionStudent');
-  const gradeFilter = document.getElementById('interventionGradeFilter');
+  const gradeFilter = document.getElementById('intGrade');
   if (!select) return;
   const grade = gradeFilter?.value || '';
   const previous = select.value;
-  const filtered = students.filter(student => !grade || String(student.grade || '') === grade);
+  const filtered = students.filter(student => !grade || gradeNumber(student.grade) === grade);
   select.innerHTML = '<option value="">تدخل صفي — دون ربط بطالب محدد</option>';
   filtered
     .slice()
@@ -433,12 +451,11 @@ function filterInterventionStudents() {
     .forEach(student => {
       const option = document.createElement('option');
       option.value = student.student_id;
-      option.textContent = `${student.name} — الصف ${student.grade || 'غير محدد'} — شعبة ${student.section || '—'}`;
+      option.textContent = `${student.name} — شعبة ${student.section || '—'}`;
       select.appendChild(option);
     });
   if (previous && filtered.some(student => student.student_id === previous)) select.value = previous;
-  const count = filtered.length;
-  if (gradeFilter) gradeFilter.title = `عدد الطلبة في القائمة: ${count}`;
+  if (gradeFilter) gradeFilter.title = `عدد الطلبة في القائمة: ${filtered.length}`;
 }
 
 function fillStudentSelects() {
@@ -1320,6 +1337,7 @@ function resetInterventionForm() {
   const aiPanel = document.getElementById('aiInterventionPanel'); if (aiPanel) aiPanel.hidden = true;
   const draftFields = document.getElementById('interventionDraftFields'); if (draftFields) draftFields.hidden = true;
   updateCurriculumSubjects();
+  filterInterventionStudents();
   fillStudentSelects();
 }
 
