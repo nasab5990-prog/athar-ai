@@ -711,3 +711,124 @@ body.dark .root-map-arrow { color:#91b6dc; }
   }
 }
 
+
+
+/* إخراج تقرير أثَر على ورق A4 مع خلفية ثابتة وحقوق في التذييل */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 14mm 15mm 22mm;
+  }
+  html, body, body.dark {
+    width: auto !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    color: #20334b !important;
+    color-scheme: light !important;
+  }
+  body, body.dark, #reports, #reports > .card, #reportSummary {
+    background: #fff !important;
+  }
+  body * {
+    box-shadow: none !important;
+  }
+  .main {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  #reports {
+    position: static !important;
+    inset: auto !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+  #reports > h1 {
+    margin: 0 0 7mm !important;
+    font-size: 20pt !important;
+    color: #174b78 !important;
+    break-after: avoid-page;
+  }
+  /* لا نكرر اسم المنصة في رأس صفحة الطباعة */
+  #reportSummary .report-print-header {
+    display: none !important;
+  }
+  #reports > .card {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 7mm !important;
+    border: 1px solid #d8e3ed !important;
+    border-radius: 3mm !important;
+    background: #fff !important;
+    overflow: visible !important;
+  }
+  #reportSummary {
+    width: 100% !important;
+    color: #20334b !important;
+    font-size: 10.5pt !important;
+    line-height: 1.65 !important;
+    padding-bottom: 2mm !important;
+  }
+  #reportSummary > p:not(.report-print-note) {
+    background: #f2f7fb !important;
+    color: #263b52 !important;
+    padding: 2.5mm 3mm !important;
+    margin: 0 0 2.5mm !important;
+    border-right: 3px solid #2d9b91 !important;
+    break-inside: avoid;
+  }
+  #reportSummary h4 {
+    color: #174b78 !important;
+    font-size: 12pt !important;
+    margin: 5mm 0 2.5mm !important;
+    break-after: avoid;
+  }
+  #reportSummary ul {
+    margin: 0 !important;
+    padding: 0 5mm 0 0 !important;
+  }
+  #reportSummary li {
+    background: #fbfcfe !important;
+    color: #263b52 !important;
+    border: 1px solid #e3eaf1 !important;
+    border-radius: 2mm !important;
+    padding: 2mm 2.5mm !important;
+    margin: 0 0 1.5mm !important;
+    break-inside: avoid;
+  }
+  #reportSummary li strong { color: #174b78 !important; }
+  #reportSummary .report-print-note {
+    background: #f3f6f9 !important;
+    color: #52677d !important;
+    border: 1px solid #dce5ed !important;
+    border-radius: 2mm !important;
+    padding: 2.5mm 3mm !important;
+    margin-top: 5mm !important;
+    font-size: 9pt !important;
+    break-inside: avoid;
+  }
+  /* يظهر التذييل أسفل كل صفحة مطبوعة دون حجز مساحة من محتوى التقرير */
+  #reportSummary::after {
+    content: "حقوق التصميم والتطوير © أ. نصراء سعيد البهلولي | منصة أثَر";
+    position: fixed;
+    right: 0;
+    left: 0;
+    bottom: -15mm;
+    display: block;
+    padding-top: 2mm;
+    border-top: 1px solid #d8e3ed;
+    color: #64778a !important;
+    background: #fff !important;
+    font-family: "Tajawal", Tahoma, Arial, sans-serif !important;
+    font-size: 8.5pt !important;
+    text-align: center;
+  }
+}
