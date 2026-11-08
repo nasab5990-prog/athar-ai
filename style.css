@@ -910,3 +910,22 @@ body.dark .root-map-arrow { color:#91b6dc; }
   }
   #reportSummary::after { content: none !important; display: none !important; }
 }
+
+
+/* إبقاء تذييل الحقوق داخل المساحة القابلة للطباعة في ورقة A4 */
+@media print {
+  #reportSummary .report-print-footer {
+    position: fixed !important;
+    right: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    z-index: 10 !important;
+    margin: 0 !important;
+    padding: 2mm 0 0 !important;
+    border-top: 1px solid #d8e3ed !important;
+    background: #fff !important;
+    color: #52677d !important;
+    text-align: center !important;
+    break-inside: avoid !important;
+  }
+}
