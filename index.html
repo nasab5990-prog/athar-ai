@@ -423,6 +423,14 @@
         <label>ربط الطالب/الطلبة (إلزامي لولي الأمر والطالب)</label><select id="accountStudentIds" multiple size="5" style="min-height:100px"></select>
         <p class="note">يمكن إسناد طلبة إلى المعلم، وربط ولي الأمر بواحد أو أكثر من الأبناء، وربط الطالب بسجل واحد فقط. أنشئ سجلات الطلبة أولًا.</p>
         <button class="btn" onclick="createAccount()">إنشاء الحساب</button>
+        <details class="secondary-tools-disclosure" open style="margin-top:.8rem">
+          <summary><span>إعداد صفوف المدرسة وشعبها</span><small>يحدّدها المدير قبل تسجيل الطلبة وتكليف المعلمين</small></summary>
+          <div class="secondary-tools-content">
+            <p class="note">فعّلي الصفوف الموجودة في المدرسة، ثم حددي عدد الشعب في كل صف. ستُنشأ الشعب تلقائيًا بالأرقام 1، 2، 3…</p>
+            <div id="schoolGradeSectionsSettings" class="school-grade-sections-grid"></div>
+            <button class="btn small" type="button" onclick="saveSchoolGradeSections()">حفظ الصفوف والشعب</button>
+          </div>
+        </details>
         <div id="usersList" style="margin-top:.8rem"></div>
       </div>
       <button class="btn outline" onclick="logout()" style="margin-top:0.8rem;">تسجيل الخروج</button>
