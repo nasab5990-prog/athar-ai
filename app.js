@@ -407,6 +407,7 @@ function applyRoleUI() {
   const teacherDescription = currentRole === 'teacher' ? (currentUser?.teachingSubject && (currentUser?.teachingGrades||[]).length ? `مادتك: ${esc(currentUser.teachingSubject)} • الصفوف: ${(currentUser.teachingGrades||[]).map(esc).join('، ')}. تظهر لك سجلات الطلبة في الصفوف المسندة.` : 'لم يحدد المدير مادتك وصفوفك بعد؛ اطلب منه إكمال التكليف الدراسي.') : null;
   if (roleInfo) roleInfo.innerHTML = `<div class="card"><strong>${esc(getRoleName(currentRole))}</strong><p>${teacherDescription || esc(({ senior_teacher:'متابعة سجلات المدرسة والتدخلات ومؤشرات الصفوف.', principal:'إدارة حسابات المدرسة ومتابعة المؤشرات والسجلات.', parent:'متابعة الأبناء المرتبطين بحسابك فقط.', student:'متابعة تقدمك ونتائجك الفردية فقط.' })[currentRole] || '')}</p></div>`;
   applyTeacherAssignmentFilters();
+  if (currentRole === 'teacher') updateCurriculumSubjects();
   const accountAdmin = document.getElementById('accountAdmin');
   if (accountAdmin) accountAdmin.hidden = currentRole !== 'principal';
   document.getElementById('currentUserLabel') && (document.getElementById('currentUserLabel').textContent = `${currentUser?.name || ''} • ${getRoleName(currentRole)}`);
