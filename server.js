@@ -403,7 +403,7 @@ app.put('/api/users/:id/assignments',requireAuth,requireRole('principal'),asyncR
 }));
 app.put('/api/users/:id/teaching-assignment',requireAuth,requireRole('principal'),asyncRoute(async(req,res)=>{
   const targetId=Number(req.params.id), target=(await query("SELECT id,role,school_id FROM users WHERE id=$1 AND school_id=$2",[targetId,req.user.school_id])).rows[0];
-  if (!target || !['teacher','senior_teacher'].includes(target.role)) return res.status(404).json({message:'حساب المعلم غير موجود في المدرسة.'});
+  if (!target || target.role!=='teacher') return res.status(404).json({message:'حساب المعلم غير موجود في المدرسة.'});
   const subject=safeText(req.body?.subject,120);
   const grades=Array.isArray(req.body?.grades)?[...new Set(req.body.grades.map(v=>safeText(v,20)).filter(Boolean))].slice(0,12):[];
   if (!subject || !grades.length) return res.status(400).json({message:'حدد مادة واحدة وصفًا واحدًا على الأقل.'});
