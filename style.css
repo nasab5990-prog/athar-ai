@@ -819,3 +819,5 @@ body.dark .root-map-arrow { color:#91b6dc; }
 .teacher-assignment-editor .note {
   margin: .35rem 0 .6rem;
 }
+
+.school-grade-sections-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.55rem;margin:.8rem 0}.school-grade-config-row{display:flex;align-items:center;gap:.45rem;padding:.55rem .65rem;border:1px solid var(--border);border-radius:10px;background:var(--surface)}.school-grade-config-row span{margin-inline-start:auto;font-size:.85em;color:var(--muted)}.school-grade-config-row input[type=number]{width:58px;min-width:58px;padding:.35rem;border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--text)}.school-grade-config-row input[type=checkbox]{width:17px;height:17px}
