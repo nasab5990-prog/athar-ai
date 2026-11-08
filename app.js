@@ -1242,6 +1242,21 @@ function renderInt() {
     const modeLabel = ({ offline:'دون أجهزة أو إنترنت', shared:'جهاز المعلم مع شاشة مشتركة', online:'أجهزة للطلبة وإنترنت' })[i.activity_mode] || 'غير محدد';
     const statusLabel = ({ active:'نشط', completed:'مكتمل', paused:'متوقف مؤقتًا' })[i.status] || i.status || 'غير محدد';
     const recordId = Number(i.recordId);
+    const relatedImpactRows = impacts
+      .filter(item => String(item.intervention_record_id ?? '') === String(i.recordId))
+      .sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
+    const progressPath = relatedImpactRows.length
+      ? '<section class="intervention-progress-path" style="margin:.9rem 0;padding:.8rem;border:1px solid var(--border);border-radius:12px;background:var(--surface-soft,rgba(120,130,150,.06))">' +
+        '<strong>مسار التقدم</strong><ol style="margin:.55rem 0 0;padding-right:1.25rem">' +
+        relatedImpactRows.map(item => {
+          const before = Number(item.before);
+          const after = Number(item.after);
+          const difference = Number(item.difference ?? (after - before));
+          const change = (difference > 0 ? '+' : '') + difference + ' نقطة مئوية';
+          return '<li style="margin:.35rem 0">من ' + esc(item.before) + '% إلى ' + esc(item.after) + '% — ' + esc(change) + ' <small style="color:var(--muted,#667085)">(' + esc(formatDate(item.date)) + ')</small></li>';
+        }).join('') +
+        '</ol></section>'
+      : '<p class="note intervention-progress-empty" style="margin:.8rem 0">مسار التقدم: لم تُسجّل قياسات أثر لهذا التدخل بعد. أضف قياسًا من صفحة قياس الأثر ليظهر هنا.</p>';
     const editButton = Number.isInteger(recordId) && recordId > 0
       ? `<button class="btn small secondary" type="button" onclick="editIntervention(${recordId})">تعديل واستكمال التدخل</button>`
       : '';
@@ -1260,6 +1275,7 @@ function renderInt() {
         <p><strong>إمكانات التنفيذ:</strong> ${esc(modeLabel)} • <strong>الوقت:</strong> ${esc(i.activity_duration ?? 'غير محدد')} دقيقة</p>
         <p><strong>مصدر إعداد التدخل:</strong> ${i.suggestion_source === 'athar-analysis' ? 'من تحليل رادار التعثر' : 'إعداد المعلم'}</p>
         ${i.analysis_record_id ? `<p class="note">مرتبط بتحليل محفوظ في رادار التعثر (رقم السجل: ${esc(i.analysis_record_id)}).</p>` : ''}
+        ${progressPath}
         ${editButton}
       </div>
     </details>`;
