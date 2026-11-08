@@ -552,7 +552,7 @@ async function addStudent() {
     showToast('تم حفظ الطالب في قاعدة بيانات المدرسة.');
   } catch (error) { showToast(error.message); }
 }
-async function bulkAddStudents() {
+async async function bulkAddStudents() {
   const grade = document.getElementById('bulkGrade')?.value || '';
   const section = document.getElementById('bulkSection')?.value || '';
   const raw = document.getElementById('bulkStudentNames')?.value || '';
