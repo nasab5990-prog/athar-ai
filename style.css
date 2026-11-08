@@ -605,3 +605,19 @@ textarea::placeholder{
     scroll-behavior:auto!important;
   }
 }
+
+/* تحسين تباين خريطة الجذور في الوضع الداكن */
+body.dark .root-map-node { background:#17283d; border-color:#40536b; }
+body.dark .root-map-node strong { color:#e7f0fa; }
+body.dark .root-map-node span, body.dark .root-map-node small { color:#b8c7d9; }
+body.dark .root-map-node.pending { background:#382f20; border-color:#80652f; }
+body.dark .root-map-node.review { background:#3b292b; border-color:#81504a; }
+body.dark .root-map-node.ok { background:#19372f; border-color:#397461; }
+body.dark .root-map-node.future { background:#1c3048; border-color:#45658e; }
+body.dark .root-map-node.pending > span { color:#f4cf83; background:#554323; }
+body.dark .root-map-node.review > span { color:#ffb5a6; background:#573431; }
+body.dark .root-map-node.ok > span { color:#91dfc2; background:#204b3e; }
+body.dark .root-map-node.focus { background:linear-gradient(145deg,#1b3550,#292d4a); border-color:#6ba8e5; }
+body.dark .root-map-node.focus > span, body.dark .root-map-node.future > span { color:#b8d8ff; background:#29486b; }
+body.dark .root-map-arrow { color:#91b6dc; }
+
