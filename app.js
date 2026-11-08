@@ -183,7 +183,7 @@ function updateCurriculumSubjects() {
     const assignedSubject = String(currentUser?.teachingSubject || '');
     verifiedSubjects = assignedSubject && assignedGrades.includes(String(grade)) ? [assignedSubject] : [];
   }
-  setCurriculumOptions(subject, grade ? (currentRole === 'teacher' && !verifiedSubjects.length ? 'المادة غير مسندة لهذا الصف' : 'اختر المادة') : 'تُحدد حسب الصف والتكليف');
+  setCurriculumOptions(subject, grade ? (currentRole === 'teacher' && !verifiedSubjects.length ? 'المادة غير مسندة لهذا الصف' : 'اختر المادة') : 'تُحدد حسب الصف والتكليف', verifiedSubjects);
   if (currentRole === 'teacher') {
     if (subject) {
       subject.value = verifiedSubjects[0] || '';
