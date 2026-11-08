@@ -621,3 +621,86 @@ body.dark .root-map-node.focus { background:linear-gradient(145deg,#1b3550,#292d
 body.dark .root-map-node.focus > span, body.dark .root-map-node.future > span { color:#b8d8ff; background:#29486b; }
 body.dark .root-map-arrow { color:#91b6dc; }
 
+/* تقرير أثَر — إخراج طباعة أنيق وواضح */
+@media print {
+  @page { size:A4 portrait; margin:16mm 15mm 17mm; }
+  html, body {
+    font-family:"Noto Sans Arabic","Noto Naskh Arabic",Tahoma,Arial,sans-serif !important;
+    font-size:11.5pt !important;
+    line-height:1.9 !important;
+    color:#20334b !important;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+  #reports { padding:0 0 8mm !important; }
+  #reports > h1 {
+    color:#174b78 !important;
+    font-size:25pt !important;
+    font-weight:800 !important;
+    padding-bottom:5mm !important;
+    margin-bottom:7mm !important;
+    border-bottom:2px solid #2d9b91 !important;
+  }
+  #reports > .card {
+    border:1px solid #d8e3ed !important;
+    border-radius:12px !important;
+    padding:9mm !important;
+    background:#fff !important;
+  }
+  #reportSummary { color:#263b52 !important; font-size:11.5pt !important; }
+  #reportSummary .report-print-header {
+    display:block !important;
+    margin:0 0 7mm !important;
+    padding:0 0 5mm !important;
+    border-bottom:1px solid #d8e3ed !important;
+  }
+  #reportSummary .report-print-header h2 {
+    color:#174b78 !important;
+    font-size:19pt !important;
+    font-weight:800 !important;
+    margin:0 0 1mm !important;
+  }
+  #reportSummary .report-print-header p {
+    color:#64778a !important;
+    font-size:9.5pt !important;
+    margin:0 !important;
+  }
+  #reportSummary > p:not(.report-print-note) {
+    background:#f2f7fb !important;
+    border-right:3px solid #2d9b91 !important;
+    border-radius:6px !important;
+    padding:3mm 4mm !important;
+    margin:0 0 3mm !important;
+    break-inside:avoid;
+  }
+  #reportSummary h4 {
+    color:#174b78 !important;
+    font-size:13pt !important;
+    font-weight:800 !important;
+    margin:7mm 0 3mm !important;
+    padding-bottom:2mm !important;
+    border-bottom:1px solid #dce6ef !important;
+    break-after:avoid;
+  }
+  #reportSummary ul { margin:0 !important; padding:0 6mm 0 0 !important; }
+  #reportSummary li {
+    padding:2.5mm 3mm !important;
+    margin:0 0 2mm !important;
+    border:1px solid #e3eaf1 !important;
+    border-radius:6px !important;
+    background:#fbfcfe !important;
+    break-inside:avoid;
+  }
+  #reportSummary li strong { color:#174b78 !important; font-weight:800 !important; }
+  #reportSummary .report-print-note {
+    margin-top:8mm !important;
+    padding:3mm 4mm !important;
+    color:#52677d !important;
+    background:#f3f6f9 !important;
+    border:1px solid #dce5ed !important;
+    border-radius:6px !important;
+    font-size:9.5pt !important;
+    break-inside:avoid;
+  }
+}
+
