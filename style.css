@@ -623,153 +623,81 @@ body.dark .root-map-arrow { color:#91b6dc; }
 
 /* تنسيق موحد ونهائي لطباعة تقرير أثَر */
 @media print {
-  @page {
-    size: A4 portrait;
-    margin: 13mm 14mm 22mm;
-  }
+  @page { size: A4 portrait; margin: 13mm 14mm 18mm; }
   html, body, body.dark {
-    width: auto !important;
-    min-width: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    background: #fff !important;
-    color: #20334b !important;
+    width: auto !important; min-width: 0 !important;
+    margin: 0 !important; padding: 0 !important;
+    background: #fff !important; color: #20334b !important;
     color-scheme: light !important;
     font-family: "Tajawal", Tahoma, Arial, sans-serif !important;
-    font-size: 11.5pt !important;
-    line-height: 1.75 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    font-size: 11.5pt !important; line-height: 1.75 !important;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
   }
   body * { box-shadow: none !important; }
   .sidebar, .menu-btn, #toast, .current-user-label, button { display: none !important; }
-  .main {
-    width: 100% !important;
-    max-width: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    overflow: visible !important;
-  }
+  .main { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; overflow: visible !important; }
   .section { display: none !important; visibility: hidden !important; }
-  #reports {
-    display: block !important;
-    visibility: visible !important;
-    position: static !important;
-    inset: auto !important;
-    width: 100% !important;
-    max-width: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    background: #fff !important;
-  }
+  #reports { display: block !important; visibility: visible !important; position: static !important; width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; background: #fff !important; }
   #reports * { visibility: visible !important; }
   #reports > h1 {
-    display: block !important;
-    margin: 0 0 6mm !important;
-    padding: 0 0 3mm !important;
-    border-bottom: 2px solid #2d9b91 !important;
-    color: #174b78 !important;
-    font-size: 21pt !important;
-    font-weight: 800 !important;
-    break-after: avoid;
+    display: block !important; margin: 0 0 6mm !important; padding: 0 0 3mm !important;
+    border-bottom: 2px solid #2d9b91 !important; color: #174b78 !important;
+    font-size: 21pt !important; font-weight: 800 !important; break-after: avoid;
   }
   #reports > .card {
-    width: 100% !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-    padding: 5mm !important;
-    border: 1px solid #d8e3ed !important;
-    border-radius: 3mm !important;
-    background: #fff !important;
-    overflow: visible !important;
+    width: 100% !important; max-width: 100% !important; margin: 0 !important;
+    padding: 5mm !important; border: 1px solid #d8e3ed !important;
+    border-radius: 3mm !important; background: #fff !important; overflow: visible !important;
   }
   #reportSummary {
-    width: 100% !important;
-    padding: 0 0 2mm !important;
-    background: #fff !important;
-    color: #20334b !important;
-    font-size: 11.5pt !important;
-    line-height: 1.75 !important;
+    display: flex !important; flex-direction: column !important;
+    width: 100% !important; min-height: 0 !important;
+    padding: 0 !important; background: #fff !important; color: #20334b !important;
+    font-size: 11.5pt !important; line-height: 1.75 !important;
   }
   #reportSummary .report-print-header {
-    display: block !important;
-    visibility: visible !important;
-    margin: 0 0 5mm !important;
-    padding: 0 0 3mm !important;
+    display: block !important; visibility: visible !important;
+    margin: 0 0 5mm !important; padding: 0 0 3mm !important;
     border-bottom: 1px solid #d8e3ed !important;
   }
   #reportSummary .report-print-header h2 {
-    display: block !important;
-    margin: 0 0 1mm !important;
-    color: #174b78 !important;
-    font-size: 18pt !important;
-    font-weight: 800 !important;
+    display: block !important; margin: 0 0 1mm !important;
+    color: #174b78 !important; font-size: 18pt !important; font-weight: 800 !important;
   }
-  #reportSummary .report-print-header p {
-    margin: 0 !important;
-    color: #64778a !important;
-    font-size: 9.5pt !important;
-  }
+  #reportSummary .report-print-header p { margin: 0 !important; color: #64778a !important; font-size: 9.5pt !important; }
   #reportSummary > p:not(.report-print-note) {
-    margin: 0 0 3mm !important;
-    padding: 2.5mm 3mm !important;
-    border-right: 3px solid #2d9b91 !important;
-    border-radius: 2mm !important;
-    background: #f2f7fb !important;
-    color: #263b52 !important;
-    break-inside: avoid;
+    margin: 0 0 3mm !important; padding: 2.5mm 3mm !important;
+    border-right: 3px solid #2d9b91 !important; border-radius: 2mm !important;
+    background: #f2f7fb !important; color: #263b52 !important; break-inside: avoid;
   }
   #reportSummary h4 {
-    margin: 5mm 0 2.5mm !important;
-    padding-bottom: 2mm !important;
-    border-bottom: 1px solid #dce6ef !important;
-    color: #174b78 !important;
-    font-size: 12.5pt !important;
-    font-weight: 800 !important;
-    break-after: avoid;
+    margin: 5mm 0 2.5mm !important; padding-bottom: 2mm !important;
+    border-bottom: 1px solid #dce6ef !important; color: #174b78 !important;
+    font-size: 12.5pt !important; font-weight: 800 !important; break-after: avoid;
   }
   #reportSummary ul { margin: 0 !important; padding: 0 5mm 0 0 !important; }
   #reportSummary li {
-    margin: 0 0 2mm !important;
-    padding: 2.5mm 3mm !important;
-    border: 1px solid #e3eaf1 !important;
-    border-radius: 2mm !important;
-    background: #fbfcfe !important;
-    color: #263b52 !important;
-    font-size: 11pt !important;
-    line-height: 1.7 !important;
-    break-inside: avoid;
+    margin: 0 0 2mm !important; padding: 2.5mm 3mm !important;
+    border: 1px solid #e3eaf1 !important; border-radius: 2mm !important;
+    background: #fbfcfe !important; color: #263b52 !important;
+    font-size: 11pt !important; line-height: 1.7 !important; break-inside: avoid;
   }
   #reportSummary li strong { color: #174b78 !important; font-weight: 800 !important; }
   #reportSummary .report-print-note {
-    margin-top: 5mm !important;
-    padding: 2.5mm 3mm !important;
-    border: 1px solid #dce5ed !important;
-    border-radius: 2mm !important;
-    background: #f3f6f9 !important;
-    color: #52677d !important;
-    font-size: 9pt !important;
-    break-inside: avoid;
+    margin-top: 5mm !important; padding: 2.5mm 3mm !important;
+    border: 1px solid #dce5ed !important; border-radius: 2mm !important;
+    background: #f3f6f9 !important; color: #52677d !important;
+    font-size: 9pt !important; break-inside: avoid;
   }
   #reportSummary .report-print-footer {
-    display: block !important;
-    visibility: visible !important;
-    position: fixed !important;
-    right: 0 !important;
-    left: 0 !important;
-    bottom: -15mm !important;
-    z-index: 10 !important;
-    box-sizing: border-box !important;
-    margin: 0 !important;
-    padding: 2mm 0 0 !important;
+    display: block !important; visibility: visible !important;
+    position: static !important; width: 100% !important; box-sizing: border-box !important;
+    margin: 12mm 0 0 !important; padding: 3mm 0 0 !important;
     border-top: 1px solid #d8e3ed !important;
-    background: #fff !important;
-    color: #52677d !important;
+    background: #fff !important; color: #52677d !important;
     font-family: "Tajawal", Tahoma, Arial, sans-serif !important;
-    font-size: 9pt !important;
-    line-height: 1.4 !important;
-    text-align: center !important;
-    break-inside: avoid !important;
+    font-size: 9pt !important; line-height: 1.5 !important;
+    text-align: center !important; break-inside: avoid !important;
   }
   #reportSummary::after { content: none !important; display: none !important; }
 }
