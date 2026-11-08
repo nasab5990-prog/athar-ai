@@ -821,3 +821,26 @@ body.dark .root-map-arrow { color:#91b6dc; }
 }
 
 .school-grade-sections-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.55rem;margin:.8rem 0}.school-grade-config-row{display:flex;align-items:center;gap:.45rem;padding:.55rem .65rem;border:1px solid var(--border);border-radius:10px;background:var(--surface)}.school-grade-config-row span{margin-inline-start:auto;font-size:.85em;color:var(--muted)}.school-grade-config-row input[type=number]{width:58px;min-width:58px;padding:.35rem;border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--text)}.school-grade-config-row input[type=checkbox]{width:17px;height:17px}
+
+
+/* تنظيم صفحة الحسابات */
+.account-profile-card,
+.account-admin-card,
+.account-list-card { margin-bottom: 1rem; }
+.account-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .9rem 1rem;
+  margin: 1rem 0;
+}
+.account-form-grid > div { min-width: 0; }
+.account-form-grid label { display: block; margin-bottom: .35rem; }
+.account-form-grid input,
+.account-form-grid select { width: 100%; box-sizing: border-box; }
+.account-student-link { grid-column: 1 / -1; }
+.account-student-link select { min-height: 7rem; }
+.account-page-actions { display: flex; justify-content: flex-start; margin-top: 1rem; }
+@media (max-width: 640px) {
+  .account-form-grid { grid-template-columns: 1fr; }
+  .account-student-link { grid-column: auto; }
+}
