@@ -1744,11 +1744,14 @@ function updateDashboard() {
   if (bar) bar.style.width = `${avg ?? 0}%`;
   const heading = document.querySelector('#dashboard h1');
   const subtitle = document.querySelector('#dashboard > .subtitle');
+  const dashboardLink = document.querySelector('.sidebar a[data-section="dashboard"]');
   if (currentRole === 'principal') {
     if (heading) heading.textContent = 'لوحة الإدارة المدرسية';
+    if (dashboardLink) dashboardLink.textContent = 'لوحة الإدارة المدرسية';
     if (subtitle) subtitle.textContent = 'متابعة مؤشرات المدرسة والتكليفات وجودة تنفيذ دورة التعلم';
   } else {
     if (heading) heading.textContent = currentRole === 'senior_teacher' ? 'لوحة متابعة المعلم الأول' : 'لوحة القيادة التربوية';
+    if (dashboardLink) dashboardLink.textContent = currentRole === 'senior_teacher' ? 'لوحة متابعة المعلم الأول' : 'لوحة القيادة';
     if (subtitle) subtitle.textContent = 'من اكتشاف فجوة التعلم → التدخل المناسب → قياس الأثر بالأدلة';
   }
   stat('dashboardScope', currentRole === 'parent' ? 'بيانات الأبناء المرتبطين بحسابك' : currentRole === 'student' ? 'بياناتك الفردية' : `مدرسة ${currentUser?.school_id || ''}`);
