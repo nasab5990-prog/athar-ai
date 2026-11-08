@@ -412,20 +412,52 @@
 
   <section id="roles" class="section">
     <h1>الحسابات</h1>
-    <div class="card">
-      <p>تم تحديد دورك عند تسجيل الدخول ولا يمكن تغييره من داخل المنصة.</p>
-      <div id="roleInfo" style="margin-top:1rem;"></div>
-      <div id="accountAdmin" hidden style="margin-top:1rem">
-        <h3>إضافة حساب إلى المدرسة</h3>
-        <label>اسم المستخدم</label><input id="accountName" type="text" placeholder="الاسم الكامل">
-        <label>البريد الرسمي</label><input id="accountEmail" type="email" placeholder="name@moe.om">
-        <label>الدور</label><select id="accountRole"><option value="teacher">المعلم</option><option value="senior_teacher">المعلم الأول</option><option value="principal">المدير</option><option value="parent">ولي الأمر</option><option value="student">الطالب</option></select>
-        <label>ربط الطالب/الطلبة (إلزامي لولي الأمر والطالب)</label><select id="accountStudentIds" multiple size="5" style="min-height:100px"></select>
-        <p class="note">يمكن إسناد طلبة إلى المعلم، وربط ولي الأمر بواحد أو أكثر من الأبناء، وربط الطالب بسجل واحد فقط. أنشئ سجلات الطلبة أولًا.</p>
-        <button class="btn" onclick="createAccount()">إنشاء الحساب</button>
-        <div id="usersList" style="margin-top:.8rem"></div>
+    <p class="subtitle">إدارة حسابك وحسابات المدرسة من مكان واحد.</p>
+
+    <div class="card account-profile-card">
+      <h3>حسابي</h3>
+      <p class="note">الدور محدد عند تسجيل الدخول ولا يمكن تغييره من هنا.</p>
+      <div id="roleInfo" style="margin-top:.7rem;"></div>
+    </div>
+
+    <div id="accountAdmin" hidden class="card account-admin-card">
+      <h3>إضافة حساب</h3>
+      <p class="note">أدخل بيانات المستخدم، ثم حدد دوره في المدرسة.</p>
+      <div class="account-form-grid">
+        <div>
+          <label for="accountName">اسم المستخدم</label>
+          <input id="accountName" type="text" placeholder="الاسم الكامل">
+        </div>
+        <div>
+          <label for="accountEmail">البريد الرسمي</label>
+          <input id="accountEmail" type="email" placeholder="name@moe.om">
+        </div>
+        <div>
+          <label for="accountRole">الدور</label>
+          <select id="accountRole">
+            <option value="teacher">المعلم</option>
+            <option value="senior_teacher">المعلم الأول</option>
+            <option value="principal">المدير</option>
+            <option value="parent">ولي الأمر</option>
+            <option value="student">الطالب</option>
+          </select>
+        </div>
+        <div class="account-student-link">
+          <label for="accountStudentIds">ربط الطلبة</label>
+          <select id="accountStudentIds" multiple size="4"></select>
+          <p class="note">مطلوب لولي الأمر والطالب. يمكن ربط ولي الأمر بأكثر من ابن، والطالب بسجله فقط.</p>
+        </div>
       </div>
-      <button class="btn outline" onclick="logout()" style="margin-top:0.8rem;">تسجيل الخروج</button>
+      <button class="btn" onclick="createAccount()">إنشاء الحساب</button>
+    </div>
+
+    <div id="accountAdminList" hidden class="card account-list-card">
+      <h3>حسابات المدرسة</h3>
+      <div id="usersList"></div>
+    </div>
+
+    <div class="account-page-actions">
+      <button class="btn outline" onclick="logout()">تسجيل الخروج</button>
     </div>
   </section>
 
