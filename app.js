@@ -647,8 +647,14 @@ function generateDiagnosticQuestions() {
 }
 function prepareDiagnosticAssessment(skill) {
   const field = document.getElementById('assessName');
+  const sourceStudentId = document.getElementById('analysisStudent')?.value || '';
+  const assessmentStudent = document.getElementById('assessmentStudent');
   if (field) field.value = skill;
   show('assessment');
+  if (assessmentStudent) {
+    const hasMatchingStudent = sourceStudentId && [...assessmentStudent.options].some(option => option.value === sourceStudentId);
+    assessmentStudent.value = hasMatchingStudent ? sourceStudentId : '';
+  }
   generateDiagnosticQuestions();
   field?.focus();
 }
