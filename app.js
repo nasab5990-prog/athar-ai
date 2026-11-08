@@ -1855,7 +1855,8 @@ async function loadSchoolUsers() {
         editor = `<div class="teacher-assignment-editor">
           <p class="note">التكليف الدراسي — المادة والصفوف التي يدرسها هذا المعلم</p>
           <label for="teacherSubject-${Number(user.id)}">المادة</label>
-          <select id="teacherSubject-${Number(user.id)}"><option value="">اختر المادة</option>${subjectOptions.map(subject=>`<option value="${esc(subject)}" ${user.teachingSubject===subject?'selected':''}>${esc(subject)}</option>`).join('')}</select>
+          <input id="teacherSubject-${Number(user.id)}" list="teacherSubjects-${Number(user.id)}" value="${esc(user.teachingSubject||'')}" placeholder="اكتب اسم المادة">
+          <datalist id="teacherSubjects-${Number(user.id)}">${subjectOptions.map(subject=>`<option value="${esc(subject)}"></option>`).join('')}</datalist>
           <label for="teacherGrades-${Number(user.id)}">الصفوف المسندة</label>
           <select id="teacherGrades-${Number(user.id)}" multiple size="4" style="min-height:85px">${grades.map(grade=>`<option value="${grade}" ${(user.teachingGrades||[]).map(String).includes(grade)?'selected':''}>الصف ${grade}</option>`).join('')}</select>
           <button class="btn small" onclick="saveTeachingAssignment(${Number(user.id)})">حفظ التكليف</button>
