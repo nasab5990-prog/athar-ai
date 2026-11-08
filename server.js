@@ -80,9 +80,13 @@ async function studentExistsInSchool(studentId,schoolId) {
   return Boolean(r.rowCount);
 }
 async function findStudentOwnedBy(user,studentId) {
-  const r=await query("SELECT id,owner_id FROM records WHERE school_id=$1 AND kind='student' AND payload->>'student_id'=$2 LIMIT 1",[user.school_id,studentId]);
+  const r=await query("SELECT id,owner_id,payload FROM records WHERE school_id=$1 AND kind='student' AND payload->>'student_id'=$2 LIMIT 1",[user.school_id,studentId]);
   const record=r.rows[0]; if (!record) return null;
-  if (user.role==='teacher' && (String(record.owner_id)===String(user.id) || (await assignedStudentIds(user)).includes(studentId))) return record;
+  if (user.role==='teacher') {
+    if (String(record.owner_id)===String(user.id) || (await assignedStudentIds(user)).includes(studentId)) return record;
+    const teaching=await teacherTeachingAssignment(user);
+    if (teaching.grades.includes(String(record.payload?.grade || ''))) return record;
+  }
   if (['senior_teacher','principal'].includes(user.role)) return record;
   return null;
 }
