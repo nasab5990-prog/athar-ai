@@ -140,6 +140,7 @@ async function syncRecord(kind, payload) {
   return api('/api/records', { method:'POST', body:JSON.stringify({ kind, payload }) });
 }
 async function loadRecords() {
+  await loadSchoolGradeSections();
   const result = await api('/api/records');
   const rows = result.records || [];
   students = rows.filter(x => x.kind === 'student').map(x => ({ ...x.payload, recordId:x.id }));
@@ -361,7 +362,7 @@ function show(id) {
   if (id === 'intervention') renderInt();
   if (id === 'studentProgress') renderStudentProgress();
   if (id === 'principalView') renderPrincipalView();
-  if (id === 'roles' && currentRole === 'principal') { loadSchoolGradeSections(); loadSchoolUsers(); }
+  if (id === 'roles' && currentRole === 'principal') { loadSchoolGradeSections().then(loadSchoolUsers); }
   if (id === 'reports') renderReports();
 }
 document.addEventListener('DOMContentLoaded', () => {
