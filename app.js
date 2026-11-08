@@ -385,6 +385,8 @@ function show(id) {
 }
 document.addEventListener('DOMContentLoaded', () => {
   ['assessmentSubject','assessmentGrade','assessmentSection','assessmentScope'].forEach(id=>document.getElementById(id)?.addEventListener('change',updateAssessmentScope));
+  document.getElementById('assessmentUnit')?.addEventListener('change',updateAssessmentCurriculumLessons);
+  document.getElementById('assessmentLesson')?.addEventListener('change',updateAssessmentCurriculumOutcome);
   document.getElementById('newGrade')?.addEventListener('change',()=>updateStudentSectionOptions('newGrade','newSection'));
   document.getElementById('bulkGrade')?.addEventListener('change',()=>updateStudentSectionOptions('bulkGrade','bulkSection'));
   document.getElementById('intGrade')?.addEventListener('change', updateCurriculumSubjects);
@@ -552,6 +554,59 @@ function updateAssessmentScope() {
   if(visibleStudents.some(student=>student.student_id===previousStudent))studentEl.value=previousStudent;
   studentEl.disabled=!visibleStudents.length;
   if(individual&&!chosenGrade)studentEl.innerHTML='<option value="">حدد المادة والصف والشعبة أولًا</option>';
+  updateAssessmentCurriculumUnits();
+}
+function updateAssessmentCurriculumUnits() {
+  const grade=document.getElementById('assessmentGrade')?.value||'';
+  const subject=document.getElementById('assessmentSubject')?.value||'';
+  const rows=ATHAR_CURRICULUM_CATALOG[grade]?.[subject]||{};
+  const unit=document.getElementById('assessmentUnit');
+  const lesson=document.getElementById('assessmentLesson');
+  const unitField=document.getElementById('assessmentUnitField');
+  const lessonField=document.getElementById('assessmentLessonField');
+  const outcomeField=document.getElementById('assessmentOutcomeField');
+  const outcome=document.getElementById('assessmentOutcome');
+  if(!unit||!lesson)return;
+  const units=Object.keys(rows);
+  const previous=unit.value;
+  unit.innerHTML='<option value="">اختر الوحدة</option>'+units.map(key=>'<option value="'+esc(key)+'">'+esc(rows[key].title||key)+'</option>').join('');
+  if(units.includes(previous))unit.value=previous;
+  if(unitField)unitField.hidden=!units.length;
+  updateAssessmentCurriculumLessons();
+  if(outcome)outcome.value='';
+  if(outcomeField)outcomeField.hidden=true;
+}
+function updateAssessmentCurriculumLessons() {
+  const grade=document.getElementById('assessmentGrade')?.value||'';
+  const subject=document.getElementById('assessmentSubject')?.value||'';
+  const unit=document.getElementById('assessmentUnit')?.value||'';
+  const lessons=ATHAR_CURRICULUM_CATALOG[grade]?.[subject]?.[unit]?.lessons||{};
+  const lesson=document.getElementById('assessmentLesson');
+  const lessonField=document.getElementById('assessmentLessonField');
+  const outcomeField=document.getElementById('assessmentOutcomeField');
+  const outcome=document.getElementById('assessmentOutcome');
+  if(!lesson)return;
+  const previous=lesson.value;
+  const keys=Object.keys(lessons);
+  lesson.innerHTML='<option value="">اختر الدرس</option>'+keys.map(key=>'<option value="'+esc(key)+'">'+esc(lessons[key].title||key)+'</option>').join('');
+  if(keys.includes(previous))lesson.value=previous;
+  if(lessonField)lessonField.hidden=!keys.length;
+  if(outcome)outcome.value='';
+  if(outcomeField)outcomeField.hidden=true;
+  updateAssessmentCurriculumOutcome();
+}
+function updateAssessmentCurriculumOutcome() {
+  const grade=document.getElementById('assessmentGrade')?.value||'';
+  const subject=document.getElementById('assessmentSubject')?.value||'';
+  const unit=document.getElementById('assessmentUnit')?.value||'';
+  const lesson=document.getElementById('assessmentLesson')?.value||'';
+  const record=ATHAR_CURRICULUM_CATALOG[grade]?.[subject]?.[unit]?.lessons?.[lesson];
+  const outcome=document.getElementById('assessmentOutcome');
+  const outcomeField=document.getElementById('assessmentOutcomeField');
+  if(outcome)outcome.value=record?.learning_outcome||'';
+  if(outcomeField)outcomeField.hidden=!record?.learning_outcome;
+  const skill=document.getElementById('assessName');
+  if(record?.title&&skill&&!skill.value.trim())skill.value=record.title;
 }
 function fillStudentSelects() {
   const selectors = ['assessmentStudent','interventionStudent','impactStudent','analysisStudent','assistantStudent','progressStudent','accountStudentIds'];
@@ -703,8 +758,11 @@ async function saveAssessment() {
   }
   if (!skill) return showToast('أدخل اسم التقويم أو المهارة أولًا.');
   const payload = {
-    student_id:studentId, student_name:student?.name || null, subject, grade, section, assessment_scope:scope, skill, name:skill,
-    total, correct, pct, date:new Date().toISOString(),
+    student_id:studentId, student_name:student?.name || null, subject, grade, section, assessment_scope:scope,
+    unit:document.getElementById('assessmentUnit')?.value||null,
+    lesson:document.getElementById('assessmentLesson')?.value||null,
+    learning_outcome:document.getElementById('assessmentOutcome')?.value||null,
+    skill, name:skill, total, correct, pct, date:new Date().toISOString(),
     diagnostic_questions:diagnosticQuestions,
     diagnostic_source:diagnosticQuestions.length ? 'قوالب إرشادية قابلة للتحرير مع تقدير المعلم لكل سؤال' : null,
     scoring_method:diagnosticQuestions.length ? 'متقن=100، متقن جزئيًا=50، يحتاج إلى دعم=0' : 'عدد الإجابات الصحيحة من الإجمالي'
