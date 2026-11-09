@@ -1199,7 +1199,10 @@ function useAnalysisForIntervention(analysis) {
   const draftFields = document.getElementById('interventionDraftFields');
   if (draftFields) draftFields.hidden = false;
   show('intervention');
-  showToast(ai ? 'نُقل التحليل، وأُعدت المسودة وفق بيانات الدرس. راجعها قبل الحفظ.' : 'نُقلت بيانات التحليل، لكن تعذر توليد خطة مخصصة؛ اضغط «اقتراح ذكي» لإعادة المحاولة قبل الحفظ.');
+  const aiPanel = document.getElementById('aiInterventionPanel');
+  if (aiPanel) aiPanel.hidden = false;
+  window.atharInterventionMode = 'ai';
+  showToast(ai ? 'نُقل التحليل، وأُعدت المسودة وفق بيانات الدرس. راجعها قبل الحفظ.' : 'بيانات الحالة جاهزة؛ اضغط «اقتراح ذكي» لتوليد خطة مخصصة قبل الحفظ.');
 }
 function renderAnalysis(analysis, destinationId) {
   const el = document.getElementById(destinationId);
