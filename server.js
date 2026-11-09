@@ -589,12 +589,15 @@ async function generateTeachingAI(analysis, observedErrors, body) {
     teacherObservation:safeText(observedErrors,1000),
     grade:safeText(body.grade,30),
     subject:safeText(body.subject,80),
+    unit:safeText(body.unit,120),
     lesson:safeText(body.lesson,120),
+    learningOutcome:safeText(body.learning_outcome,700),
+    activityDuration:['10','15','20'].includes(String(body.activity_duration))?String(body.activity_duration):'15',
     classSize:safeText(body.class_size,10),
-    deliveryMode:['offline','shared','digital'].includes(body.delivery_mode)?body.delivery_mode:'shared'
+    deliveryMode:['offline','shared','online'].includes(body.delivery_mode)?body.delivery_mode:'offline'
   };
-  const instructions='أنت مساعد تربوي للمعلم في سلطنة عُمان. حلّل بيانات التعلم المقدمة فقط. لا تخترع نتائج أو أدلة أو بيانات منهجية. فرّق بوضوح بين الدليل والفرضية، ولا تصف أي جذر بأنه سبب مؤكد ما لم تدعمه نتائج مباشرة. لا تشخّص الطالب ولا تصدر أحكامًا عليه. اقترح إجراءات صفية قابلة للتنفيذ في صف كبير، مع بدائل دون أجهزة أو باستخدام جهاز المعلم/الشاشة المشتركة. اجعل المعلم صاحب القرار. أخرج JSON صالحًا باللغة العربية بالمفاتيح: errorPattern (string), possibleRoots (array of objects {skill:string,evidence:string,confidence:string}), teacherChecks (array of strings), differentiated (object {support:string,expected:string,enrichment:string}), nextCheck (string), cautions (array of strings).';
-  const userPrompt=`حلّل هذه البيانات التعليمية المجمّعة والمجرّدة من أسماء الطلبة ومعرّفاتهم، وأعد JSON فقط:\n${JSON.stringify(evidenceOnly)}`;
+  const instructions='أنت مساعد تربوي خبير في تصميم التدخلات التعليمية في مدارس سلطنة عُمان. صمّم خطة علاجية تطبيقية مرتبطة مباشرة بالمهارة المستهدفة وملاحظة المعلم وناتج التعلم والدرس والمادة والوقت وإمكانات المدرسة. لا تستخدم أنشطة لمهارة أخرى؛ مثال: لا تقترح نصوص فهم مقروء إذا كانت المهارة تنسيق البريد الإلكتروني. ابدأ بتحويل ملاحظة المعلم إلى سلوك قابل للملاحظة، ثم صغ هدفًا محددًا قابلًا للقياس مرتبطًا بالمهارة نفسها، وحدد خط الأساس والهدف والزمن دون ضمان تحسن غير مثبت. اكتب 3 إلى 5 خطوات متدرجة قابلة للتنفيذ خلال الوقت المحدد، تتضمن نموذجًا من المعلم وممارسة موجهة وممارسة مستقلة وتحققًا قصيرًا. راع حجم الصف وإمكانات التنفيذ: offline يعني ورقة وسبورة دون أجهزة؛ shared يعني جهاز المعلم وشاشة مشتركة دون افتراض جهاز لكل طالب؛ online يسمح بأجهزة الطلبة. اجعل الأنشطة مرتبطة بمحتوى الدرس وناتج التعلم إن توفرا، ولا تخترع تفاصيل من الكتاب. أضف تكييفًا للمتعثر ومسارًا إثرائيًا. اجعل الهدف والخطوات محددة وليست عبارات عامة. أخرج JSON عربيًا فقط بالمفاتيح: errorPattern (string), goal (string), interventionSteps (array of strings), possibleRoots (array of objects {skill:string,evidence:string,confidence:string}), teacherChecks (array of strings), differentiated (object {support:string,expected:string,enrichment:string}), nextCheck (string), cautions (array of strings).';
+  const userPrompt=`صمّم تدخلًا تربويًا مخصصًا اعتمادًا على البيانات التالية فقط. يجب أن تتطابق الأنشطة مع المهارة والدرس والمادة، وأن تراعي الوقت والإمكانات. إذا كانت معلومة غير متاحة فلا تفترضها. أعد JSON فقط:\\n${JSON.stringify(evidenceOnly)}`;
   const endpoint=provider==='groq'?'https://api.groq.com/openai/v1/chat/completions':'https://api.openai.com/v1/responses';
   const headers={'Authorization':`Bearer ${provider==='groq'?process.env.GROQ_API_KEY:process.env.OPENAI_API_KEY}`,'Content-Type':'application/json'};
   const requestBody=provider==='groq'?{
@@ -630,13 +633,13 @@ async function generateTeachingAI(analysis, observedErrors, body) {
     status:'ok',
     provider:provider==='groq'?'Groq':'OpenAI API',
     errorPattern:safeText(parsed.errorPattern,700),
+    goal:safeText(parsed.goal,900),
+    interventionSteps:list(parsed.interventionSteps),
     possibleRoots:roots,
     teacherChecks:list(parsed.teacherChecks),
     differentiated:{
       support:safeText(parsed.differentiated?.support,700),
-      expected:Number.isFinite(Number(analysis.targetScore))
-        ? `المستوى المستهدف: رفع الإتقان من ${Number(analysis.targetScore)}% إلى 70% على الأقل خلال أسبوعين، ويُتحقق منه بقياس بعدي.`
-        : 'يُحدَّد المستوى المتوقع بعد تنفيذ تقويم تشخيصي قصير واعتماد خط أساس واضح.',
+      expected:safeText(parsed.differentiated?.expected,700),
       enrichment:safeText(parsed.differentiated?.enrichment,700)
     },
     nextCheck:safeText(parsed.nextCheck,500),
