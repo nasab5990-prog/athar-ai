@@ -775,25 +775,28 @@ async function saveAssessment() {
     renderAssess(); updateDashboard(); updateCycle(); updateAlerts();
     // حدّث الرادار مباشرة من نتيجة التقويم المحفوظة، دون اشتراط فتح تحليل سابق.
     const assessmentObservation = diagnosticQuestions
-      .map(item => item.note ? `${item.question}: ${item.note}` : '')
+      .map(item => {
+        const evidence = item.note ? ` — ملاحظة المعلم: ${item.note}` : '';
+        return item.score === 0 ? `يحتاج إلى دعم في: ${item.question}${evidence}` :
+          item.score === 50 ? `إتقان جزئي في: ${item.question}${evidence}` :
+          item.note ? `${item.question}${evidence}` : '';
+      })
       .filter(Boolean).join('؛ ');
     const radarRequest = {
       skill:displaySkillName(skill),
       student_id:studentId || '',
-      observedErrors:assessmentObservation
+      observedErrors:assessmentObservation || `نتيجة التقويم التشخيصي: ${pct}% من ${total} أسئلة.`
     };
     try {
       const refreshed = await api('/api/analysis', { method:'POST', body:JSON.stringify(radarRequest) });
+      if (!refreshed?.analysis) throw new Error('لم تصل بيانات التحليل من الخادم.');
       window.atharLastAnalysisRequest = radarRequest;
       window.atharLastAnalysisRecordId = refreshed.id || null;
-      const selectedStudentLabel = student
-        ? student.name
-        : '';
       const refreshedAnalysis = {
         ...refreshed.analysis,
         aiAssist:refreshed.aiAssist || null,
         analysisScope:studentId ? 'فردي' : 'صفي',
-        studentLabel:selectedStudentLabel
+        studentLabel:student?.name || ''
       };
       analyses.unshift({
         student_id:studentId || null,
@@ -804,10 +807,14 @@ async function saveAssessment() {
         recordId:refreshed.id
       });
       renderAnalysisHistory();
+      // الانتقال للرادار يستدعي إعادة تهيئة نموذج التقويم بعد نجاح الحفظ.
+      show('radar');
       renderAnalysis(refreshedAnalysis, 'analysisResult');
-      showToast('حُفظ التقويم وتحدّث رادار التعثر وخريطة الجذور تلقائيًا.');
+      showToast('حُفظ التقويم، وفُتح الرادار مع خريطة الجذور المحدّثة.');
     } catch (refreshError) {
-      showToast(`حُفظ التقويم، لكن تعذر تحديث الرادار تلقائيًا: ${refreshError.message}`);
+      // التقويم محفوظ بالفعل؛ أعد تهيئة الحقول حتى لا يبدو أن الحفظ لم يكتمل.
+      show('assessment');
+      showToast(`حُفظ التقويم، لكن تعذر عرض خريطة الجذور: ${refreshError.message}`);
     }
   } catch (error) { showToast(error.message); }
 }
