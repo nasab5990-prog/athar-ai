@@ -773,23 +773,41 @@ async function saveAssessment() {
     const el = document.getElementById('assessResult');
     if (el) el.innerHTML = `<strong>نسبة الإتقان: ${payload.pct}%</strong><p class="note">${student ? `الطالب: ${esc(student.name)}` : 'تقويم صفي غير مرتبط بطالب محدد'} — ${diagnosticQuestions.length ? `تقييم ${total} أسئلة؛ ${correct} متقنة بالكامل، مع احتساب الإتقان الجزئي.` : 'احتُسبت من الإجابات الصحيحة'} — حُفظ على الخادم.</p>`;
     renderAssess(); updateDashboard(); updateCycle(); updateAlerts();
-    const lastAnalysis = window.atharLastAnalysisRequest;
-    const sameStudentScope = lastAnalysis && String(lastAnalysis.student_id || '') === String(studentId || '');
-    const isPrerequisiteAssessment = lastAnalysis && sameStudentScope &&
-      (window.atharLastAnalysisPrerequisites || []).some(item => displaySkillName(item.skill) === displaySkillName(skill));
-    if (isPrerequisiteAssessment) {
-      try {
-        const refreshed = await api('/api/analysis', { method:'POST', body:JSON.stringify(lastAnalysis) });
-        const refreshedAnalysis = { ...refreshed.analysis, aiAssist:refreshed.aiAssist || null };
-        analyses.unshift({ student_id:lastAnalysis.student_id || null, skill:refreshedAnalysis.skill, result:refreshedAnalysis, date:new Date().toISOString(), recordId:refreshed.id });
-        renderAnalysisHistory();
-        renderAnalysis(refreshedAnalysis, 'analysisResult');
-        showToast('حُفظ التقويم وتحدّثت خريطة الجذور بالنتيجة الجديدة.');
-      } catch (refreshError) {
-        showToast(`حُفظ التقويم، لكن تعذر تحديث الخريطة تلقائيًا: ${refreshError.message}`);
-      }
-    } else {
-      showToast('تم حفظ التقويم مركزيًا.');
+    // حدّث الرادار مباشرة من نتيجة التقويم المحفوظة، دون اشتراط فتح تحليل سابق.
+    const assessmentObservation = diagnosticQuestions
+      .map(item => item.note ? `${item.question}: ${item.note}` : '')
+      .filter(Boolean).join('؛ ');
+    const radarRequest = {
+      skill:displaySkillName(skill),
+      student_id:studentId || '',
+      observedErrors:assessmentObservation
+    };
+    try {
+      const refreshed = await api('/api/analysis', { method:'POST', body:JSON.stringify(radarRequest) });
+      window.atharLastAnalysisRequest = radarRequest;
+      window.atharLastAnalysisRecordId = refreshed.id || null;
+      const selectedStudentLabel = student
+        ? student.name
+        : '';
+      const refreshedAnalysis = {
+        ...refreshed.analysis,
+        aiAssist:refreshed.aiAssist || null,
+        analysisScope:studentId ? 'فردي' : 'صفي',
+        studentLabel:selectedStudentLabel
+      };
+      analyses.unshift({
+        student_id:studentId || null,
+        student_name:student?.name || null,
+        skill:refreshedAnalysis.skill || skill,
+        result:refreshedAnalysis,
+        date:new Date().toISOString(),
+        recordId:refreshed.id
+      });
+      renderAnalysisHistory();
+      renderAnalysis(refreshedAnalysis, 'analysisResult');
+      showToast('حُفظ التقويم وتحدّث رادار التعثر وخريطة الجذور تلقائيًا.');
+    } catch (refreshError) {
+      showToast(`حُفظ التقويم، لكن تعذر تحديث الرادار تلقائيًا: ${refreshError.message}`);
     }
   } catch (error) { showToast(error.message); }
 }
