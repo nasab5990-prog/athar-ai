@@ -647,11 +647,16 @@ async function generateTeachingAI(analysis, observedErrors, body) {
 app.post('/api/analysis',requireAuth,requireRole('teacher','senior_teacher','principal'),aiAnalysisLimiter,asyncRoute(async(req,res)=>{
   try {
     const requestBody=req.body||{};
+    const assessmentRecordId=Number(requestBody.assessment_record_id)||null;
+    if(assessmentRecordId){
+      const sourceAssessment=await query('SELECT id,owner_id FROM records WHERE id=$1 AND school_id=$2 AND kind=$3',[assessmentRecordId,req.user.school_id,'assessment']);
+      if(!sourceAssessment.rows.length||(req.user.role==='teacher'&&String(sourceAssessment.rows[0].owner_id)!==String(req.user.id)))return res.status(400).json({message:'التقويم المرتبط غير موجود أو غير متاح لهذا الحساب.'});
+    }
     const result=await analyzeLearning(req.user,requestBody), studentId=safeText(requestBody.student_id,80)||null;
     let aiAssist={status:'not_configured'};
     try { aiAssist=await generateTeachingAI(result,requestBody.observedErrors,requestBody); }
     catch(error) { console.error('Teaching AI unavailable:',error.message); aiAssist={status:'unavailable',message:'تعذر إكمال التحليل الذكي الآن؛ ما زال التحليل القائم على نتائج التقويم متاحًا.'}; }
-    const saved=await query('INSERT INTO records(school_id,owner_id,kind,payload) VALUES($1,$2,$3,$4::jsonb) RETURNING id',[req.user.school_id,req.user.id,'analysis',JSON.stringify({student_id:studentId,assessment_record_id:Number(requestBody.assessment_record_id)||null,skill:result.skill,result,aiAssist,date:new Date().toISOString()})]);
+    const saved=await query('INSERT INTO records(school_id,owner_id,kind,payload) VALUES($1,$2,$3,$4::jsonb) RETURNING id',[req.user.school_id,req.user.id,'analysis',JSON.stringify({student_id:studentId,assessment_record_id:assessmentRecordId,skill:result.skill,result,aiAssist,date:new Date().toISOString()})]);
     await audit(req.user.id,'learning.analysis',result.skill);
     res.json({analysis:result,aiAssist,id:saved.rows[0].id});
   } catch(error) { res.status(error.status||500).json({message:error.status?error.message:'تعذر تحليل البيانات.'}); }
