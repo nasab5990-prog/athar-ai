@@ -651,7 +651,7 @@ app.post('/api/analysis',requireAuth,requireRole('teacher','senior_teacher','pri
     let aiAssist={status:'not_configured'};
     try { aiAssist=await generateTeachingAI(result,requestBody.observedErrors,requestBody); }
     catch(error) { console.error('Teaching AI unavailable:',error.message); aiAssist={status:'unavailable',message:'تعذر إكمال التحليل الذكي الآن؛ ما زال التحليل القائم على نتائج التقويم متاحًا.'}; }
-    const saved=await query('INSERT INTO records(school_id,owner_id,kind,payload) VALUES($1,$2,$3,$4::jsonb) RETURNING id',[req.user.school_id,req.user.id,'analysis',JSON.stringify({student_id:studentId,skill:result.skill,result,aiAssist,date:new Date().toISOString()})]);
+    const saved=await query('INSERT INTO records(school_id,owner_id,kind,payload) VALUES($1,$2,$3,$4::jsonb) RETURNING id',[req.user.school_id,req.user.id,'analysis',JSON.stringify({student_id:studentId,assessment_record_id:Number(requestBody.assessment_record_id)||null,skill:result.skill,result,aiAssist,date:new Date().toISOString()})]);
     await audit(req.user.id,'learning.analysis',result.skill);
     res.json({analysis:result,aiAssist,id:saved.rows[0].id});
   } catch(error) { res.status(error.status||500).json({message:error.status?error.message:'تعذر تحليل البيانات.'}); }
