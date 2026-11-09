@@ -914,7 +914,13 @@ function generateDiagnosticQuestions() {
   const curriculum = curriculumDiagnosticQuestionSet();
   const curriculumRecord = curriculum?.record || null;
   const curriculumQuestions = curriculum?.questions || null;
-  const questions = curriculumQuestions || diagnosticQuestionSet(skill);
+  const outcomeText = curriculumRecord?.learning_outcome || '';
+  const outcomeQuestions = curriculumRecord && !curriculumQuestions ? [
+    {question:`نفّذ مهمة تطبيقية تُظهر تحقق مخرج التعلم الآتي: «${outcomeText}».`,guide:'يراجع المعلم أداء المتعلم في عناصر مخرج التعلم المحدد، ويضيف أمثلة من نشاط المشروع في الكتاب.'},
+    {question:`اشرح الخطوات التي اتبعتها لتطبيق مخرج التعلم: «${outcomeText}».`,guide:'يتحقق المعلم من فهم المتعلم للخطوات وقدرته على تنفيذها بنفسه.'},
+    {question:`اعرض ناتج عملك، وحدد كيف يثبت تحقق مخرج التعلم: «${outcomeText}».`,guide:'يربط المتعلم بين الناتج ومخرج التعلم، ويقدم دليلًا عمليًا يمكن للمعلم ملاحظته.'}
+  ] : null;
+  const questions = curriculumQuestions || outcomeQuestions || diagnosticQuestionSet(skill);
   const panel = document.getElementById('diagnosticQuestions');
   if (!panel) return;
   panel.hidden = false;
