@@ -1202,7 +1202,8 @@ function useAnalysisForIntervention(analysis) {
   const aiPanel = document.getElementById('aiInterventionPanel');
   if (aiPanel) aiPanel.hidden = false;
   window.atharInterventionMode = 'ai';
-  showToast(ai ? 'نُقل التحليل، وأُعدت المسودة وفق بيانات الدرس. راجعها قبل الحفظ.' : 'بيانات الحالة جاهزة؛ اضغط «اقتراح ذكي» لتوليد خطة مخصصة قبل الحفظ.');
+  const hasCustomPlan = !!(ai?.goal && ai?.interventionSteps?.length);
+  showToast(hasCustomPlan ? 'نُقل التحليل، وأُعدت المسودة وفق بيانات الدرس. راجعها قبل الحفظ.' : 'بيانات الحالة جاهزة؛ اضغط «اقتراح ذكي» لتوليد خطة مخصصة قبل الحفظ.');
 }
 function renderAnalysis(analysis, destinationId) {
   const el = document.getElementById(destinationId);
