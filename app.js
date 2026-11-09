@@ -1016,6 +1016,7 @@ function renderAssess() {
       window.atharLastAnalysisRequest = {
         skill:result.skill || linked.skill || '',
         student_id:linked.student_id || '',
+        assessment_record_id:linked.assessment_record_id || null,
         observedErrors:result.observedErrors || ''
       };
       show('radar');
@@ -1108,6 +1109,7 @@ function renderAnalysisHistory() {
       window.atharLastAnalysisRequest = {
         skill: result.skill || item.skill || '',
         student_id: item.student_id || '',
+        assessment_record_id:item.assessment_record_id || null,
         observedErrors: result.observedErrors || ''
       };
       renderAnalysis(result, 'analysisResult');
