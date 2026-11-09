@@ -1128,6 +1128,7 @@ function useAnalysisForIntervention(analysis) {
   const roots = analysis.rootCandidates || analysis.likelyRoots || analysis.prerequisiteEvidence || [];
   const request = window.atharLastAnalysisRequest || {};
   const studentId = request.student_id || '';
+  const sourceAssessment = assessments.find(item => String(item.recordId || '') === String(request.assessment_record_id || '')) || null;
   const goal = score === null
     ? 'تنفيذ تقويم تشخيصي قصير لتحديد مستوى إتقان المهارة، ثم اعتماد هدف قابل للقياس بناءً على النتيجة.'
     : `رفع إتقان مهارة ${skill} من ${score}% إلى 70% على الأقل خلال أسبوعين، مع متابعة التقدم بقياس قصير.`;
@@ -1161,12 +1162,45 @@ function useAnalysisForIntervention(analysis) {
   setValue('intSteps', [...new Set(steps)].join('\n'));
   if (support || expected) setValue('intSteps', [...new Set(steps)].join('\n') + (support ? `\n\nمستوى الدعم: ${support}` : '') + (expected ? `\nمستوى المتوقع: ${expected}` : ''));
   setValue('intEnrich', enrichment);
+  setValue('aiSkill', skill);
+  setValue('intObservedErrors', request.observedErrors || analysis.observedErrors || '');
   if (studentId) setValue('interventionStudent', studentId);
+  // استعادة بيانات المنهج من التقويم المرتبط متى كانت ضمن تكليفات المعلم.
+  if (sourceAssessment?.grade) {
+    const gradeField = document.getElementById('intGrade');
+    if (gradeField && [...gradeField.options].some(option => String(option.value) === String(sourceAssessment.grade))) {
+      gradeField.value = String(sourceAssessment.grade);
+      updateCurriculumSubjects();
+      const subjectField = document.getElementById('intSubject');
+      if (subjectField && [...subjectField.options].some(option => option.value === sourceAssessment.subject)) {
+        subjectField.value = sourceAssessment.subject;
+        updateCurriculumUnits();
+        if (sourceAssessment.unit && [...document.getElementById('intUnit').options].some(option => option.value === sourceAssessment.unit)) {
+          document.getElementById('intUnit').value = sourceAssessment.unit;
+          updateCurriculumLessons();
+          if (sourceAssessment.lesson && [...document.getElementById('intLesson').options].some(option => option.value === sourceAssessment.lesson)) {
+            document.getElementById('intLesson').value = sourceAssessment.lesson;
+            updateCurriculumOutcome();
+          }
+        }
+      }
+    }
+  }
+  const sourceSummary = document.getElementById('intSourceSummary');
+  if (sourceSummary) {
+    const sourceScore = score === null ? 'لا توجد نسبة إتقان مسجلة' : `أحدث إتقان ${score}%`;
+    sourceSummary.textContent = `مصدر المسودة: تحليل الرادار • ${skill} • ${sourceScore}${sourceAssessment ? ` • ${sourceAssessment.subject || ''} — الصف ${sourceAssessment.grade || ''} / الشعبة ${sourceAssessment.section || ''}` : ''}`;
+    sourceSummary.hidden = false;
+  }
   window.atharSuggestedIntervention = {
     analysisId:window.atharLastAnalysisRecordId || null,
+    assessmentRecordId:request.assessment_record_id || null,
     skill,
     studentId:studentId || null
   };
+  window.atharAiDraftReady = true;
+  const draftFields = document.getElementById('interventionDraftFields');
+  if (draftFields) draftFields.hidden = false;
   show('intervention');
   showToast('نُقل التحليل إلى مسودة التدخل. راجع الهدف والخطوات قبل الحفظ.');
 }
@@ -1622,6 +1656,7 @@ function resetInterventionForm() {
   if (cancelButton) cancelButton.hidden = true;
   editingInterventionId = null;
   window.atharSuggestedIntervention = null;
+  const sourceSummary = document.getElementById('intSourceSummary'); if (sourceSummary) { sourceSummary.textContent = ''; sourceSummary.hidden = true; }
   window.atharAiDraftReady = false;
   window.atharInterventionMode = null;
   const aiPanel = document.getElementById('aiInterventionPanel'); if (aiPanel) aiPanel.hidden = true;
@@ -1668,7 +1703,8 @@ async function saveIntervention() {
       activity_duration:Number(document.getElementById('activityDuration')?.value || existing?.activity_duration || 15),
       date:existing?.date || new Date().toISOString(),
       suggestion_source:existing?.suggestion_source || (suggestion && suggestion.skill === displaySkillName(skill) && suggestion.studentId === studentId ? 'athar-analysis' : 'teacher'),
-      analysis_record_id:existing?.analysis_record_id ?? (suggestion && suggestion.skill === displaySkillName(skill) && suggestion.studentId === studentId ? suggestion.analysisId : null)
+      analysis_record_id:existing?.analysis_record_id ?? (suggestion && suggestion.skill === displaySkillName(skill) && suggestion.studentId === studentId ? suggestion.analysisId : null),
+      assessment_record_id:existing?.assessment_record_id ?? (suggestion && suggestion.skill === displaySkillName(skill) && suggestion.studentId === studentId ? suggestion.assessmentRecordId : null)
     };
     let result;
     if (editingInterventionId) {
