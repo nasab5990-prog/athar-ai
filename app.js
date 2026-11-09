@@ -785,6 +785,7 @@ async function saveAssessment() {
     const radarRequest = {
       skill:displaySkillName(skill),
       student_id:studentId || '',
+      assessment_record_id:result.id,
       observedErrors:assessmentObservation || `نتيجة التقويم التشخيصي: ${pct}% من ${total} أسئلة.`
     };
     try {
@@ -801,6 +802,7 @@ async function saveAssessment() {
       analyses.unshift({
         student_id:studentId || null,
         student_name:student?.name || null,
+        assessment_record_id:result.id,
         skill:refreshedAnalysis.skill || skill,
         result:refreshedAnalysis,
         date:new Date().toISOString(),
@@ -999,8 +1001,28 @@ function renderAssess() {
     const total = Number(a.total || questions.length || 0);
     const correct = Number(a.correct || 0);
     const scoreDetails = `<p class="note">الإجمالي: ${total || 'غير مسجل'} • الإجابات الصحيحة بالكامل: ${correct} • طريقة الاحتساب: ${esc(a.scoring_method || 'الطريقة السابقة')}</p>`;
-    return `<details class="card saved-assessment-card" style="margin-top:.6rem"><summary style="cursor:pointer"><strong>${esc(displaySkillName(a.skill || a.name))}</strong> — ${Number(a.pct)}%<small> • ${esc(a.student_name || 'تقويم صفي')} • ${esc(formatDate(a.date))} • فتح التفاصيل</small></summary><div class="secondary-tools-content">${scoreDetails}${questionDetails}</div></details>`;
+    const linkedAnalysis = analyses.find(item => String(item.assessment_record_id || '') === String(a.recordId || ''));
+    const analysisAction = linkedAnalysis
+      ? '<button type="button" class="btn small outline assessment-radar-link" data-assessment-analysis="' + esc(linkedAnalysis.recordId) + '">عرض خريطة الجذور المرتبطة</button>'
+      : '<p class="note">لا يوجد تحليل رادار مرتبط بهذا التقويم. التقويمات السابقة لهذا التحديث لا تتضمن هذا الربط.</p>';
+    return `<details class="card saved-assessment-card" style="margin-top:.6rem"><summary style="cursor:pointer"><strong>${esc(displaySkillName(a.skill || a.name))}</strong> — ${Number(a.pct)}%<small> • ${esc(a.student_name || 'تقويم صفي')} • ${esc(formatDate(a.date))} • فتح التفاصيل</small></summary><div class="secondary-tools-content">${scoreDetails}${questionDetails}${analysisAction}</div></details>`;
   }).join('') || '<p class="note">لا توجد تقويمات محفوظة بعد.</p>';
+  el.querySelectorAll('[data-assessment-analysis]').forEach(button => {
+    button.addEventListener('click', () => {
+      const linked = analyses.find(item => String(item.recordId || '') === String(button.dataset.assessmentAnalysis || ''));
+      if (!linked) return showToast('تعذر العثور على تحليل الرادار المرتبط بهذا التقويم.');
+      const result = linked.result || linked.analysis || {};
+      window.atharLastAnalysisRecordId = linked.recordId || null;
+      window.atharLastAnalysisRequest = {
+        skill:result.skill || linked.skill || '',
+        student_id:linked.student_id || '',
+        observedErrors:result.observedErrors || ''
+      };
+      show('radar');
+      renderAnalysis({ ...result, aiAssist:linked.aiAssist || result.aiAssist || null }, 'analysisResult');
+      showToast('تم فتح خريطة الجذور المرتبطة بالتقويم.');
+    });
+  });
   fillStudentSelects();
 }
 function formatDate(value) {
