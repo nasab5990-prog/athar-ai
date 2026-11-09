@@ -1614,7 +1614,7 @@ async function suggestIntervention() {
       ...ai.interventionSteps,
       ...(ai.teacherChecks || []),
       ai.nextCheck ? `التحقق من التقدم: ${ai.nextCheck}` : ''
-    ].filter(Boolean).join('\\n');
+    ].filter(Boolean).join('\n');
     document.getElementById('intEnrich').value = ai.differentiated?.enrichment || '';
     window.atharSuggestedIntervention = {
       analysisId:response.id,
