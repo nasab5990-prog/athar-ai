@@ -786,7 +786,15 @@ async function saveAssessment() {
       skill:displaySkillName(skill),
       student_id:studentId || '',
       assessment_record_id:result.id,
-      observedErrors:assessmentObservation || `نتيجة التقويم التشخيصي: ${pct}% من ${total} أسئلة.`
+      observedErrors:assessmentObservation || `نتيجة التقويم التشخيصي: ${pct}% من ${total} أسئلة.`,
+      grade,
+      subject,
+      unit:payload.unit || '',
+      lesson:payload.lesson || '',
+      learning_outcome:payload.learning_outcome || '',
+      delivery_mode:document.getElementById('activityMode')?.value || 'offline',
+      activity_duration:document.getElementById('activityDuration')?.value || '15',
+      class_size:String(students.filter(item => String(gradeNumber(item.grade)) === String(grade) && String(item.section || '') === String(section)).length || 1)
     };
     try {
       const refreshed = await api('/api/analysis', { method:'POST', body:JSON.stringify(radarRequest) });
@@ -1131,28 +1139,15 @@ function useAnalysisForIntervention(analysis) {
   const request = window.atharLastAnalysisRequest || {};
   const studentId = request.student_id || '';
   const sourceAssessment = assessments.find(item => String(item.recordId || '') === String(request.assessment_record_id || '')) || null;
-  const goal = score === null
-    ? 'تنفيذ تقويم تشخيصي قصير لتحديد مستوى إتقان المهارة، ثم اعتماد هدف قابل للقياس بناءً على النتيجة.'
-    : `رفع إتقان مهارة ${skill} من ${score}% إلى 70% على الأقل خلال أسبوعين، مع متابعة التقدم بقياس قصير.`;
-  const rootChecks = roots.map(root => {
-    const name = displaySkillName(root.skill);
-    return root.score === null || root.score === undefined
-      ? `تحقق من مهارة ${name} بتقويم قصير؛ لا توجد نتيجة مسجلة لها، لذلك لا تُعد سببًا مؤكدًا للتعثر.`
-      : Number(root.score) < 70
-        ? `راجع مهارة ${name}؛ أظهرت النتائج مستوى ${Number(root.score)}%، ثم تحقق من عينة الإجابات قبل اعتمادها فجوة.`
-        : `تحقق من استمرار إتقان مهارة ${name}؛ لا تظهر فجوة في النتائج المتاحة (${Number(root.score)}%).`;
-  });
   const ai = analysis.aiAssist && analysis.aiAssist.status === 'ok' ? analysis.aiAssist : null;
+  const goal = ai?.goal || '';
   const steps = [
-    ...rootChecks,
-    ...(analysis.recommendations || []),
+    ai?.errorPattern ? `نمط الصعوبة الذي ينبغي معالجته: ${ai.errorPattern}` : '',
+    ...(ai?.interventionSteps || []),
     ...(ai?.teacherChecks || []),
-    ai?.nextCheck ? `تحقق لاحق مقترح: ${ai.nextCheck}` : '',
-    'نفّذ مهمة تحقق قصيرة في نهاية التدخل، وسجّل النتيجة لمقارنتها بخط الأساس.'
+    ai?.nextCheck ? `التحقق من التقدم: ${ai.nextCheck}` : ''
   ].filter(Boolean);
-  const enrichment = ai?.differentiated?.enrichment || (score !== null && score >= 70
-    ? 'قدّم مهمة أعمق تتطلب التفسير أو الاستدلال أو نقل المهارة إلى سياق جديد، مع متابعة ثبات الإتقان.'
-    : 'بعد تقدم المتعلم، انتقل تدريجيًا إلى مهمة أكثر تحديًا، مع إبقاء الدعم متاحًا عند الحاجة.');
+  const enrichment = ai?.differentiated?.enrichment || '';
   const support = ai?.differentiated?.support || '';
   const expected = ai?.differentiated?.expected || '';
   const setValue = (id, value) => {
@@ -1204,7 +1199,7 @@ function useAnalysisForIntervention(analysis) {
   const draftFields = document.getElementById('interventionDraftFields');
   if (draftFields) draftFields.hidden = false;
   show('intervention');
-  showToast('نُقل التحليل إلى مسودة التدخل. راجع الهدف والخطوات قبل الحفظ.');
+  showToast(ai ? 'نُقل التحليل، وأُعدت المسودة وفق بيانات الدرس. راجعها قبل الحفظ.' : 'نُقلت بيانات التحليل، لكن تعذر توليد خطة مخصصة؛ اضغط «اقتراح ذكي» لإعادة المحاولة قبل الحفظ.');
 }
 function renderAnalysis(analysis, destinationId) {
   const el = document.getElementById(destinationId);
@@ -1588,34 +1583,39 @@ async function suggestIntervention() {
   try {
     const response = await api('/api/analysis', {
       method:'POST',
-      body:JSON.stringify({ skill, student_id:studentId, observedErrors })
+      body:JSON.stringify({
+        skill, student_id:studentId, observedErrors,
+        assessment_record_id:window.atharSuggestedIntervention?.assessmentRecordId || window.atharLastAnalysisRequest?.assessment_record_id || null,
+        grade:document.getElementById('intGrade')?.value || '',
+        subject:document.getElementById('intSubject')?.value || '',
+        unit:document.getElementById('intUnit')?.value || '',
+        lesson:document.getElementById('intLesson')?.value || '',
+        learning_outcome:document.getElementById('intOutcome')?.value || '',
+        delivery_mode:document.getElementById('activityMode')?.value || 'offline',
+        activity_duration:document.getElementById('activityDuration')?.value || '15',
+        class_size:String(students.filter(item => String(gradeNumber(item.grade)) === String(document.getElementById('intGrade')?.value || '')).length || 1)
+      })
     });
     const analysis = response.analysis;
-    const score = analysis.targetScore;
-    const goal = score === null
-      ? 'تنفيذ تقويم تشخيصي قصير لتحديد مستوى المهارة، ثم وضع هدف قابل للقياس بناءً على النتيجة.'
-      : `رفع إتقان ${displaySkillName(analysis.skill)} من ${score}% إلى 70% على الأقل خلال أسبوعين، مع متابعة تقدم الطالب أسبوعيًا.`;
-    const rootSteps = (analysis.likelyRoots || []).map(root =>
-      `تحقق أولًا من مهارة ${displaySkillName(root.skill)}؛ أظهرت البيانات مستوى ${root.score}%، ثم قدم نشاطًا قصيرًا لمعالجة الفجوة.`
-    );
-    const steps = [
-      ...rootSteps,
-      ...(analysis.recommendations || []),
-      'نفّذ سؤال تحقق قصيرًا في نهاية كل حصة، وسجّل النتيجة لمقارنة التقدم.'
-    ];
-    const enrichment = score !== null && score >= 70
-      ? 'قدّم نصًا أو مهمة أكثر عمقًا تتضمن الاستنتاج وتبرير الإجابة بالدليل، مع استمرار التحقق من ثبات الإتقان.'
-      : 'بعد تحسن الأداء، انتقل تدريجيًا إلى نصوص أطول وأسئلة استنتاجية، مع إبقاء الدعم متاحًا عند الحاجة.';
-
+    const ai = response.aiAssist && response.aiAssist.status === 'ok' ? response.aiAssist : null;
+    if (!ai?.goal || !Array.isArray(ai.interventionSteps) || !ai.interventionSteps.length) {
+      throw new Error(response.aiAssist?.message || 'لم ينتج المساعد خطة تدخل مخصصة. تحقق من اتصال خدمة الذكاء الاصطناعي ثم أعد المحاولة.');
+    }
     document.getElementById('intSkill').value = displaySkillName(analysis.skill);
     window.atharAiDraftReady = true;
     const draftFields = document.getElementById('interventionDraftFields');
     if (draftFields) draftFields.hidden = false;
-    document.getElementById('intGoal').value = goal;
-    document.getElementById('intSteps').value = [...new Set(steps)].join('\n');
-    document.getElementById('intEnrich').value = enrichment;
+    document.getElementById('intGoal').value = ai.goal;
+    document.getElementById('intSteps').value = [
+      ai.errorPattern ? `نمط الصعوبة: ${ai.errorPattern}` : '',
+      ...ai.interventionSteps,
+      ...(ai.teacherChecks || []),
+      ai.nextCheck ? `التحقق من التقدم: ${ai.nextCheck}` : ''
+    ].filter(Boolean).join('\\n');
+    document.getElementById('intEnrich').value = ai.differentiated?.enrichment || '';
     window.atharSuggestedIntervention = {
       analysisId:response.id,
+      assessmentRecordId:window.atharLastAnalysisRequest?.assessment_record_id || null,
       skill:displaySkillName(analysis.skill),
       studentId:studentId || null
     };
