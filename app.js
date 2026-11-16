@@ -1862,7 +1862,7 @@ function printWorksheet() {
   win.document.write(`<html lang="ar" dir="rtl"><meta charset="utf-8"><title>ورقة تدخل — أثَر</title><body style="font-family:Arial,sans-serif;padding:2rem"><h2>ورقة تدخل تعليمية — منصة أثَر</h2><h3>${esc(displaySkillName(skill))}</h3><p><strong>الهدف:</strong> ${esc(goal)}</p><p><strong>الخطوات:</strong><br>${escapeLine(steps)}</p></body></html>`);
   win.document.close(); win.focus(); win.print();
 }
-async async function calcImpact() {
+async function calcImpact() {
   const beforeRaw = document.getElementById('before')?.value ?? '';
   const afterRaw = document.getElementById('after')?.value ?? '';
   if (beforeRaw.trim() === '' || afterRaw.trim() === '') return showToast('أدخل نتيجة القياس قبل التدخل وبعده.');
