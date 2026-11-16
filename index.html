@@ -13,8 +13,8 @@
 <div id="loginScreen">
   <div class="card" style="width:90%;max-width:440px;text-align:center;">
     <h1 style="color:var(--primary);">أثَر</h1>
-    <p class="subtitle" id="loginSubtitle">تسجيل الدخول إلى منصة أَثَر</p>
-    <div id="otpLoginArea">
+    <p class="subtitle" id="loginSubtitle">اختبار أدوار المنصة ببيانات تجريبية</p>
+    <div id="otpLoginArea" hidden>
       <label for="loginEmail" style="display:block;text-align:right;">البريد الإلكتروني الرسمي</label>
       <input type="email" id="loginEmail" placeholder="name@moe.om أو name@edu.moe.om" autocomplete="email" required>
       <button class="btn" id="requestCodeBtn" onclick="requestLoginCode()" style="width:100%;">إرسال رمز التحقق</button>
@@ -24,7 +24,7 @@
         <button class="btn" id="verifyCodeBtn" onclick="verifyLoginCode()" style="width:100%;">تحقق وتسجيل الدخول</button>
       </div>
     </div>
-    <div id="demoLoginArea" hidden>
+    <div id="demoLoginArea">
       <label for="demoPersona" style="display:block;text-align:right;">اختر شخصية الاختبار</label>
       <select id="demoPersona">
         <option value="teacher">المعلم التجريبي</option>
@@ -36,7 +36,7 @@
       <p class="note">دخول مباشر للعرض والتجربة — جميع البيانات اصطناعية ومعزولة.</p>
       <button class="btn" id="demoLoginBtn" onclick="demoLogin()" style="width:100%;">الدخول إلى بيئة الاختبار</button>
     </div>
-    <p id="loginModeNote" style="font-size:.82rem;color:var(--text-light);margin-top:.8rem;">يجري التحقق من وضع الدخول…</p>
+    <p id="loginModeNote" style="font-size:.82rem;color:var(--text-light);margin-top:.8rem;">بيئة اختبار معزولة ببيانات اصطناعية. لا تدخل بيانات حقيقية للطلبة.</p>
     <p id="authMessage" role="status" aria-live="polite"></p>
   </div>
 </div>
