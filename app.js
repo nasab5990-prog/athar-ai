@@ -1862,9 +1862,12 @@ function printWorksheet() {
   win.document.write(`<html lang="ar" dir="rtl"><meta charset="utf-8"><title>ورقة تدخل — أثَر</title><body style="font-family:Arial,sans-serif;padding:2rem"><h2>ورقة تدخل تعليمية — منصة أثَر</h2><h3>${esc(displaySkillName(skill))}</h3><p><strong>الهدف:</strong> ${esc(goal)}</p><p><strong>الخطوات:</strong><br>${escapeLine(steps)}</p></body></html>`);
   win.document.close(); win.focus(); win.print();
 }
-async function calcImpact() {
-  const before = Number(document.getElementById('before')?.value);
-  const after = Number(document.getElementById('after')?.value);
+async async function calcImpact() {
+  const beforeRaw = document.getElementById('before')?.value ?? '';
+  const afterRaw = document.getElementById('after')?.value ?? '';
+  if (beforeRaw.trim() === '' || afterRaw.trim() === '') return showToast('أدخل نتيجة القياس قبل التدخل وبعده.');
+  const before = Number(beforeRaw);
+  const after = Number(afterRaw);
   const studentId = document.getElementById('impactStudent')?.value || null;
   const interventionId = document.getElementById('impactIntervention')?.value || '';
   if (!Number.isFinite(before) || !Number.isFinite(after) || before < 0 || after < 0 || before > 100 || after > 100) return showToast('أدخل نسبتين من 0 إلى 100.');
@@ -1877,9 +1880,14 @@ async function calcImpact() {
   const tool = document.getElementById('impactTool')?.value.trim() || '';
   const beforeDate = document.getElementById('impactBeforeDate')?.value || '';
   const afterDate = document.getElementById('impactAfterDate')?.value || '';
+  if (beforeDate && afterDate && afterDate < beforeDate) return showToast('تاريخ القياس البعدي يجب أن يكون في يوم القياس القبلي أو بعده.');
   const activityMode = document.getElementById('impactActivityMode')?.value || '';
-  const sessionsPlanned = Number(document.getElementById('impactSessionsPlanned')?.value || 0);
-  const sessionsDone = Number(document.getElementById('impactSessionsDone')?.value || 0);
+  const plannedRaw = document.getElementById('impactSessionsPlanned')?.value || '';
+  const doneRaw = document.getElementById('impactSessionsDone')?.value || '';
+  const sessionsPlanned = plannedRaw === '' ? 0 : Number(plannedRaw);
+  const sessionsDone = doneRaw === '' ? 0 : Number(doneRaw);
+  if ((plannedRaw !== '' && (!Number.isInteger(sessionsPlanned) || sessionsPlanned < 1 || sessionsPlanned > 30)) || (doneRaw !== '' && (!Number.isInteger(sessionsDone) || sessionsDone < 0 || sessionsDone > 30))) return showToast('تحقق من عدد الجلسات؛ المخطط من 1 إلى 30 والمنفذ من 0 إلى 30.');
+  if (sessionsPlanned && sessionsDone > sessionsPlanned) return showToast('عدد الجلسات المنفذة لا يمكن أن يتجاوز الجلسات المخططة.');
   const evidenceNote = document.getElementById('impactEvidenceNote')?.value.trim() || '';
   const followupRaw = document.getElementById('impactFollowup')?.value;
   const followup = followupRaw === '' || followupRaw === undefined ? null : Number(followupRaw);
