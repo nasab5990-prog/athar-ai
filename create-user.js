@@ -7,17 +7,18 @@ const name = (nameArg || '').trim();
 const role = roleArg || '';
 const school = (schoolArg || '').trim();
 const studentIds = studentArgs.join(',').split(',').map(s => s.trim()).filter(Boolean);
-const roles = ['teacher', 'senior_teacher', 'principal', 'parent', 'student'];
+const roles = ['teacher', 'senior_teacher', 'principal', 'supervisor', 'parent', 'student'];
+const supervisorSchoolIds = role === 'supervisor' ? [...new Set([school, ...studentIds])] : [];
 
 async function main() {
-  if (!email || !name || !school || !roles.includes(role) || school.toUpperCase() === 'DEMO-SCHOOL') {
+  if (!email || !name || !school || !roles.includes(role) || school.toUpperCase().startsWith('DEMO-SCHOOL')) {
     throw new Error('Usage: npm run create-user -- user@moe.om "Name" teacher SCHOOL_ID (must not be DEMO-SCHOOL)');
   }
   if (!['moe.om', 'edu.moe.om'].includes(email.split('@')[1])) {
     throw new Error('Only @moe.om and @edu.moe.om email domains are allowed.');
   }
-  if ((role === 'parent' && !studentIds.length) || (role === 'student' && studentIds.length !== 1) || (['principal','senior_teacher'].includes(role) && studentIds.length)) {
-    throw new Error('Parent requires linked students; student requires exactly one; principal and senior_teacher do not take student assignments.');
+  if ((role === 'parent' && !studentIds.length) || (role === 'student' && studentIds.length !== 1) || (['principal','senior_teacher','supervisor'].includes(role) && role !== 'supervisor' && studentIds.length)) {
+    throw new Error('Parent requires linked students; student requires exactly one; principal and senior_teacher do not take student assignments. For supervisor, pass school IDs after the primary school ID.');
   }
 
   for (const studentId of studentIds) {
@@ -48,7 +49,17 @@ async function main() {
         );
       }
     }
-    console.log(`Created ${role} account for ${email} in school ${school}.`);
+    if (role === 'supervisor') {
+      for (const schoolId of supervisorSchoolIds) {
+        await client.query(
+          'INSERT INTO supervisor_schools(user_id,school_id,school_name) VALUES($1,$2,$2) ON CONFLICT(user_id,school_id) DO NOTHING',
+          [userId, schoolId]
+        );
+      }
+    }
+    console.log(role === 'supervisor'
+      ? `Created supervisor account for ${email}; read-only scope: ${supervisorSchoolIds.join(', ')}.`
+      : `Created ${role} account for ${email} in school ${school}.`);
   });
 }
 
