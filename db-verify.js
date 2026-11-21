@@ -3,6 +3,7 @@ import { pool } from './database.js';
 
 const expected = {
   users: ['id','email','name','role','school_id','student_id','active','created_at','teaching_subject','teaching_grades'],
+  supervisor_schools: ['user_id','school_id','school_name','created_at'],
   otp_codes: ['email','code_hash','expires_at','attempts','created_at'],
   audit_log: ['id','user_id','event','details','created_at'],
   records: ['id','school_id','owner_id','kind','payload','created_at'],
@@ -34,7 +35,7 @@ async function main() {
     "SELECT indexname FROM pg_indexes WHERE schemaname=current_schema()"
   );
   const indexNames = new Set(indexes.rows.map(row => row.indexname));
-  for (const name of ['idx_records_school_kind','idx_records_owner','idx_records_student_id','idx_account_students_student','idx_teacher_students_student','idx_teacher_teaching_assignments_school']) {
+  for (const name of ['idx_records_school_kind','idx_records_owner','idx_records_student_id','idx_account_students_student','idx_teacher_students_student','idx_teacher_teaching_assignments_school','idx_supervisor_schools_school']) {
     if (!indexNames.has(name)) problems.push(`missing index ${name}`);
   }
 
