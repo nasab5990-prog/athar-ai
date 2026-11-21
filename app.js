@@ -448,6 +448,8 @@ function applyTeacherAssignmentFilters() {
 function applyRoleUI() {
   const allowed = roleSections[currentRole] || [];
   const studentMenuTitle = document.querySelector('#nav-students')?.previousElementSibling;
+  const dashboardLink=document.querySelector('.sidebar a[data-section="dashboard"]');
+  if (dashboardLink) dashboardLink.textContent=currentRole==='supervisor'?'لوحة الإشراف':'لوحة القيادة';
   if (studentMenuTitle) studentMenuTitle.textContent = ['teacher','senior_teacher'].includes(currentRole) ? '📝 التقويم والرادار' : '👥 الطلبة والتقويم';
   document.querySelectorAll('.sidebar a[data-section]').forEach(link => {
     link.style.display = allowed.includes(link.dataset.section) ? '' : 'none';
