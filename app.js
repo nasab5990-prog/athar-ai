@@ -784,7 +784,7 @@ async function saveAssessment() {
       skill:displaySkillName(skill),
       student_id:studentId || '',
       assessment_record_id:result.id,
-      observedErrors:assessmentObservation || `نتيجة التقويم التشخيصي: ${pct}% من ${total} أسئلة.`,
+      observedErrors:assessmentObservation,
       grade,
       subject,
       unit:payload.unit || '',
@@ -1238,7 +1238,7 @@ function renderAnalysis(analysis, destinationId) {
   const rootStatus = analysis.rootCauseStatus || (roots.length ? 'تحتاج المهارات السابقة إلى مراجعة الأدلة.' : 'لا تتوفر خريطة موثقة للمهارات السابقة.');
   const evidenceItems = (analysis.evidence || []).filter(item => {
     const value = String(item || '');
-    return !value.startsWith('ملاحظة المعلم:') || Boolean(cleanTeacherObservation(value.replace(/^ملاحظة المعلم:\\s*/, '')));
+    return !value.startsWith('ملاحظة المعلم:') || Boolean(cleanTeacherObservation(value.replace(/^ملاحظة المعلم:\s*/, '')));
   });
   const hasNoAssessmentEvidence = (analysis.targetScore === null || analysis.targetScore === undefined) && Number(analysis.sampleSize || 0) === 0;
   window.atharLastAnalysisPrerequisites = roots.map(item => ({ skill:item.skill, score:item.score, sampleSize:item.sampleSize || 0 }));
