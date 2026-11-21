@@ -1263,6 +1263,26 @@ function buildWordOpeningIntervention(grade, mode, classSize) {
     nextCheck: 'نفّذ خمس محاولات خلال أسبوعين في ظروف الاستخدام المعتادة. سجّل لكل محاولة: هل اختار Word الصحيح؟ هل ظهرت نافذته؟ هل احتاج إلى مساعدة؟ احسب نسبة الفتح المستقل من أصل خمس محاولات.'
   };
 }
+function classifyTeacherObservation(observation) {
+  const clauses = String(observation || '')
+    .replace(/\\s+(لكن|ولكن|بينما|في حين)\\s+/g, '؛')
+    .split(/[؛؛\\n]+/)
+    .map(item => item.trim().replace(/^[،,.]+|[،,.]+$/g, ''))
+    .filter(Boolean);
+  const strengths = [];
+  const supportNeeds = [];
+  const unclassified = [];
+  const normalize = value => value.replace(/[أإآ]/g, 'ا').replace(/ى/g, 'ي');
+  for (const clause of clauses) {
+    const value = normalize(clause);
+    const negative = /لا يستطيع|لا تتمكن|لا يتمكن|لم يستطع|لم تتمكن|لم يتمكن|يعجز|تواجه صعوب|يواجه صعوب|يحتاج الى دعم|تحتاج الى دعم|يتعثر/.test(value);
+    const positive = /يستطيع|تستطيع|تمكن من|تمكنت من|يتقن|تتقن|يجيد|تجيد|ينجح في|تنجح في|بنجاح/.test(value);
+    if (negative && !positive) supportNeeds.push(clause);
+    else if (positive && !negative) strengths.push(clause);
+    else unclassified.push(clause);
+  }
+  return { strengths, supportNeeds, unclassified };
+}
 function renderAnalysis(analysis, destinationId) {
   const el = document.getElementById(destinationId);
   if (!el) return;
@@ -1276,6 +1296,7 @@ function renderAnalysis(analysis, destinationId) {
   }));
   const rawTeacherObservation = analysis.observedErrors || (analysis.evidence || []).find(item => String(item).startsWith('ملاحظة المعلم:'))?.replace('ملاحظة المعلم:', '').trim() || '';
   const teacherObservation = cleanTeacherObservation(rawTeacherObservation) || 'لا توجد ملاحظة صفية موثقة؛ راجع إجابات التقويم لتحديد موضع الصعوبة.';
+  const observationInsights = classifyTeacherObservation(teacherObservation);
   const normalizedObservation = teacherObservation.replace(/[أإآ]/g, 'ا').replace(/ى/g, 'ي');
   const patternHint = /استخراج|استخرج|يستخرج/.test(normalizedObservation) && /نص|مقروء|قراء/.test(normalizedObservation)
     ? 'مؤشر أولي محتمل: صعوبة تحديد موضع الإجابة أو الدليل في النص.'
@@ -1310,7 +1331,7 @@ function renderAnalysis(analysis, destinationId) {
     <p>${esc(score + trend)}</p>
     <div class="card" style="margin:.6rem 0"><strong>1 | المهارة المتأثرة</strong><p>${esc(displaySkillName(analysis.skill))}</p></div>
 ${destinationId === 'analysisResult' ? '<div class="card root-map-card" style="margin:.6rem 0"><strong>خريطة جذور التعلم لهذه المهارة</strong><div id="learningRootMap" class="root-map-empty">جارٍ إعداد خريطة المهارات والأدلة.</div></div>' : ''}
-    <div class="card" style="margin:.6rem 0"><strong>2 | نمط الخطأ الملحوظ</strong><p>${esc(teacherObservation)}</p>${patternHint ? `<p><strong>${esc(patternHint)}</strong></p>` : ''}<p class="note">الوصف من ملاحظة المعلم. والمؤشر المحتمل — إن ظهر — استنتاج مبدئي قائم على كلمات الملاحظة، وليس تشخيصًا آليًا أو نتيجة ذكاء اصطناعي.</p></div>
+    <div class="card" style="margin:.6rem 0"><strong>2 | قراءة الملاحظة الصفية</strong><p>${esc(teacherObservation)}</p>${observationInsights.supportNeeds.length ? `<p><strong>مهارات تحتاج إلى دعم وفق ملاحظة المعلم:</strong></p><ul>${observationInsights.supportNeeds.map(item => `<li>${esc(item)}</li>`).join('')}</ul>` : ''}${observationInsights.strengths.length ? `<p><strong>جوانب قوة وفق ملاحظة المعلم:</strong></p><ul>${observationInsights.strengths.map(item => `<li>${esc(item)}</li>`).join('')}</ul>` : ''}${observationInsights.unclassified.length ? `<p class="note">عبارات تحتاج إلى مراجعة المعلم لتحديد دلالتها: ${observationInsights.unclassified.map(esc).join('؛ ')}</p>` : ''}${patternHint ? `<p><strong>${esc(patternHint)}</strong></p>` : ''}<p class="note">فُرزت العبارات لغويًا من ملاحظة المعلم فقط؛ لا تمثل نتائج تقويم مستقلة أو تشخيصًا آليًا. راجع التصنيف قبل اعتماد خطة الدعم.</p></div>
     <div class="card" style="margin:.6rem 0"><strong>3 | مهارات سابقة للتحقق من جذور التعثر</strong><p class="note">${esc(rootStatus)} لا يُعد غياب النتائج دليلًا على وجود فجوة أو سبب.</p><ul>${rootItems.map(item => `<li><strong>${esc(displaySkillName(item.skill))}</strong> — ${item.score === null || item.score === undefined ? 'لا توجد نتيجة مسجلة' : `متوسط الإتقان ${Number(item.score)}%`}<br><span class="note">${esc(item.displayStatus)} • ${esc(item.displayEvidence)}</span></li>`).join('') || '<li>لا توجد مهارات سابقة موثقة لهذه المهارة بعد.</li>'}</ul></div>
     <div class="card" style="margin:.6rem 0"><strong>4 | الدليل من السجلات</strong><ul>${evidenceItems.map(item => `<li>${esc(item)}</li>`).join('') || '<li>لا توجد نتائج تقويم مرتبطة بالمهارة بعد.</li>'}</ul>${analysis.diagnosticEvidence?.length ? `<details class="secondary-tools-disclosure"><summary>تفاصيل أداء أسئلة التقويم المرتبط (${analysis.diagnosticEvidence.length})</summary><div class="secondary-tools-content"><ol>${analysis.diagnosticEvidence.map(item => `<li style="margin:.55rem 0"><strong>${esc(item.question || 'مهمة دون نص')}</strong><p class="note">الأداء: ${item.score === null || item.score === undefined ? esc(item.rating || 'غير محدد') : item.score === 100 ? 'متقن' : item.score === 50 ? 'متقن جزئيًا' : item.score === 0 ? 'يحتاج إلى دعم' : esc(String(item.score) + '%')}</p>${item.teacherNote ? `<p class="note">ملاحظة المعلم: ${esc(item.teacherNote)}</p>` : '<p class="note">لم تُسجل ملاحظة إضافية لهذا السؤال.</p>'}</li>`).join('')}</ol></div></details>` : ''}</div>
     ${hasNoAssessmentEvidence
