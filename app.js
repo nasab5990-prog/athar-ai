@@ -1303,6 +1303,17 @@ function buildSuggestedActivityOptions(analysis) {
   const skill = displaySkillName(analysis.skill || 'المهارة المستهدفة');
   const mode = document.getElementById('activityMode')?.value || 'offline';
   const duration = Number(document.getElementById('activityDuration')?.value || 15);
+  const lessonSelect = document.getElementById('intLesson');
+  const lesson = (lessonSelect?.selectedOptions?.[0]?.textContent || lessonSelect?.value || '').trim();
+  if (/إنشاء القوائم/.test(lesson)) {
+    const activities = [
+      {title:'أحوّل النص إلى قائمة نقطية',steps:'أنشئ قائمة نقطية بعنوان أدواتي المدرسية تتضمن قلمًا ودفترًا ومسطرة وممحاة. ظلّل العناصر واختر أمر التعداد النقطي.'},
+      {title:'أنشئ قائمة رقمية بالترتيب',steps:'أنشئ قائمة رقمية لخطوات حفظ مستند: اختيار ملف، حفظ باسم، كتابة اسم الملف، الضغط على حفظ. تحقق من ظهور الأرقام بالترتيب.'},
+      {title:'أختار نوع القائمة المناسب',steps:'قارن بين قائمة مشتريات لا يشترط ترتيبها وخطوات تشغيل الحاسوب التي تتطلب ترتيبًا. أنشئ الأولى بتعداد نقطي والثانية بتعداد رقمي، ثم وضّح سبب اختيارك.'}
+    ];
+    const modeLabel = mode === 'offline' ? 'تهيئة ورقية دون جهاز' : 'تطبيق على جهاز المعلم أو جهاز متاح';
+    return '<div class="card" style="margin-top:.8rem"><h4>أنشطة درس إنشاء القوائم</h4><p class="note">' + modeLabel + '. التدريب الورقي تمهيدي، ويُتحقق من المهارة بالتنفيذ على برنامج معالجة النصوص.</p>' + activities.map(a => '<div class="card" style="margin:.5rem 0"><strong>' + esc(a.title) + '</strong><p>' + esc(a.steps) + '</p><button class="btn small outline" type="button" onclick=\'printSuggestedActivityWorksheet(' + JSON.stringify(a.title) + ',' + JSON.stringify(skill) + ',' + JSON.stringify(subject) + ',' + JSON.stringify(lesson) + ')\'>عرض ورقة النشاط وطباعتها</button> <button class="btn small outline" type="button" onclick=\'useSuggestedActivity(' + JSON.stringify(a.steps) + ')\'>إضافة إلى خطة التدخل</button></div>').join('') + '</div>';
+  }
   const isReading = /الفهم المقروء|فهم المقروء|الفهم القرائي/.test(skill);
   const subjectSelect = document.getElementById('intSubject');
   const subject = (subjectSelect?.selectedOptions?.[0]?.textContent || subjectSelect?.value || '').trim();
@@ -1374,7 +1385,23 @@ function buildSuggestedActivityOptions(analysis) {
   const classPlan = `<div class="card" style="margin:.7rem 0"><h4>تنظيم التطبيق لصف يضم أكثر من 30 طالبًا</h4><p>قسّم الطلبة إلى مجموعات صغيرة تنفذ المهمة بالتوازي، مع توزيع أدوار واضحة وتدويرها:</p><ul><li><strong>مجموعة الدعم:</strong> تنفذ خطوات أقل مع نموذج مصور أو بطاقة إرشاد وتوجيه مباشر.</li><li><strong>المستوى المتوقع:</strong> تنفذ المهمة كاملة بصورة مستقلة وتسجل الناتج.</li><li><strong>مجموعة الإثراء:</strong> تطبق المهارة في حالة جديدة أو تقارن بين طريقتين وتبرر اختياراتها.</li></ul><p>في المواد العملية، يشارك كل طالب في أداء أو ملاحظة أو تسجيل خطوة؛ لا يقتصر التنفيذ على مشاهدة طالب واحد. استخدم أدوات آمنة ومتاحة، وبدّل الأدوار لضمان مشاركة الجميع.</p></div>`;
   return `<div class="card" style="margin-top:.8rem"><h4>مجموعة أنشطة مقترحة — ${esc(modeLabel)}</h4><p class="note">اختر نشاطًا مناسبًا لوقت الحصة. لكل نشاط ورقة جاهزة للطباعة، ويمكن تنفيذه مع الصف كله بمستويات دعم وإثراء مختلفة.</p>${classPlan}${activities.map(activity => `<div class="card" style="margin:.5rem 0"><strong>${esc(activity.title)}</strong><p>${esc(activity.steps)}</p><button class="btn small outline" type="button" onclick='printSuggestedActivityWorksheet(${JSON.stringify(activity.title)},${JSON.stringify(skill)},${JSON.stringify(subject)})'>عرض ورقة النشاط وطباعتها</button> <button class="btn small outline" type="button" onclick='useSuggestedActivity(${JSON.stringify(activity.steps)})'>إضافة إلى خطة التدخل</button></div>`).join('')}</div>`;
 }
-function printSuggestedActivityWorksheet(title, skill, subject = '') {
+function printListLessonWorksheet(title, skill) {
+  const header = '<div class="sheet-head"><div class="brand">أثَر <span>ATHAR AI</span></div><div class="tag">ورقة نشاط صفية متمايزة</div><h1>' + esc(title) + '</h1><p>الدرس: إنشاء القوائم | المهارة: ' + esc(skill) + '</p><div class="student-line">اسم الطالب: ........................................　الصف/الشعبة: ................　التاريخ: ............</div></div>';
+  const pages = [
+    ['support','مجموعة الدعم','أتعرف وأطبق','<p>استمع إلى المعلم.</p><p>اختر النوع المناسب:</p><div class="choice">أدوات مدرسية: قلم، دفتر، ممحاة — □ نقطية □ رقمية</div><div class="choice">خطوات حفظ ملف — □ نقطية □ رقمية</div><p>على الجهاز: اكتب قلم، دفتر، ممحاة كلًّا في سطر. ظلّل الكلمات واختر التعداد النقطي.</p><p>□ كتبت العناصر　 □ ظلّلتها　 □ اخترت التعداد النقطي</p><p>مساندة المعلم: يشير إلى زر التعداد ويشرح شفهيًا.'],
+    ['core','المستوى المتوقع','أنشئ قائمتين','<p><strong>1. قائمة نقطية:</strong> أنشئ قائمة بعنوان أدواتي المدرسية: قلم، دفتر، مسطرة، ممحاة. استخدم التعداد النقطي.</p><p><strong>2. قائمة رقمية:</strong> أنشئ قائمة بعنوان خطوات حفظ المستند: اختيار ملف، حفظ باسم، كتابة اسم الملف، الضغط على حفظ. استخدم التعداد الرقمي.</p><p>تحقق من ظهور النقاط والأرقام تلقائيًا، ومن ترتيب الخطوات من 1 إلى 4.</p>'],
+    ['enrich','مجموعة الإثراء','أعدّل وأتحقق','<p>أنشئ قائمة رقمية من ثلاث خطوات تشرح طريقة إعداد واجبك.</p><p>حوّلها إلى قائمة نقطية ثم أعدها رقمية.</p><p>أضف عنصرًا في منتصف القائمة ولاحظ تحديث الترقيم.</p><p>لماذا نستخدم التعداد الرقمي للخطوات والنقطي للعناصر غير المرتبة؟</p><div class="answer"></div>']
+  ];
+  const groupPages = pages.map(p => '<section class="sheet ' + p[0] + '" data-sheet="' + p[0] + '">' + header + '<div class="group-label">' + p[1] + '<span>' + p[2] + '</span></div>' + p[3] + '<div class="footer">منصة أثَر | تعلّم يناسب الجميع</div></section>').join('');
+  const exit = '<section class="sheet" data-sheet="exit">' + header + '<div class="group-label">بطاقة خروج</div><p>1. متى تستخدم التعداد النقطي؟</p><div class="answer"></div><p>2. أنشئ على الجهاز قائمة رقمية من ثلاث خطوات.</p><div class="answer"></div><p>3. □ نفذت بنفسي　 □ بمساعدة</p></section>';
+  const teacher = '<section class="sheet" data-sheet="teacher">' + header + '<div class="group-label">دليل المعلم ومفتاح الاستجابة</div><p><strong>الإجابات:</strong> قائمة الأدوات نقطية؛ خطوات حفظ المستند رقمية.</p><p><strong>معيار التقييم العملي (4 درجات):</strong> تحديد العناصر (1)، اختيار نوع التعداد (1)، إنشاء قائمة صحيحة (1)، تعديل القائمة أو إضافة عنصر (1).</p><p>لا تحتسب الإجابة الورقية وحدها دليلًا على إتقان التنفيذ. امنح الطالبة تعليمات شفهية قصيرة، وافصل بين صعوبة القراءة ومهارة استخدام البرنامج.</p></section>';
+  const win = window.open('', '_blank'); if (!win) return showToast('اسمح بفتح نافذة جديدة لعرض أوراق النشاط.');
+  win.document.write('<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><title>أوراق إنشاء القوائم — أثَر</title><style>body{font-family:Tahoma,Arial,sans-serif;color:#20324a;line-height:1.8;margin:0;background:#eef3f9}.toolbar{position:sticky;top:0;background:#12385e;color:white;padding:12px;display:flex;gap:8px;flex-wrap:wrap}.toolbar button{padding:8px 12px}.sheet{background:white;max-width:800px;min-height:900px;margin:20px auto;padding:34px;position:relative;page-break-after:always}.sheet-head{border-bottom:1px solid #ddd;padding-bottom:12px}.brand{font-size:24px;font-weight:bold;color:#174c80}.tag,.group-label{background:#eaf2fb;padding:10px;border-radius:8px}.group-label{font-size:19px;font-weight:bold;margin:18px 0}.support .group-label{background:#fff4e5}.core .group-label{background:#e8f5f2}.enrich .group-label{background:#f0ebff}.choice{border:1px solid #ddd;padding:10px;margin:8px 0}.answer{height:45px;border-bottom:1px dashed #999}.footer{margin-top:40px;border-top:1px solid #ddd;padding-top:8px;color:#777}@page{size:A4;margin:12mm}@media print{.toolbar{display:none}.sheet{margin:0;min-height:0;box-shadow:none;display:none}body[data-print="all"] .sheet{display:block}body[data-print="support"] [data-sheet="support"],body[data-print="core"] [data-sheet="core"],body[data-print="enrich"] [data-sheet="enrich"],body[data-print="exit"] [data-sheet="exit"],body[data-print="teacher"] [data-sheet="teacher"]{display:block}}</style><body data-print="preview"><div class="toolbar"><b>أثَر | حزمة إنشاء القوائم</b><button onclick="printSet(\'all\')">طباعة الحزمة كاملة</button><button onclick="printSet(\'support\')">ورقة الدعم</button><button onclick="printSet(\'core\')">المستوى المتوقع</button><button onclick="printSet(\'enrich\')">الإثراء</button><button onclick="printSet(\'exit\')">بطاقة الخروج</button><button onclick="printSet(\'teacher\')">دليل المعلم</button></div>' + groupPages + exit + teacher + '<script>function printSet(v){document.body.setAttribute("data-print",v);window.print()}window.onafterprint=()=>document.body.setAttribute("data-print","preview")<\/script></body></html>');
+  win.document.close(); showToast('جهزت أوراقًا خاصة بدرس إنشاء القوائم.');
+}
+function printSuggestedActivityWorksheet(title, skill, subject = '', lesson = '') {
+  lesson = lesson || (document.getElementById('intLesson')?.selectedOptions?.[0]?.textContent || document.getElementById('intLesson')?.value || '').trim();
+  if (/إنشاء القوائم/.test(lesson)) return printListLessonWorksheet(title, skill);
   const reading = /الفهم المقروء|فهم المقروء|الفهم القرائي/.test(skill);
   const computer = /تقنية المعلومات|الحاسوب|التقانة/.test(subject) || /التعامل مع الحاسوب/.test(skill);
   const practical = /العلوم|الفيزياء|الكيمياء|الأحياء|تقنية المعلومات|الحاسوب|التقانة|الفنون|التربية الفنية|التربية البدنية|الرياضة|المهارات الحياتية|التصميم|الزراعة|المجال المهني/.test(subject);
@@ -1435,6 +1462,8 @@ function getImpactEvidenceStatus(item) {
 
 function buildInterventionGuide(analysis, observedErrors = '') {
   const skill = displaySkillName(analysis.skill || '');
+  const lesson = (document.getElementById('intLesson')?.selectedOptions?.[0]?.textContent || document.getElementById('intLesson')?.value || '').trim();
+  const isListLesson = /إنشاء القوائم/.test(lesson);
   const isReading = /الفهم المقروء|فهم المقروء|الفهم القرائي/.test(skill);
   const score = analysis.targetScore;
   const subjectSelect = document.getElementById('intSubject');
@@ -1444,7 +1473,7 @@ function buildInterventionGuide(analysis, observedErrors = '') {
   const focusText = observedErrors.trim()
     ? `ملاحظة المعلم: ${esc(observedErrors)}`
     : 'ابدأ بتحديد نوع الصعوبة من إجابات الطالب قبل اختيار الدعم.';
-  const content = isReading ? `
+  const content = isListLesson ? '<h4>دليل دعم مهارة إنشاء القوائم</h4><p><strong>الدرس:</strong> إنشاء القوائم. افصل بين صعوبة قراءة التعليمات وبين القدرة على استخدام البرنامج، وقدم التعليمات شفهيًا خطوة واحدة في كل مرة.</p><p><strong>التهيئة (3 دقائق):</strong> اعرض قائمة أدوات مدرسية وقائمة خطوات حفظ مستند. اسأل: أيهما يحتاج أرقامًا؟</p><p><strong>النمذجة (4 دقائق):</strong> اكتب ثلاثة عناصر كلًّا في سطر، ظلّلها، ثم اختر التعداد النقطي. كرر بخطوات مرتبة واختر التعداد الرقمي.</p><p><strong>الممارسة (5 دقائق):</strong> تنشئ الطالبة قائمة أدوات مدرسية نقطية، ثم قائمة خطوات حفظ مستند رقمية على جهاز متاح.</p><p><strong>التحقق المستقل (3 دقائق):</strong> اطلب إنشاء قائمة رقمية من ثلاث خطوات دون عرض الحل، مع السماح بإعادة التعليمات شفهيًا.</p><h4>قياس التحسن</h4><p>بطاقة أداء من 4 معايير: تحديد العناصر، اختيار نوع التعداد، إنشاء القائمة، تعديلها أو إضافة عنصر. درجة لكل معيار. أعد مهمة مماثلة بعد أسبوعين. لا تحتسب التدريب الورقي إتقانًا للتنفيذ على البرنامج.</p>' : isReading ? `
     <h4>1) هدف الدليل وتركيز المعلم</h4>
     <p>النتيجة المسجلة الحالية: <strong>${score === null ? 'غير متاحة' : score + '%'}</strong>. ركّز في البداية على تحديد موضع التعثر: المفردات، أو الفكرة الرئيسة، أو التفاصيل، أو الاستنتاج.</p>
     <p>${focusText}</p>
