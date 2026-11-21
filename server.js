@@ -277,7 +277,7 @@ async function ensureDemoFixtures() {
   await upsertDemoRecord('assessment','reading-assessment',{
     student_id:studentId,student_name:'طالب تجريبي',skill:'الفهم المقروء',name:'الفهم المقروء',
     subject:'اللغة العربية',grade:'5',section:'1',assessment_scope:'individual',
-    pct:45,total:10,correct:4.5,date:'2026-10-01',source:'demo'
+    pct:45,total:20,correct:9,date:'2026-10-01',source:'demo'
   });
   await upsertDemoRecord('assessment','word-assessment',{
     student_id:studentId,student_name:'طالب تجريبي',skill:'فتح تطبيق Word',name:'فتح تطبيق Word',
