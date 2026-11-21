@@ -67,6 +67,15 @@ async function main() {
   const cookie = setCookie.split(';')[0];
   const me = await request('/api/auth/me', { cookie });
   if (me.data.user.role !== 'teacher' || !me.data.user.isDemo) throw new Error('Demo teacher session is invalid.');
+  const supervisorLogin=await request('/api/auth/demo',{method:'POST',body:{persona:'supervisor'}});
+  const supervisorCookie=supervisorLogin.cookie;
+  const supervisorSchools=await request('/api/supervisor/schools',{cookie:supervisorCookie});
+  if (supervisorSchools.data.schools.length!==2) throw new Error('Demo supervisor must be assigned to two schools.');
+  const supervisorRecords=await request('/api/records',{cookie:supervisorCookie});
+  if (!supervisorRecords.data.records.some(row=>row.school_id==='DEMO-SCHOOL') || !supervisorRecords.data.records.some(row=>row.school_id==='DEMO-SCHOOL-2')) throw new Error('Supervisor cannot read records across both assigned schools.');
+  await request('/api/records',{method:'POST',cookie:supervisorCookie,body:{kind:'assessment',payload:{student_id:'ATHAR-DEMO-STUDENT-002'}},expected:403});
+  await request('/api/analysis',{method:'POST',cookie:supervisorCookie,body:{skill:'الكسور'},expected:403});
+  await request('/api/users',{cookie:supervisorCookie,expected:403});
   const demoStudentId='ATHAR-DEMO-STUDENT-001';
   if (!me.data.user.assignedStudentIds.includes(demoStudentId)) throw new Error('Demo teacher is not assigned to the synthetic learner.');
   if (!me.data.user.teachingSubjects.includes('تقنية المعلومات') || !me.data.user.teachingSubjects.includes('اللغة العربية')) throw new Error('Demo teacher subject assignments are incomplete.');
