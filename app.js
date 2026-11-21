@@ -774,14 +774,12 @@ async function saveAssessment() {
     if (el) el.innerHTML = `<strong>نسبة الإتقان: ${payload.pct}%</strong><p class="note">${student ? `الطالب: ${esc(student.name)}` : 'تقويم صفي غير مرتبط بطالب محدد'} — ${diagnosticQuestions.length ? `تقييم ${total} أسئلة؛ ${correct} متقنة بالكامل، مع احتساب الإتقان الجزئي.` : 'احتُسبت من الإجابات الصحيحة'} — حُفظ على الخادم.</p>`;
     renderAssess(); updateDashboard(); updateCycle(); updateAlerts();
     // حدّث الرادار مباشرة من نتيجة التقويم المحفوظة، دون اشتراط فتح تحليل سابق.
+    // لا نحوّل نص السؤال أو مستوى إتقانه إلى "ملاحظة معلم".
+    // نمرر الملاحظات التي كتبها المعلم فقط؛ ويرتبط التحليل بسجل التقويم عبر assessment_record_id.
     const assessmentObservation = diagnosticQuestions
-      .map(item => {
-        const evidence = item.note ? ` — ملاحظة المعلم: ${item.note}` : '';
-        return item.score === 0 ? `يحتاج إلى دعم في: ${item.question}${evidence}` :
-          item.score === 50 ? `إتقان جزئي في: ${item.question}${evidence}` :
-          item.note ? `${item.question}${evidence}` : '';
-      })
-      .filter(Boolean).join('؛ ');
+      .map(item => item.note ? String(item.note).trim() : '')
+      .filter(Boolean)
+      .join('؛ ');
     const radarRequest = {
       skill:displaySkillName(skill),
       student_id:studentId || '',
