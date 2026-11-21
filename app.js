@@ -1299,14 +1299,36 @@ async function askAssistant() {
     showToast('أُعد الرد بالاستناد إلى بيانات المدرسة المتاحة.');
   } catch (error) { showToast(error.message); }
 }
+function getInterventionLessonContext() {
+  const target = window.atharInterventionTarget || {};
+  const curriculum = target.curriculum || {};
+  const grade = String(curriculum.grade || document.getElementById('intGrade')?.value || '');
+  const subject = String(curriculum.subject || document.getElementById('intSubject')?.value || '').trim();
+  const rawLesson = String(curriculum.lesson || document.getElementById('intLesson')?.value || '').trim();
+  const rows = ATHAR_CURRICULUM_CATALOG[grade]?.[subject] || {};
+  let matched = null;
+  for (const unit of Object.values(rows)) {
+    const lessons = unit?.lessons || {};
+    for (const [key, value] of Object.entries(lessons)) {
+      if (String(key).trim() === rawLesson || String(value?.title || '').trim() === rawLesson) {
+        matched = value;
+        break;
+      }
+    }
+    if (matched) break;
+  }
+  const selected = document.getElementById('intLesson')?.selectedOptions?.[0];
+  const selectedText = selected && selected.value ? String(selected.textContent || '').trim() : '';
+  const lesson = String(matched?.title || selectedText || rawLesson).trim();
+  return { grade, subject, lesson, learningOutcome:curriculum.learning_outcome || document.getElementById('intOutcome')?.value || '' };
+}
 function buildSuggestedActivityOptions(analysis) {
-  const skill = displaySkillName(analysis.skill || 'المهارة المستهدفة');
-  const mode = document.getElementById('activityMode')?.value || 'offline';
-  const duration = Number(document.getElementById('activityDuration')?.value || 15);
-  const subjectSelect = document.getElementById('intSubject');
-  const subject = (subjectSelect?.selectedOptions?.[0]?.textContent || subjectSelect?.value || '').trim();
-  const lessonSelect = document.getElementById('intLesson');
-  const lesson = (lessonSelect?.selectedOptions?.[0]?.textContent || lessonSelect?.value || '').trim();
+  const skill = displaySkillName(analysis.skill || window.atharInterventionTarget?.skill || 'المهارة المستهدفة');
+  const mode = document.getElementById('activityMode')?.value || window.atharInterventionTarget?.activity_mode || 'offline';
+  const duration = Number(document.getElementById('activityDuration')?.value || window.atharInterventionTarget?.activity_duration || 15);
+  const context = getInterventionLessonContext();
+  const subject = context.subject;
+  const lesson = context.lesson;
   if (/إنشاء القوائم/.test(lesson)) {
     const activities = [
       {title:'أحوّل النص إلى قائمة نقطية',steps:'أنشئ قائمة نقطية بعنوان أدواتي المدرسية تتضمن قلمًا ودفترًا ومسطرة وممحاة. ظلّل العناصر واختر أمر التعداد النقطي.'},
@@ -1383,7 +1405,7 @@ function buildSuggestedActivityOptions(analysis) {
   }
   const modeLabel = mode === 'offline' ? 'دون أجهزة أو إنترنت' : mode === 'shared' ? 'جهاز المعلم/شاشة مشتركة' : 'أجهزة وإنترنت';
   const classPlan = `<div class="card" style="margin:.7rem 0"><h4>تنظيم التطبيق لصف يضم أكثر من 30 طالبًا</h4><p>قسّم الطلبة إلى مجموعات صغيرة تنفذ المهمة بالتوازي، مع توزيع أدوار واضحة وتدويرها:</p><ul><li><strong>مجموعة الدعم:</strong> تنفذ خطوات أقل مع نموذج مصور أو بطاقة إرشاد وتوجيه مباشر.</li><li><strong>المستوى المتوقع:</strong> تنفذ المهمة كاملة بصورة مستقلة وتسجل الناتج.</li><li><strong>مجموعة الإثراء:</strong> تطبق المهارة في حالة جديدة أو تقارن بين طريقتين وتبرر اختياراتها.</li></ul><p>في المواد العملية، يشارك كل طالب في أداء أو ملاحظة أو تسجيل خطوة؛ لا يقتصر التنفيذ على مشاهدة طالب واحد. استخدم أدوات آمنة ومتاحة، وبدّل الأدوار لضمان مشاركة الجميع.</p></div>`;
-  return `<div class="card" style="margin-top:.8rem"><h4>مجموعة أنشطة مقترحة — ${esc(modeLabel)}</h4><p class="note">اختر نشاطًا مناسبًا لوقت الحصة. لكل نشاط ورقة جاهزة للطباعة، ويمكن تنفيذه مع الصف كله بمستويات دعم وإثراء مختلفة.</p>${classPlan}${activities.map(activity => `<div class="card" style="margin:.5rem 0"><strong>${esc(activity.title)}</strong><p>${esc(activity.steps)}</p><button class="btn small outline" type="button" onclick='printSuggestedActivityWorksheet(${JSON.stringify(activity.title)},${JSON.stringify(skill)},${JSON.stringify(subject)})'>عرض ورقة النشاط وطباعتها</button> <button class="btn small outline" type="button" onclick='useSuggestedActivity(${JSON.stringify(activity.steps)})'>إضافة إلى خطة التدخل</button></div>`).join('')}</div>`;
+  return `<div class="card" style="margin-top:.8rem"><h4>مجموعة أنشطة مقترحة — ${esc(modeLabel)}</h4><p class="note">اختر نشاطًا مناسبًا لوقت الحصة. لكل نشاط ورقة جاهزة للطباعة، ويمكن تنفيذه مع الصف كله بمستويات دعم وإثراء مختلفة.</p>${classPlan}${activities.map(activity => `<div class="card" style="margin:.5rem 0"><strong>${esc(activity.title)}</strong><p>${esc(activity.steps)}</p><button class="btn small outline" type="button" onclick='printSuggestedActivityWorksheet(${JSON.stringify(activity.title)},${JSON.stringify(skill)},${JSON.stringify(subject)},${JSON.stringify(lesson)})'>عرض ورقة النشاط وطباعتها</button> <button class="btn small outline" type="button" onclick='useSuggestedActivity(${JSON.stringify(activity.steps)})'>إضافة إلى خطة التدخل</button></div>`).join('')}</div>`;
 }
 function printListLessonWorksheet(title, skill) {
   const header = '<div class="sheet-head"><div class="brand">أثَر <span>ATHAR AI</span></div><div class="tag">ورقة نشاط صفية متمايزة</div><h1>' + esc(title) + '</h1><p>الدرس: إنشاء القوائم | المهارة: ' + esc(skill) + '</p><div class="student-line">اسم الطالب: ........................................　الصف/الشعبة: ................　التاريخ: ............</div></div>';
@@ -1400,8 +1422,10 @@ function printListLessonWorksheet(title, skill) {
   win.document.close(); showToast('جهزت أوراقًا خاصة بدرس إنشاء القوائم.');
 }
 function printSuggestedActivityWorksheet(title, skill, subject = '', lesson = '') {
-  lesson = lesson || (document.getElementById('intLesson')?.selectedOptions?.[0]?.textContent || document.getElementById('intLesson')?.value || '').trim();
-  if (/إنشاء القوائم/.test(lesson)) return printListLessonWorksheet(title, skill);
+  const savedContext = getInterventionLessonContext();
+  lesson = String(lesson || savedContext.lesson || '').trim();
+  subject = String(subject || savedContext.subject || '').trim();
+  if (/إنشاء\\s*القوائم/.test(lesson)) return printListLessonWorksheet(title, skill);
   const reading = /الفهم المقروء|فهم المقروء|الفهم القرائي/.test(skill);
   const computer = /تقنية المعلومات|الحاسوب|التقانة/.test(subject) || /التعامل مع الحاسوب/.test(skill);
   const practical = /العلوم|الفيزياء|الكيمياء|الأحياء|تقنية المعلومات|الحاسوب|التقانة|الفنون|التربية الفنية|التربية البدنية|الرياضة|المهارات الحياتية|التصميم|الزراعة|المجال المهني/.test(subject);
