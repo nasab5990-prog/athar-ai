@@ -1563,13 +1563,27 @@ function setInterventionMode(mode) {
   }
 }
 
+function suggestForIntervention(recordId) {
+  const item = interventions.find(row => String(row.recordId) === String(recordId));
+  if (!item) return showToast('تعذر العثور على التدخل المحدد. حدّث السجلات وحاول مجددًا.');
+  editIntervention(recordId);
+  window.atharInterventionTarget = { ...item };
+  setInterventionMode('ai');
+  const aiSkill = document.getElementById('aiSkill');
+  if (aiSkill) aiSkill.value = displaySkillName(item.skill || '');
+  const observed = document.getElementById('intObservedErrors');
+  if (observed) observed.value = item.observed_errors || item.observedErrors || '';
+  suggestIntervention();
+}
+
 async function suggestIntervention() {
   const button = document.getElementById('suggestInterventionBtn');
   const resultEl = document.getElementById('intAiResult');
-  const studentId = document.getElementById('interventionStudent')?.value || '';
+  const target = window.atharInterventionTarget || null;
+  const studentId = target ? (target.student_id || '') : (document.getElementById('interventionStudent')?.value || '');
   const student = students.find(item => item.student_id === studentId);
   const observedErrors = document.getElementById('intObservedErrors')?.value.trim() || '';
-  let skill = document.getElementById('aiSkill')?.value.trim() || '';
+  let skill = target?.skill ? displaySkillName(target.skill) : (document.getElementById('aiSkill')?.value.trim() || '');
 
   if (studentId && !student) return showToast('تعذر العثور على الطالب المحدد.');
   if (!skill && studentId) {
@@ -1589,7 +1603,7 @@ async function suggestIntervention() {
       method:'POST',
       body:JSON.stringify({
         skill, student_id:studentId, observedErrors,
-        assessment_record_id:window.atharSuggestedIntervention?.assessmentRecordId || window.atharLastAnalysisRequest?.assessment_record_id || null,
+        assessment_record_id:target?.assessment_record_id || window.atharSuggestedIntervention?.assessmentRecordId || window.atharLastAnalysisRequest?.assessment_record_id || null,
         grade:document.getElementById('intGrade')?.value || '',
         subject:document.getElementById('intSubject')?.value || '',
         unit:document.getElementById('intUnit')?.value || '',
@@ -1601,6 +1615,7 @@ async function suggestIntervention() {
       })
     });
     const analysis = response.analysis;
+    const score = analysis?.targetScore === null || analysis?.targetScore === undefined ? null : Number(analysis.targetScore);
     const ai = response.aiAssist && response.aiAssist.status === 'ok' ? response.aiAssist : null;
     if (!ai?.goal || !Array.isArray(ai.interventionSteps) || !ai.interventionSteps.length) {
       throw new Error(response.aiAssist?.message || 'لم ينتج المساعد خطة تدخل مخصصة. تحقق من اتصال خدمة الذكاء الاصطناعي ثم أعد المحاولة.');
@@ -1619,9 +1634,10 @@ async function suggestIntervention() {
     document.getElementById('intEnrich').value = ai.differentiated?.enrichment || '';
     window.atharSuggestedIntervention = {
       analysisId:response.id,
-      assessmentRecordId:window.atharLastAnalysisRequest?.assessment_record_id || null,
+      assessmentRecordId:target?.assessment_record_id || window.atharLastAnalysisRequest?.assessment_record_id || null,
       skill:displaySkillName(analysis.skill),
-      studentId:studentId || null
+      studentId:studentId || null,
+      interventionRecordId:target?.recordId || null
     };
 
     const roots = (analysis.likelyRoots?.length ? analysis.likelyRoots : analysis.prerequisiteEvidence || []);
@@ -1662,6 +1678,7 @@ function resetInterventionForm() {
   if (cancelButton) cancelButton.hidden = true;
   editingInterventionId = null;
   window.atharSuggestedIntervention = null;
+  window.atharInterventionTarget = null;
   const sourceSummary = document.getElementById('intSourceSummary'); if (sourceSummary) { sourceSummary.textContent = ''; sourceSummary.hidden = true; }
   window.atharAiDraftReady = false;
   window.atharInterventionMode = null;
@@ -1763,7 +1780,7 @@ function renderInt() {
         '</ol></section>'
       : '<p class="note intervention-progress-empty" style="margin:.8rem 0">مسار التقدم: لم تُسجّل قياسات أثر لهذا التدخل بعد. أضف قياسًا من صفحة قياس الأثر ليظهر هنا.</p>';
     const editButton = Number.isInteger(recordId) && recordId > 0
-      ? `<button class="btn small secondary" type="button" onclick="editIntervention(${recordId})">تعديل واستكمال التدخل</button>`
+      ? `<div class="row-actions"><button class="btn small secondary" type="button" onclick="editIntervention(${recordId})">تعديل واستكمال التدخل</button><button class="btn small outline" type="button" onclick="suggestForIntervention(${recordId})">اقتراح ذكي لهذه الحالة</button></div>`
       : '';
     return `<details class="card saved-intervention-card" data-intervention-id="${esc(i.recordId)}" style="margin-top:.6rem">
       <summary style="cursor:pointer;display:flex;justify-content:space-between;gap:.8rem;align-items:center;flex-wrap:wrap">
@@ -1791,6 +1808,7 @@ function editIntervention(recordId) {
   const item = interventions.find(row => String(row.recordId) === String(recordId));
   if (!item) return showToast('تعذر العثور على التدخل. حدّث السجلات وحاول مجددًا.');
   editingInterventionId = item.recordId;
+  window.atharInterventionTarget = { ...item };
   fillStudentSelects();
   const setValue = (id, value) => {
     const field = document.getElementById(id);
