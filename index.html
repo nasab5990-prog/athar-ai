@@ -30,6 +30,7 @@
         <option value="teacher">المعلم التجريبي</option>
         <option value="senior_teacher">المعلم الأول التجريبي</option>
         <option value="principal">المدير التجريبي</option>
+        <option value="supervisor">المشرف التربوي التجريبي</option>
         <option value="parent">ولي الأمر التجريبي</option>
         <option value="student">الطالب التجريبي</option>
       </select>
@@ -101,6 +102,14 @@
 </aside>
 <div class="main">
   <section id="dashboard" class="section active">
+    <div id="supervisorDashboardPanel" hidden>
+      <h1>لوحة متابعة الإشراف التربوي</h1>
+      <p class="subtitle">متابعة مؤشرات المدارس المسندة إليك — صلاحية اطلاع وتقارير فقط</p>
+      <div id="supervisorSummary"></div>
+      <h3 style="margin-top:1rem">المدارس المشمولة</h3>
+      <div id="supervisorSchoolsList"></div>
+      <p class="note">لا تظهر هنا إلا المدارس المرتبطة بحسابك. لا تتوفر أدوات تعديل أو إدارة حسابات أو بيانات طلبة.</p>
+    </div>
     <div id="demoEnvironmentBanner" class="note" hidden><strong>بيئة تجريبية معزولة:</strong> الأسماء والنتائج الظاهرة بيانات اصطناعية للاختبار فقط، وليست بيانات طلبة حقيقية.</div>
     <h1>لوحة القيادة التربوية</h1>
     <p class="subtitle">من اكتشاف فجوة التعلم → التدخل المناسب → قياس الأثر بالأدلة</p>
