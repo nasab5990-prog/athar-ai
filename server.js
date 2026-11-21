@@ -525,13 +525,11 @@ function findSkill(skill) {
 async function analyzeLearning(user,body) {
   const skill=safeText(body.skill||body.question,160)||'مهارة غير محددة', studentId=safeText(body.student_id,80);
   if (studentId && !await findStudentOwnedBy(user,studentId)) throw Object.assign(new Error('الطالب غير تابع لسجلاتك أو غير موجود في المدرسة.'),{status:403});
-  let rows;
-  if (['principal','senior_teacher'].includes(user.role)) rows=(await query("SELECT payload FROM records WHERE school_id=$1 AND kind='assessment' ORDER BY id DESC LIMIT 1000",[user.school_id])).rows;
-  else {
-    const assigned=user.role==='teacher'?await assignedStudentIds(user):[];
-    rows=(await query(`SELECT payload FROM records WHERE school_id=$1 AND kind='assessment' AND (owner_id=$2 OR payload->>'student_id'=ANY($3::text[])) ORDER BY id DESC LIMIT 800`,[user.school_id,user.id,assigned])).rows;
-  }
-  let assessments=rows.map(r=>r.payload);
+  // Use the same permission-filtered record set shown to this account in the interface.
+  // This keeps radar analysis aligned with teaching assignments and explicit student links.
+  const visibleRecords=await getRecordsForUser(user);
+  const rows=visibleRecords.filter(record=>record.kind==='assessment');
+  let assessments=rows.map(record=>record.payload);
   if (studentId) assessments=assessments.filter(a=>a.student_id===studentId);
   const mapped=findSkill(skill), targetSkill=normalizeArabic(mapped?.title||skill);
   // Compare canonical skill names so aliases such as فهم المقروء / الفهم القرائي match.
@@ -652,14 +650,15 @@ app.post('/api/analysis',requireAuth,requireRole('teacher','senior_teacher','pri
     const requestBody=req.body||{};
     const assessmentRecordId=Number(requestBody.assessment_record_id)||null;
     if(assessmentRecordId){
-      const sourceAssessment=await query('SELECT id,owner_id FROM records WHERE id=$1 AND school_id=$2 AND kind=$3',[assessmentRecordId,req.user.school_id,'assessment']);
-      if(!sourceAssessment.rows.length||(req.user.role==='teacher'&&String(sourceAssessment.rows[0].owner_id)!==String(req.user.id)))return res.status(400).json({message:'التقويم المرتبط غير موجود أو غير متاح لهذا الحساب.'});
+      const visibleRecords=await getRecordsForUser(req.user);
+      const sourceAssessment=visibleRecords.find(record=>String(record.id)===String(assessmentRecordId)&&record.kind==='assessment');
+      if(!sourceAssessment)return res.status(400).json({message:'التقويم المرتبط غير موجود أو غير متاح ضمن صلاحيات هذا الحساب.'});
     }
     const result=await analyzeLearning(req.user,requestBody), studentId=safeText(requestBody.student_id,80)||null;
     let aiAssist={status:'not_configured'};
     try { aiAssist=await generateTeachingAI(result,requestBody.observedErrors,requestBody); }
     catch(error) { console.error('Teaching AI unavailable:',error.message); aiAssist={status:'unavailable',message:'تعذر إكمال التحليل الذكي الآن؛ ما زال التحليل القائم على نتائج التقويم متاحًا.'}; }
-    const saved=await query('INSERT INTO records(school_id,owner_id,kind,payload) VALUES($1,$2,$3,$4::jsonb) RETURNING id',[req.user.school_id,req.user.id,'analysis',JSON.stringify({student_id:studentId,assessment_record_id:assessmentRecordId,skill:result.skill,result,aiAssist,date:new Date().toISOString()})]);
+    const saved=await query('INSERT INTO records(school_id,owner_id,kind,payload) VALUES($1,$2,$3,$4::jsonb) RETURNING id',[req.user.school_id,req.user.id,'analysis',JSON.stringify({student_id:studentId,assessment_record_id:assessmentRecordId,skill:result.skill,grade:safeText(requestBody.grade,30),subject:safeText(requestBody.subject,80),unit:safeText(requestBody.unit,120),lesson:safeText(requestBody.lesson,120),learning_outcome:safeText(requestBody.learning_outcome,700),result,aiAssist,date:new Date().toISOString()})]);
     await audit(req.user.id,'learning.analysis',result.skill);
     res.json({analysis:result,aiAssist,id:saved.rows[0].id});
   } catch(error) { res.status(error.status||500).json({message:error.status?error.message:'تعذر تحليل البيانات.'}); }
