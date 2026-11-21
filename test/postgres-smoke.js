@@ -68,7 +68,8 @@ async function main() {
   const me = await request('/api/auth/me', { cookie });
   if (me.data.user.role !== 'teacher' || !me.data.user.isDemo) throw new Error('Demo teacher session is invalid.');
   const supervisorLogin=await request('/api/auth/demo',{method:'POST',body:{persona:'supervisor'}});
-  const supervisorCookie=supervisorLogin.cookie;
+  const supervisorCookie=(supervisorLogin.response.headers.get('set-cookie')||'').split(';')[0];
+  if (!supervisorCookie) throw new Error('Demo supervisor login did not return a session cookie.');
   const supervisorSchools=await request('/api/supervisor/schools',{cookie:supervisorCookie});
   if (supervisorSchools.data.schools.length!==2) throw new Error('Demo supervisor must be assigned to two schools.');
   const supervisorRecords=await request('/api/records',{cookie:supervisorCookie});
