@@ -213,7 +213,13 @@ app.post('/api/auth/verify-code',loginLimiter,asyncRoute(async(req,res)=>{
 }));
 async function ensureDemoFixtures() {
   const schoolId='DEMO-SCHOOL';
-  const demoUsers=[['demo.teacher@athar.test','معلّم تجريبي','teacher'],['demo.senior@athar.test','معلم أول تجريبي','senior_teacher'],['demo.principal@athar.test','مدير تجريبي','principal'],['demo.parent@athar.test','ولي أمر تجريبي','parent'],['demo.student@athar.test','طالب تجريبي','student']];
+  const demoUsers=[
+    ['demo.teacher@athar.test','معلّم تجريبي','teacher'],
+    ['demo.senior@athar.test','معلم أول تجريبي','senior_teacher'],
+    ['demo.principal@athar.test','مدير تجريبي','principal'],
+    ['demo.parent@athar.test','ولي أمر تجريبي','parent'],
+    ['demo.student@athar.test','طالب تجريبي','student']
+  ];
   const users={};
   for (const [email,name,role] of demoUsers) {
     let user=(await query('SELECT id,email,name,role,school_id,student_id,active FROM users WHERE email=$1',[email])).rows[0];
@@ -221,41 +227,95 @@ async function ensureDemoFixtures() {
     if (!user.active || user.school_id!==schoolId || user.role!==role) throw new Error('Demo account configuration conflict.');
     users[role]=user;
   }
-  // Stable synthetic learner shared only inside the isolated demo school.
-  const studentId='ATHAR-DEMO-STUDENT-001';
+
+  // Give the isolated demo school a consistent numeric section setup.
+  for (let grade=1;grade<=12;grade++) {
+    await query('INSERT INTO school_grade_sections(school_id,grade,section_count) VALUES($1,$2,1) ON CONFLICT(school_id,grade) DO NOTHING',[schoolId,String(grade)]);
+  }
+
   const teacher=users.teacher;
-  const learnerExists=await query(
-    "SELECT id FROM records WHERE school_id=$1 AND kind='student' AND payload->>'student_id'=$2 LIMIT 1",
-    [schoolId,studentId]
-  );
-  if (!learnerExists.rowCount) {
-    await query(
-      "INSERT INTO records(school_id,owner_id,kind,payload) VALUES($1,$2,'student',$3::jsonb)",
-      [schoolId,teacher.id,JSON.stringify({student_id:studentId,name:'طالب تجريبي',grade:'5',section:'أ'})]
-    );
-  }
-  // Seed a small learning journey so parent/student dashboards have meaningful data.
-  const demoLearningRecords=[
-    ['assessment',{student_id:studentId,skill:'الفهم المقروء',pct:45,date:'2026-10-01',source:'demo'}],
-    ['intervention',{student_id:studentId,title:'قراءة موجهة قصيرة',description:'تدريب يومي على تحديد الفكرة الرئيسة',status:'مستمرة',source:'demo'}],
-    ['impact',{student_id:studentId,skill:'الفهم المقروء',before:45,after:70,change:25,date:'2026-10-15',source:'demo'}]
+  const demoAssignments=[
+    {subject:'تقنية المعلومات',grade:'5',sections:['1']},
+    {subject:'اللغة العربية',grade:'5',sections:['1']}
   ];
-  for (const [kind,payload] of demoLearningRecords) {
-    const exists=await query(
-      "SELECT id FROM records WHERE school_id=$1 AND kind=$2 AND payload->>'student_id'=$3 AND payload->>'source'='demo' LIMIT 1",
-      [schoolId,kind,studentId]
+  await query("UPDATE users SET teaching_subject=$1,teaching_grades=ARRAY['5']::text[] WHERE id=$2",[demoAssignments[0].subject,teacher.id]);
+  for (const item of demoAssignments) {
+    await query(
+      'INSERT INTO teacher_teaching_assignments(user_id,school_id,subject,grade,sections) VALUES($1,$2,$3,$4,$5::text[]) ON CONFLICT(user_id,school_id,subject,grade) DO UPDATE SET sections=EXCLUDED.sections',
+      [teacher.id,schoolId,item.subject,item.grade,item.sections]
     );
-    if (!exists.rowCount) {
-      await query(
-        'INSERT INTO records(school_id,owner_id,kind,payload) VALUES($1,$2,$3,$4::jsonb)',
-        [schoolId,teacher.id,kind,JSON.stringify(payload)]
-      );
-    }
   }
-  await query(
-    "UPDATE users SET student_id=$1 WHERE email='demo.student@athar.test' AND school_id=$2",
-    [studentId,schoolId]
-  );
+
+  const studentId='ATHAR-DEMO-STUDENT-001';
+  const studentPayload={student_id:studentId,name:'طالب تجريبي',grade:'5',section:'1',source:'demo'};
+  const learner=(await query("SELECT id FROM records WHERE school_id=$1 AND kind='student' AND payload->>'student_id'=$2 LIMIT 1",[schoolId,studentId])).rows[0];
+  if (!learner) {
+    await query("INSERT INTO records(school_id,owner_id,kind,payload) VALUES($1,$2,'student',$3::jsonb)",[schoolId,teacher.id,JSON.stringify(studentPayload)]);
+  } else {
+    await query("UPDATE records SET payload=payload || $1::jsonb WHERE id=$2",[JSON.stringify(studentPayload),learner.id]);
+  }
+
+  async function upsertDemoRecord(kind,demoKey,payload) {
+    const existingRows=(await query(
+      "SELECT id,payload FROM records WHERE school_id=$1 AND kind=$2 AND payload->>'student_id'=$3 AND payload->>'source'='demo' ORDER BY id",
+      [schoolId,kind,studentId]
+    )).rows;
+    const existing=existingRows.find(row=>row.payload?.demo_key===demoKey)
+      || existingRows.find(row=>row.payload?.skill===payload.skill)
+      || ((kind==='intervention'||kind==='impact')?existingRows.find(row=>!row.payload?.skill&&!row.payload?.demo_key):null);
+    if (existing) {
+      await query('UPDATE records SET payload=$1::jsonb WHERE id=$2',[JSON.stringify({...payload,demo_key:demoKey}),existing.id]);
+      return Number(existing.id);
+    }
+    const saved=await query(
+      'INSERT INTO records(school_id,owner_id,kind,payload) VALUES($1,$2,$3,$4::jsonb) RETURNING id',
+      [schoolId,teacher.id,kind,JSON.stringify({...payload,demo_key:demoKey})]
+    );
+    return Number(saved.rows[0].id);
+  }
+
+  await upsertDemoRecord('assessment','reading-assessment',{
+    student_id:studentId,student_name:'طالب تجريبي',skill:'الفهم المقروء',name:'الفهم المقروء',
+    subject:'اللغة العربية',grade:'5',section:'1',assessment_scope:'individual',
+    pct:45,total:10,correct:4.5,date:'2026-10-01',source:'demo'
+  });
+  await upsertDemoRecord('assessment','word-assessment',{
+    student_id:studentId,student_name:'طالب تجريبي',skill:'فتح تطبيق Word',name:'فتح تطبيق Word',
+    subject:'تقنية المعلومات',grade:'5',section:'1',assessment_scope:'individual',
+    pct:50,total:2,correct:1,date:'2026-10-03',source:'demo'
+  });
+
+  await upsertDemoRecord('intervention','reading-intervention',{
+    student_id:studentId,student_name:'طالب تجريبي',skill:'الفهم المقروء',
+    goal:'أن يحدد الطالب الفكرة الرئيسة ويستخرج دليلًا من نص قصير وفق معيار يحدده المعلم',
+    steps:'1. يعرض المعلم نصًا قصيرًا ويقرأه بصوت واضح.\n2. يحدد الطالب الفكرة الرئيسة بمساندة سؤال شفهي.\n3. يستخرج الطالب جملة واحدة تدعم إجابته.\n4. يجيب عن سؤال تحقق مستقل.',
+    enrichment:'قارن بين فكرتين رئيسيتين في نصين قصيرين وادعم الاختيار بدليل.',
+    observed_errors:'يحتاج إلى دعم في تحديد الفكرة الرئيسة واستخراج الدليل من النص.',
+    curriculum:{grade:'5',subject:'اللغة العربية',unit:'نصوص قرائية',lesson:'الفكرة الرئيسة والدليل',learning_outcome:''},
+    activity_mode:'offline',activity_duration:15,status:'active',date:'2026-10-02',source:'demo'
+  });
+  const wordInterventionId=await upsertDemoRecord('intervention','word-intervention',{
+    student_id:studentId,student_name:'طالب تجريبي',skill:'فتح تطبيق Word',
+    goal:'أن يفتح الطالب تطبيق Word بصورة مستقلة في محاولتين متتاليتين',
+    steps:'1. يتعرف الطالب إلى رمز Word بين ثلاثة رموز.\n2. ينفذ فتح التطبيق على جهاز المعلم مع تلميح واحد عند الحاجة.\n3. يعيد فتح التطبيق دون مساعدة، ويسجل المعلم الاستقلالية.',
+    enrichment:'يفتح مستندًا جديدًا بعد تشغيل البرنامج إذا كان ذلك ضمن الدرس.',
+    observed_errors:'يحتاج إلى دعم في الوصول إلى تطبيق Word وفتحه.',
+    curriculum:{grade:'5',subject:'تقنية المعلومات',unit:'معالجة النصوص',lesson:'فتح تطبيق Word',learning_outcome:''},
+    activity_mode:'shared',activity_duration:15,status:'active',date:'2026-10-04',source:'demo'
+  });
+
+  await upsertDemoRecord('impact','word-impact',{
+    student_id:studentId,student_name:'طالب تجريبي',intervention_record_id:wordInterventionId,
+    intervention_skill:'فتح تطبيق Word',intervention_goal:'أن يفتح الطالب تطبيق Word بصورة مستقلة في محاولتين متتاليتين',
+    before:50,after:75,difference:25,date:'2026-10-18',
+    evidence_tool:'بطاقة ملاحظة الأداء العملي',before_date:'2026-10-04',after_date:'2026-10-18',
+    activity_mode:'shared',sessions_planned:4,sessions_done:4,
+    evidence_note:'فتح التطبيق في المحاولة الثانية دون مساعدة وفق بطاقة الملاحظة.',
+    followup_score:75,evidence_status:'أدلة تجريبية توضيحية — ليست نتائج ميدانية',
+    source:'demo'
+  });
+
+  await query("UPDATE users SET student_id=$1 WHERE email='demo.student@athar.test' AND school_id=$2",[studentId,schoolId]);
   for (const role of ['parent','student']) {
     await query(
       'INSERT INTO account_students(user_id,student_id,school_id) VALUES($1,$2,$3) ON CONFLICT(user_id,student_id) DO NOTHING',
@@ -700,6 +760,7 @@ await query("CREATE TABLE IF NOT EXISTS teacher_teaching_assignments (" +
   "sections TEXT[] NOT NULL DEFAULT '{}'::text[], " +
   "created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), " +
   "UNIQUE(user_id,school_id,subject,grade))");
+await query("CREATE INDEX IF NOT EXISTS idx_teacher_teaching_assignments_school ON teacher_teaching_assignments(school_id,subject,grade)");
 await query("INSERT INTO teacher_teaching_assignments(user_id,school_id,subject,grade,sections) " +
   "SELECT u.id,u.school_id,u.teaching_subject,grade,'{}'::text[] " +
   "FROM users u CROSS JOIN LATERAL unnest(u.teaching_grades) AS grade " +
