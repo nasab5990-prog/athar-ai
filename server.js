@@ -18,7 +18,7 @@ if (production && (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.len
 }
 const allowedDomains = new Set(['moe.om', 'edu.moe.om']);
 const frontendOrigins = (process.env.FRONTEND_ORIGIN || 'https://nasab5990-prog.github.io').split(',').map(v => v.trim()).filter(Boolean);
-const roleNames = { teacher:'المعلم', senior_teacher:'المعلم الأول', principal:'المدير', parent:'ولي الأمر', student:'الطالب' };
+const roleNames = { teacher:'المعلم', senior_teacher:'المعلم الأول', principal:'المدير', supervisor:'المشرف التربوي', parent:'ولي الأمر', student:'الطالب' };
 const demoEnabled = process.env.DEMO_LOGIN_ENABLED === 'true';
 let otpExpiryUsesTimestamp = false;
 let otpCreatedUsesTimestamp = false;
@@ -122,6 +122,12 @@ async function findStudentOwnedBy(user,studentId) {
   return null;
 }
 async function getRecordsForUser(user) {
+  if (user.role==='supervisor') {
+    const assigned=await query('SELECT school_id FROM supervisor_schools WHERE user_id=$1 ORDER BY school_name',[user.id]);
+    const schoolIds=assigned.rows.map(row=>row.school_id);
+    if (!schoolIds.length) return [];
+    return (await query('SELECT id,school_id,kind,payload,created_at FROM records WHERE school_id=ANY($1::text[]) ORDER BY id DESC LIMIT 3000',[schoolIds])).rows;
+  }
   if (['principal','senior_teacher'].includes(user.role)) {
     return (await query('SELECT id,kind,payload,created_at FROM records WHERE school_id=$1 ORDER BY id DESC LIMIT 1000',[user.school_id])).rows;
   }
@@ -217,6 +223,7 @@ async function ensureDemoFixtures() {
     ['demo.teacher@athar.test','معلّم تجريبي','teacher'],
     ['demo.senior@athar.test','معلم أول تجريبي','senior_teacher'],
     ['demo.principal@athar.test','مدير تجريبي','principal'],
+    ['demo.supervisor@athar.test','مشرف تربوي تجريبي','supervisor'],
     ['demo.parent@athar.test','ولي أمر تجريبي','parent'],
     ['demo.student@athar.test','طالب تجريبي','student']
   ];
@@ -232,6 +239,24 @@ async function ensureDemoFixtures() {
   for (let grade=1;grade<=12;grade++) {
     await query('INSERT INTO school_grade_sections(school_id,grade,section_count) VALUES($1,$2,1) ON CONFLICT(school_id,grade) DO NOTHING',[schoolId,String(grade)]);
   }
+
+  const supervisor=users.supervisor;
+  await query(
+    'INSERT INTO supervisor_schools(user_id,school_id,school_name) VALUES($1,$2,$3) ON CONFLICT(user_id,school_id) DO UPDATE SET school_name=EXCLUDED.school_name',
+    [supervisor.id,'DEMO-SCHOOL','مدرسة أثَر التجريبية الأولى']
+  );
+  await query(
+    'INSERT INTO supervisor_schools(user_id,school_id,school_name) VALUES($1,$2,$3) ON CONFLICT(user_id,school_id) DO UPDATE SET school_name=EXCLUDED.school_name',
+    [supervisor.id,'DEMO-SCHOOL-2','مدرسة أثَر التجريبية الثانية']
+  );
+  await query(
+    "INSERT INTO records(school_id,owner_id,kind,payload) SELECT $1,$2,'student',$3::jsonb WHERE NOT EXISTS (SELECT 1 FROM records WHERE school_id=$1 AND kind='student' AND payload->>'student_id'=$4)",
+    ['DEMO-SCHOOL-2',supervisor.id,JSON.stringify({student_id:'ATHAR-DEMO-STUDENT-002',name:'طالبة تجريبية',grade:'6',section:'1',source:'demo'}),'ATHAR-DEMO-STUDENT-002']
+  );
+  await query(
+    "INSERT INTO records(school_id,owner_id,kind,payload) SELECT $1,$2,'assessment',$3::jsonb WHERE NOT EXISTS (SELECT 1 FROM records WHERE school_id=$1 AND kind='assessment' AND payload->>'student_id'=$4 AND payload->>'skill'=$5)",
+    ['DEMO-SCHOOL-2',supervisor.id,JSON.stringify({student_id:'ATHAR-DEMO-STUDENT-002',student_name:'طالبة تجريبية',skill:'الكسور',name:'الكسور',subject:'الرياضيات',grade:'6',section:'1',pct:62,total:10,correct:6.2,date:'2026-10-05',source:'demo'}),'ATHAR-DEMO-STUDENT-002','الكسور']
+  );
 
   const teacher=users.teacher;
   const demoAssignments=[
@@ -331,7 +356,7 @@ async function ensureDemoFixtures() {
 app.post('/api/auth/demo',loginLimiter,asyncRoute(async(req,res)=>{
   if (!demoEnabled) return res.status(404).json({ message:'وضع الاختبار غير مفعّل.' });
   const role=safeText(req.body?.persona || 'teacher',32);
-  if (!['teacher','senior_teacher','principal','parent','student'].includes(role)) return res.status(400).json({ message:'شخصية الاختبار غير معروفة.' });
+  if (!['teacher','senior_teacher','principal','supervisor','parent','student'].includes(role)) return res.status(400).json({ message:'شخصية الاختبار غير معروفة.' });
   const users=await ensureDemoFixtures(), user=users[role];
   if (!user?.active) return res.status(403).json({ message:'حساب الاختبار غير نشط.' });
   await sessionLogin(req,res,user,{demo:true,warning:'وضع اختبار فقط مع بيانات اصطناعية في مدرسة معزولة. لا تستخدم بيانات حقيقية.'});
@@ -348,6 +373,23 @@ app.post('/api/auth/logout',requireAuth,asyncRoute(async(req,res)=>{
 app.get('/api/records',requireAuth,asyncRoute(async(req,res)=>{
   const rows=await getRecordsForUser(req.user);
   res.json({ records:rows.map(row=>({...row,payload:row.payload})) });
+}));
+app.get('/api/supervisor/schools',requireAuth,requireRole('supervisor'),asyncRoute(async(req,res)=>{
+  const schools=(await query(
+    `SELECT s.school_id,s.school_name,
+      COUNT(r.id) FILTER (WHERE r.kind='student')::int AS students,
+      COUNT(r.id) FILTER (WHERE r.kind='assessment')::int AS assessments,
+      COUNT(r.id) FILTER (WHERE r.kind='intervention')::int AS interventions,
+      COUNT(r.id) FILTER (WHERE r.kind='impact')::int AS impacts,
+      MAX(r.created_at) AS last_activity
+     FROM supervisor_schools s
+     LEFT JOIN records r ON r.school_id=s.school_id
+     WHERE s.user_id=$1
+     GROUP BY s.school_id,s.school_name
+     ORDER BY s.school_name`,
+    [req.user.id]
+  )).rows;
+  res.json({schools});
 }));
 app.post('/api/records',recordLimiter,requireAuth,requireRole('teacher','senior_teacher','principal'),asyncRoute(async(req,res)=>{
   const kind=safeText(req.body?.kind,40), payload=req.body?.payload;
@@ -735,6 +777,13 @@ app.use((error,req,res,next)=>{
   res.status(error.status||500).json({message:error.status?error.message:'حدث خطأ داخلي. راجع سجل الخادم.'});
 });
 await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS teaching_subject TEXT');
+await query("ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check");
+await query("ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('teacher','senior_teacher','principal','supervisor','parent','student'))");
+await query("CREATE TABLE IF NOT EXISTS supervisor_schools (" +
+  "user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE, " +
+  "school_id TEXT NOT NULL, school_name TEXT NOT NULL, " +
+  "created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY(user_id,school_id))");
+await query("CREATE INDEX IF NOT EXISTS idx_supervisor_schools_school ON supervisor_schools(school_id,user_id)");
 await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS teaching_grades TEXT[] NOT NULL DEFAULT '{}'::text[]");
 await query("CREATE TABLE IF NOT EXISTS account_students (" +
   "user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE, " +
