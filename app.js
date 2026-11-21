@@ -1302,13 +1302,23 @@ async function askAssistant() {
 function getInterventionLessonContext() {
   const target = window.atharInterventionTarget || {};
   const curriculum = target.curriculum || {};
-  const grade = String(curriculum.grade || document.getElementById('intGrade')?.value || '');
-  const subject = String(curriculum.subject || document.getElementById('intSubject')?.value || '').trim();
-  const rawLesson = String(curriculum.lesson || document.getElementById('intLesson')?.value || '').trim();
+  const read = (id) => {
+    const field = document.getElementById(id);
+    return String(field?.value || '').trim();
+  };
+  const selectedText = (id) => {
+    const field = document.getElementById(id);
+    const option = field?.selectedOptions?.[0];
+    return option && option.value ? String(option.textContent || '').trim() : '';
+  };
+  const grade = String(curriculum.grade || read('intGrade'));
+  const subject = String(curriculum.subject || selectedText('intSubject') || read('intSubject')).trim();
+  const unit = String(curriculum.unit || selectedText('intUnit') || read('intUnit')).trim();
+  const rawLesson = String(curriculum.lesson || read('intLesson')).trim();
   const rows = ATHAR_CURRICULUM_CATALOG[grade]?.[subject] || {};
   let matched = null;
-  for (const unit of Object.values(rows)) {
-    const lessons = unit?.lessons || {};
+  for (const unitRecord of Object.values(rows)) {
+    const lessons = unitRecord?.lessons || {};
     for (const [key, value] of Object.entries(lessons)) {
       if (String(key).trim() === rawLesson || String(value?.title || '').trim() === rawLesson) {
         matched = value;
@@ -1317,10 +1327,12 @@ function getInterventionLessonContext() {
     }
     if (matched) break;
   }
-  const selected = document.getElementById('intLesson')?.selectedOptions?.[0];
-  const selectedText = selected && selected.value ? String(selected.textContent || '').trim() : '';
-  const lesson = String(matched?.title || selectedText || rawLesson).trim();
-  return { grade, subject, lesson, learningOutcome:curriculum.learning_outcome || document.getElementById('intOutcome')?.value || '' };
+  const lesson = String(matched?.title || selectedText('intLesson') || rawLesson).trim();
+  const learningOutcome = String(curriculum.learning_outcome || read('intOutcome')).trim();
+  const contextText = [lesson, unit, learningOutcome].join(' ');
+  const isListLesson = /قوائم|قائمة/.test(contextText) &&
+    (/تقنية المعلومات|الحاسوب|التقانة|معالجة النصوص|Word/i.test([subject,unit,lesson].join(' ')));
+  return { grade, subject, unit, lesson, learningOutcome, isListLesson };
 }
 function buildSuggestedActivityOptions(analysis) {
   const skill = displaySkillName(analysis.skill || window.atharInterventionTarget?.skill || 'المهارة المستهدفة');
@@ -1329,7 +1341,7 @@ function buildSuggestedActivityOptions(analysis) {
   const context = getInterventionLessonContext();
   const subject = context.subject;
   const lesson = context.lesson;
-  if (/إنشاء القوائم/.test(lesson)) {
+  if (context.isListLesson || /إنشاء\\s*القوائم|القوائم النقطية|القوائم الرقمية/.test(lesson)) {
     const activities = [
       {title:'أحوّل النص إلى قائمة نقطية',steps:'أنشئ قائمة نقطية بعنوان أدواتي المدرسية تتضمن قلمًا ودفترًا ومسطرة وممحاة. ظلّل العناصر واختر أمر التعداد النقطي.'},
       {title:'أنشئ قائمة رقمية بالترتيب',steps:'أنشئ قائمة رقمية لخطوات حفظ مستند: اختيار ملف، حفظ باسم، كتابة اسم الملف، الضغط على حفظ. تحقق من ظهور الأرقام بالترتيب.'},
@@ -1486,8 +1498,9 @@ function getImpactEvidenceStatus(item) {
 
 function buildInterventionGuide(analysis, observedErrors = '') {
   const skill = displaySkillName(analysis.skill || '');
-  const lesson = (document.getElementById('intLesson')?.selectedOptions?.[0]?.textContent || document.getElementById('intLesson')?.value || '').trim();
-  const isListLesson = /إنشاء القوائم/.test(lesson);
+  const lessonContext = getInterventionLessonContext();
+  const lesson = lessonContext.lesson;
+  const isListLesson = lessonContext.isListLesson || /إنشاء\\s*القوائم|القوائم النقطية|القوائم الرقمية/.test(lesson);
   const isReading = /الفهم المقروء|فهم المقروء|الفهم القرائي/.test(skill);
   const score = analysis.targetScore;
   const subjectSelect = document.getElementById('intSubject');
@@ -1646,7 +1659,19 @@ function suggestForIntervention(recordId) {
   const item = interventions.find(row => String(row.recordId) === String(recordId));
   if (!item) return showToast('تعذر العثور على التدخل المحدد. حدّث السجلات وحاول مجددًا.');
   editIntervention(recordId);
-  window.atharInterventionTarget = { ...item };
+  const savedCurriculum = item.curriculum || {};
+  const selectedLessonText = document.getElementById('intLesson')?.selectedOptions?.[0]?.textContent || '';
+  window.atharInterventionTarget = {
+    ...item,
+    curriculum: {
+      ...savedCurriculum,
+      grade:savedCurriculum.grade || document.getElementById('intGrade')?.value || '',
+      subject:savedCurriculum.subject || document.getElementById('intSubject')?.value || '',
+      unit:savedCurriculum.unit || document.getElementById('intUnit')?.value || '',
+      lesson:savedCurriculum.lesson || selectedLessonText || document.getElementById('intLesson')?.value || '',
+      learning_outcome:savedCurriculum.learning_outcome || document.getElementById('intOutcome')?.value || ''
+    }
+  };
   setInterventionMode('ai');
   const aiSkill = document.getElementById('aiSkill');
   if (aiSkill) aiSkill.value = displaySkillName(item.skill || '');
