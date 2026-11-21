@@ -69,6 +69,11 @@ async function main() {
   if (me.data.user.role !== 'teacher' || !me.data.user.isDemo) throw new Error('Demo teacher session is invalid.');
   const demoStudentId='ATHAR-DEMO-STUDENT-001';
   if (!me.data.user.assignedStudentIds.includes(demoStudentId)) throw new Error('Demo teacher is not assigned to the synthetic learner.');
+  if (!me.data.user.teachingSubjects.includes('تقنية المعلومات') || !me.data.user.teachingSubjects.includes('اللغة العربية')) throw new Error('Demo teacher subject assignments are incomplete.');
+  if (!me.data.user.teachingGrades.includes('5')) throw new Error('Demo teacher grade assignment is missing.');
+  const sections=await request('/api/school/grade-sections',{cookie});
+  if (!sections.data.grades.some(item=>item.grade==='5' && item.sectionCount===1)) throw new Error('Demo school grade/section configuration is missing.');
+  await request('/api/users',{cookie,expected:403});
   const teacherRecords=await request('/api/records',{cookie});
   if (!teacherRecords.data.records.some(row=>row.kind==='assessment' && row.payload?.student_id===demoStudentId)) throw new Error('Demo teacher cannot see the synthetic learner assessment.');
 
@@ -78,6 +83,8 @@ async function main() {
     if (!roleCookie) throw new Error(`Demo ${persona} login did not return a session cookie.`);
     if (roleLogin.data.user.role!==persona || !roleLogin.data.user.linkedStudentIds.includes(demoStudentId)) throw new Error(`Demo ${persona} is not linked to the synthetic learner.`);
     const roleRecords=await request('/api/records',{cookie:roleCookie});
+    await request('/api/analysis',{method:'POST',cookie:roleCookie,body:{skill:'الفهم المقروء',student_id:demoStudentId},expected:403});
+    await request('/api/records',{method:'POST',cookie:roleCookie,body:{kind:'assessment',payload:{student_id:demoStudentId}},expected:403});
     if (!roleRecords.data.records.some(row=>row.kind==='assessment' && row.payload?.student_id===demoStudentId)) throw new Error(`Demo ${persona} cannot see the synthetic learner assessment.`);
     if (!roleRecords.data.records.some(row=>row.kind==='impact' && row.payload?.student_id===demoStudentId)) throw new Error(`Demo ${persona} cannot see the synthetic learner impact record.`);
     await request('/api/auth/logout',{method:'POST',cookie:roleCookie});
@@ -88,6 +95,7 @@ async function main() {
     if (roleLogin.data.user.role!==persona) throw new Error(`Demo ${persona} login returned the wrong role.`);
     const roleCookie=(roleLogin.response.headers.get('set-cookie')||'').split(';')[0];
     const roleRecords=await request('/api/records',{cookie:roleCookie});
+    await request('/api/users',{cookie:roleCookie,expected:403});
     if (!roleRecords.data.records.some(row=>row.kind==='student' && row.payload?.student_id===demoStudentId)) throw new Error(`Demo ${persona} cannot see the synthetic school learner.`);
     await request('/api/auth/logout',{method:'POST',cookie:roleCookie});
   }
@@ -95,7 +103,7 @@ async function main() {
   const studentId = `PG-TEST-${Date.now()}`;
   const student = await request('/api/records', {
     method:'POST', cookie, expected:201,
-    body:{ kind:'student', payload:{ student_id:studentId, name:'طالب اختبار PostgreSQL', grade:'5', section:'A' } }
+    body:{ kind:'student', payload:{ student_id:studentId, name:'طالب اختبار PostgreSQL', grade:'5', section:'1' } }
   });
   const assessment = await request('/api/records', {
     method:'POST', cookie, expected:201,
