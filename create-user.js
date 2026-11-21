@@ -12,12 +12,12 @@ const supervisorSchoolIds = role === 'supervisor' ? [...new Set([school, ...stud
 
 async function main() {
   if (!email || !name || !school || !roles.includes(role) || school.toUpperCase().startsWith('DEMO-SCHOOL')) {
-    throw new Error('Usage: npm run create-user -- user@moe.om "Name" teacher SCHOOL_ID (must not be DEMO-SCHOOL)');
+    throw new Error('Usage: npm run create-user -- user@moe.om "Name" teacher SCHOOL_ID; supervisor: user@edu.moe.om "Name" supervisor SCHOOL_ID SCHOOL_ID_2 (must not be DEMO-SCHOOL)');
   }
   if (!['moe.om', 'edu.moe.om'].includes(email.split('@')[1])) {
     throw new Error('Only @moe.om and @edu.moe.om email domains are allowed.');
   }
-  if ((role === 'parent' && !studentIds.length) || (role === 'student' && studentIds.length !== 1) || (['principal','senior_teacher','supervisor'].includes(role) && role !== 'supervisor' && studentIds.length)) {
+  if ((role === 'parent' && !studentIds.length) || (role === 'student' && studentIds.length !== 1) || (['principal','senior_teacher'].includes(role) && studentIds.length)) {
     throw new Error('Parent requires linked students; student requires exactly one; principal and senior_teacher do not take student assignments. For supervisor, pass school IDs after the primary school ID.');
   }
 
