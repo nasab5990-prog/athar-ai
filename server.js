@@ -20,6 +20,8 @@ const allowedDomains = new Set(['moe.om', 'edu.moe.om']);
 const frontendOrigins = (process.env.FRONTEND_ORIGIN || 'https://nasab5990-prog.github.io').split(',').map(v => v.trim()).filter(Boolean);
 const roleNames = { teacher:'المعلم', senior_teacher:'المعلم الأول', principal:'المدير', parent:'ولي الأمر', student:'الطالب' };
 const demoEnabled = process.env.DEMO_LOGIN_ENABLED === 'true';
+let otpExpiryUsesTimestamp = false;
+let otpCreatedUsesTimestamp = false;
 const transporter = process.env.SMTP_HOST ? nodemailer.createTransport({
   host:process.env.SMTP_HOST, port:Number(process.env.SMTP_PORT || 587),
   secure:process.env.SMTP_SECURE === 'true',
@@ -177,9 +179,11 @@ app.post('/api/auth/request-code',loginLimiter,asyncRoute(async(req,res)=>{
   const user=found.rows[0];
   if (user?.active) {
     const code=String(crypto.randomInt(0,1000000)).padStart(6,'0'), now=Date.now();
+    const expiresAt=otpExpiryUsesTimestamp?new Date(now+600000):now+600000;
+    const createdAt=otpCreatedUsesTimestamp?new Date(now):now;
     await query(`INSERT INTO otp_codes(email,code_hash,expires_at,attempts,created_at) VALUES($1,$2,$3,0,$4)
       ON CONFLICT(email) DO UPDATE SET code_hash=EXCLUDED.code_hash,expires_at=EXCLUDED.expires_at,attempts=0,created_at=EXCLUDED.created_at`,
-      [email,hashOtp(email,code),now+600000,now]);
+      [email,hashOtp(email,code),expiresAt,createdAt]);
     try {
       await transporter.sendMail({ from:process.env.MAIL_FROM || process.env.SMTP_USER,to:email,subject:'رمز التحقق — أثَر',text:`رمز التحقق للدخول إلى منصة أثَر هو: ${code}\nصالح لمدة 10 دقائق. لا تشارك الرمز مع أحد.` });
     } catch(error) {
@@ -193,7 +197,8 @@ app.post('/api/auth/verify-code',loginLimiter,asyncRoute(async(req,res)=>{
   const email=safeText(req.body?.email,254).toLowerCase(), code=safeText(req.body?.code,6);
   if (!emailAllowed(email) || !/^\d{6}$/.test(code)) return res.status(400).json({ message:'البريد أو رمز التحقق غير صالح.' });
   const row=(await query('SELECT * FROM otp_codes WHERE email=$1',[email])).rows[0];
-  if (!row || Number(row.expires_at)<Date.now() || row.attempts>=5) {
+  const expiresAtMs=row?.expires_at instanceof Date?row.expires_at.getTime():(Number.isFinite(Number(row?.expires_at))?Number(row.expires_at):Date.parse(row?.expires_at));
+  if (!row || !Number.isFinite(expiresAtMs) || expiresAtMs<Date.now() || row.attempts>=5) {
     await query('DELETE FROM otp_codes WHERE email=$1',[email]);
     return res.status(401).json({ message:'انتهت صلاحية الرمز أو لم يعد صالحًا. اطلب رمزًا جديدًا.' });
   }
@@ -671,6 +676,18 @@ app.use((error,req,res,next)=>{
 });
 await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS teaching_subject TEXT');
 await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS teaching_grades TEXT[] NOT NULL DEFAULT '{}'::text[]");
+await query("CREATE TABLE IF NOT EXISTS account_students (" +
+  "user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE, " +
+  "student_id TEXT NOT NULL, school_id TEXT NOT NULL, PRIMARY KEY(user_id,student_id))");
+await query("CREATE INDEX IF NOT EXISTS idx_account_students_student ON account_students(school_id,student_id)");
+await query("CREATE TABLE IF NOT EXISTS teacher_students (" +
+  "user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE, " +
+  "student_id TEXT NOT NULL, school_id TEXT NOT NULL, PRIMARY KEY(user_id,student_id))");
+await query("CREATE INDEX IF NOT EXISTS idx_teacher_students_student ON teacher_students(school_id,student_id)");
+const otpColumnTypes=await query("SELECT column_name,data_type FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='otp_codes'");
+const otpTypes=new Map(otpColumnTypes.rows.map(row=>[row.column_name,row.data_type]));
+otpExpiryUsesTimestamp=otpTypes.get('expires_at')==='timestamp with time zone';
+otpCreatedUsesTimestamp=otpTypes.get('created_at')==='timestamp with time zone';
 await query("CREATE TABLE IF NOT EXISTS school_grade_sections (" +
   "school_id TEXT NOT NULL, grade TEXT NOT NULL, section_count INTEGER NOT NULL CHECK(section_count BETWEEN 1 AND 30), " +
   "updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY(school_id,grade))");
