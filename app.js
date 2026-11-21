@@ -1203,13 +1203,20 @@ function useAnalysisForIntervention(analysis) {
   const hasCustomPlan = !!(ai?.goal && ai?.interventionSteps?.length);
   showToast(hasCustomPlan ? 'نُقل التحليل، وأُعدت المسودة وفق بيانات الدرس. راجعها قبل الحفظ.' : 'بيانات الحالة جاهزة؛ اضغط «اقتراح ذكي» لتوليد خطة مخصصة قبل الحفظ.');
 }
+function isGeneratedAssessmentText(value) {
+  return /إتقان جزئي في|يحتاج إلى دعم في|قدّم مهمة قصيرة مباشرة|قدّم مثالًا ثانيًا مختلفًا|اعرض إجابة تتضمن خطأ شائعًا|الملاحظة تشير إلى إتقان جزئي في ثلاث مهام|لا توجد بيانات عن الدرس أو ناتج التعلم/.test(String(value || ''));
+}
 function cleanTeacherObservation(value) {
   const raw = String(value || '').trim();
   if (!raw) return '';
-  const autoAssessmentPrompt = /إتقان جزئي في:|يحتاج إلى دعم في:|قدّم مهمة قصيرة مباشرة|قدّم مثالًا ثانيًا مختلفًا|اعرض إجابة تتضمن خطأ شائعًا/;
-  const parts = raw.split(/[؛\n]+/).map(part => part.trim()).filter(Boolean);
-  const cleaned = parts.filter(part => !autoAssessmentPrompt.test(part));
-  return cleaned.join('؛ ').trim();
+  const parts = raw.split(/[؛;\n]+/).map(part => part.trim()).filter(Boolean);
+  return parts.filter(part => !isGeneratedAssessmentText(part)).join('؛ ').trim();
+}
+function cleanSavedInterventionSteps(value) {
+  return String(value || '').split(/\r?\n/).map(line => line.trim()).filter(Boolean)
+    .filter(line => !isGeneratedAssessmentText(line))
+    .filter(line => !/^نمط الصعوبة\s*:/u.test(line) || !/إتقان جزئي|الملاحظة تشير|لا توجد بيانات/.test(line))
+    .join('\n');
 }
 
 function renderAnalysis(analysis, destinationId) {
@@ -1870,7 +1877,7 @@ async function saveIntervention() {
       student_id:existing ? existing.student_id : studentId,
       student_name:existing ? existing.student_name : (student?.name || null),
       skill, goal, steps, enrichment,
-      observed_errors:document.getElementById('intObservedErrors')?.value.trim() || '',
+      observed_errors:cleanTeacherObservation(document.getElementById('intObservedErrors')?.value || ''),
       curriculum,
       status:editingInterventionId
         ? (document.getElementById('intStatus')?.value || existing.status || 'active')
@@ -1913,7 +1920,8 @@ function renderInt() {
     const c = i.curriculum || {};
     const curriculumLine = [c.grade ? `الصف ${c.grade}` : '', c.subject || '', c.semester ? `الفصل ${c.semester}` : '', c.unit ? `الوحدة: ${c.unit}` : '', c.lesson ? `الدرس: ${c.lesson}` : ''].filter(Boolean).join(' • ');
     const studentName = i.student_name || students.find(student => student.student_id === i.student_id)?.name || 'تدخل صفي';
-    const observedErrors = String(i.observed_errors ?? i.observedErrors ?? '').trim();
+    const observedErrors = cleanTeacherObservation(i.observed_errors ?? i.observedErrors ?? '');
+    const displayedSteps = cleanSavedInterventionSteps(i.steps || '');
     const modeLabel = ({ offline:'دون أجهزة أو إنترنت', shared:'جهاز المعلم مع شاشة مشتركة', online:'أجهزة للطلبة وإنترنت' })[i.activity_mode] || 'غير محدد';
     const statusLabel = ({ active:'نشط', completed:'مكتمل', paused:'متوقف مؤقتًا' })[i.status] || i.status || 'غير محدد';
     const recordId = Number(i.recordId);
@@ -1944,7 +1952,7 @@ function renderInt() {
         ${curriculumLine ? `<p class="note">${esc(curriculumLine)}</p>` : ''}
         ${c.learning_outcome ? `<p><strong>ناتج التعلم:</strong> ${esc(c.learning_outcome)}</p>` : ''}
         <p><strong>الهدف:</strong><br>${esc(i.goal || 'غير مسجل')}</p>
-        <p><strong>خطوات التدخل:</strong><br>${esc(i.steps || 'غير مسجلة')}</p>
+        <p><strong>خطوات التدخل:</strong><br>${esc(displayedSteps || 'تحتاج خطوات التدخل إلى مراجعة المعلم قبل اعتمادها.')}</p>
         ${i.enrichment ? `<p><strong>مسار الإثراء:</strong><br>${esc(i.enrichment)}</p>` : ''}
         ${observedErrors ? `<p><strong>ملاحظة المعلم:</strong><br>${esc(observedErrors)}</p>` : ''}
         <p><strong>إمكانات التنفيذ:</strong> ${esc(modeLabel)} • <strong>الوقت:</strong> ${esc(i.activity_duration ?? 'غير محدد')} دقيقة</p>
