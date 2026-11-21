@@ -120,14 +120,19 @@
       <h3>تنبيهات ذكية</h3>
       <div id="smartAlerts"></div>
     </div>
-    <details class="card secondary-tools-disclosure" id="teacherDataAdmin" style="margin-top:1rem;">
-      <summary>أدوات إدارة البيانات <small>للتصدير أو الاستيراد عند الحاجة</small></summary>
-      <div class="secondary-tools-content">
-        <button class="btn small" onclick="exportData()">تصدير JSON</button>
-        <button class="btn small outline" onclick="document.getElementById('imp').click()">استيراد</button>
+    <div class="card" id="teacherDataAdmin" style="margin-top:1rem;">
+      <div class="row-actions" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+        <button class="btn small" type="button" onclick="exportData()">تصدير JSON</button>
+        <button class="btn small outline" type="button" onclick="document.getElementById('imp').click()">استيراد</button>
         <input type="file" id="imp" accept=".json" style="display:none" onchange="importData(event)">
       </div>
-    </details>
+      <details class="secondary-tools-disclosure" style="margin-top:.7rem">
+        <summary>تفاصيل إدارة البيانات <small>استخدم النسخ الاحتياطي قبل الاستيراد أو التحديث الجماعي</small></summary>
+        <div class="secondary-tools-content">
+          <p class="note">تصدير JSON يحفظ نسخة من السجلات المتاحة لحسابك. راجع ملف الاستيراد قبل رفعه، وتأكد من ارتباط السجلات بالمدرسة والطلبة الصحيحين.</p>
+        </div>
+      </details>
+    </div>
   </section>
 
   <section id="students" class="section">
