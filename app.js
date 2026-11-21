@@ -1219,6 +1219,32 @@ function cleanSavedInterventionSteps(value) {
     .join('\n');
 }
 
+function buildWordOpeningIntervention(grade, mode, classSize) {
+  const groupSize = Math.max(1, Number(classSize) || 1);
+  const groupNote = groupSize > 30
+    ? 'قسّم الصف إلى مجموعات صغيرة، واجعل لكل مجموعة دور ملاحظ/منفذ، مع تدوير الأدوار حتى يحصل كل متعلم على محاولة فعلية.'
+    : 'نظّم المحاولات بالتتابع، ويمكن للزملاء الملاحظة دون تنفيذ المهمة بدل المتعلم.';
+  const accessPlan = mode === 'shared'
+    ? 'استخدم جهاز المعلم والشاشة المشتركة للنمذجة، ثم امنح المتعلمين أدوارًا متتابعة على الجهاز نفسه. لا تشترط جهازًا لكل متعلم.'
+    : mode === 'online'
+      ? 'استخدم الأجهزة المتاحة للمتعلمين إن كانت متوفرة، لكن لا تجعل الاتصال بالإنترنت شرطًا لفتح Word إذا كان التطبيق مثبتًا.'
+      : 'لا تتطلب هذه المرحلة أجهزة أو إنترنت: استخدم بطاقة مطبوعة لرمز Word وبطاقات مصورة لمسار فتحه. هذه محاكاة تمهيدية فقط، ولا تُسجّل إتقانًا عمليًا قبل تجربة التطبيق على جهاز متاح.';
+  const steps = [
+    'التهيئة (دقيقة واحدة): اعرض رمز Microsoft Word أو بطاقته المطبوعة، واطلب من المتعلم تمييزه من بين رمزين أو ثلاثة. اذكر اسم التطبيق شفهيًا ولا تجعل القراءة شرطًا.',
+    'تجهيز التنفيذ: ' + accessPlan,
+    'النمذجة (دقيقتان): وضّح مسارًا واحدًا مناسبًا للجهاز: افتح قائمة ابدأ، اعثر على Word، ثم اختره وانتظر ظهور نافذة البرنامج. اشرح أن ظهور النافذة هو معيار النجاح، وليس النقر على الرمز فقط.',
+    'ممارسة موجهة (3 دقائق): نفّذ المحاولة الأولى مع تلميح لفظي قصير عند الحاجة. في المحاولة التالية قلّل التلميح، وسجّل نوع المساعدة بدل تنفيذ الخطوات نيابة عن المتعلم.',
+    'ممارسة مستقلة (3 دقائق): اطلب من المتعلم فتح Word دون عرض الخطوات. امنحه فرصة إعادة المحاولة من قائمة التطبيقات أو البحث في قائمة ابدأ. ' + groupNote,
+    'تحقق ختامي (دقيقة واحدة): اطلب إغلاق Word ثم فتحه مرة أخرى. سجّل نجاح الفتح، والزمن التقريبي، وهل احتاج إلى تلميح. في نمط دون أجهزة، سجّل التدريب الورقي بوصفه تهيئة فقط وحدد موعد تحقق عملي على جهاز متاح.'
+  ];
+  return {
+    goal: 'أن يفتح المتعلم تطبيق Microsoft Word بصورة مستقلة خلال 30 ثانية في 4 محاولات على الأقل من أصل 5، خلال أسبوعين، مع تسجيل مستوى المساعدة في كل محاولة.',
+    steps:steps,
+    enrichment: 'للإثراء: يفتح المتعلم Word بطريقتين متاحتين على الجهاز (من قائمة ابدأ، ومن البحث أو اختصار مثبت إن وجد)، ثم يشرح أيهما أسرع. لا يُطلب مسار غير متاح على جهاز المدرسة.',
+    nextCheck: 'أعد خمس محاولات قصيرة خلال أسبوعين، وسجّل عدد مرات الفتح المستقل والزمن ومستوى المساعدة. اعتمد نسبة النجاح = المحاولات المستقلة الناجحة ÷ 5 × 100.'
+  };
+}
+
 function renderAnalysis(analysis, destinationId) {
   const el = document.getElementById(destinationId);
   if (!el) return;
@@ -1776,9 +1802,26 @@ async function suggestIntervention() {
     });
     const analysis = response.analysis;
     const score = analysis?.targetScore === null || analysis?.targetScore === undefined ? null : Number(analysis.targetScore);
-    const ai = response.aiAssist && response.aiAssist.status === 'ok' ? response.aiAssist : null;
+    let ai = response.aiAssist && response.aiAssist.status === 'ok' ? response.aiAssist : null;
     if (!ai?.goal || !Array.isArray(ai.interventionSteps) || !ai.interventionSteps.length) {
       throw new Error(response.aiAssist?.message || 'لم ينتج المساعد خطة تدخل مخصصة. تحقق من اتصال خدمة الذكاء الاصطناعي ثم أعد المحاولة.');
+    }
+    const isWordOpeningSkill = /فتح.*(?:تطبيق|برنامج)?.*(?:معالج الكلمات|\\bword\\b)|(?:معالج الكلمات|\\bword\\b).*فتح/i.test(displaySkillName(analysis.skill || skill));
+    if (isWordOpeningSkill) {
+      const wordPlan = buildWordOpeningIntervention(
+        document.getElementById('intGrade')?.value || '',
+        document.getElementById('activityMode')?.value || 'offline',
+        students.filter(item => String(gradeNumber(item.grade)) === String(document.getElementById('intGrade')?.value || '')).length || 1
+      );
+      ai = {
+        ...ai,
+        goal:wordPlan.goal,
+        errorPattern:cleanTeacherObservation(observedErrors) ? 'تُراجع ملاحظة المعلم مع أداء المتعلم الفعلي؛ لا تُعامل عبارات أسئلة التقويم بوصفها أخطاء مرصودة.' : 'لا توجد ملاحظة صفية موثقة؛ يبدأ الدعم بملاحظة الأداء أثناء المحاولة.',
+        interventionSteps:wordPlan.steps,
+        teacherChecks:[],
+        nextCheck:wordPlan.nextCheck,
+        differentiated:{ ...(ai.differentiated || {}), enrichment:wordPlan.enrichment }
+      };
     }
     document.getElementById('intSkill').value = displaySkillName(analysis.skill);
     window.atharAiDraftReady = true;
