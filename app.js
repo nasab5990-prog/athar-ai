@@ -7,6 +7,7 @@ let impacts = [];
 let analyses = [];
 let currentRole = null;
 let currentUser = null;
+let supervisorSchoolsData = [];
 let loginMode = 'otp';
 let linkedStudentIds = [];
 const API_BASE = String(window.ATHAR_CONFIG?.apiBase || '').replace(/\/$/, '');
@@ -107,8 +108,8 @@ async function acceptLogin(user) {
   if (demoNotice) demoNotice.hidden = !user.isDemo && user.school_id !== 'DEMO-SCHOOL';
   document.getElementById('loginScreen')?.classList.add('hidden');
   applyRoleUI();
-  try { await loadRecords(); }
-  catch (error) { showToast(`تم الدخول، لكن تعذّر تحميل السجلات: ${error.message}`); }
+  try { if (currentRole === 'supervisor') await loadSupervisorData(); else await loadRecords(); }
+  catch (error) { showToast(`تم الدخول، لكن تعذّر تحميل البيانات: ${error.message}`); }
   show('dashboard');
   showToast(`مرحبًا ${user.name || user.email} — ${getRoleName(currentRole)}`);
 }
@@ -139,13 +140,13 @@ async function restoreSession() {
   if (demoNotice) demoNotice.hidden = !result.user.isDemo;
   document.getElementById('loginScreen')?.classList.add('hidden');
   applyRoleUI();
-  try { await loadRecords(); }
-  catch (error) { showToast(`تعذّر تحميل السجلات: ${error.message}`); }
+  try { if (currentRole === 'supervisor') await loadSupervisorData(); else await loadRecords(); }
+  catch (error) { showToast(`تعذّر تحميل البيانات: ${error.message}`); }
   show('dashboard');
 }
 async function logout() {
   try { await api('/api/auth/logout', { method:'POST' }); } catch { /* Session may already have expired. */ }
-  currentUser = null; currentRole = null; linkedStudentIds = [];
+  currentUser = null; currentRole = null; linkedStudentIds = []; supervisorSchoolsData = [];
   const demoNotice = document.getElementById('demoEnvironmentBanner'); if (demoNotice) demoNotice.hidden = true;
   students = []; assessments = []; interventions = []; impacts = []; analyses = [];
   document.getElementById('loginCode') && (document.getElementById('loginCode').value = '');
@@ -316,7 +317,8 @@ const roleSections = {
   senior_teacher: ['dashboard','assessment','radar','assistant','intervention','activities','impact','reports','principalView','inclusive','lowresource','privacy','teacherdev','curriculum','guide','about'],
   principal: ['dashboard','students','reports','principalView','roles','privacy','guide','about'],
   parent: ['dashboard','studentProgress','guide','privacy','about'],
-  student: ['dashboard','studentProgress','guide','privacy','about']
+  student: ['dashboard','studentProgress','guide','privacy','about'],
+  supervisor: ['dashboard','reports','guide','about']
 };
 function canOpenSection(id) { return (roleSections[currentRole] || []).includes(id); }
 function resetSectionView(section) {
@@ -427,7 +429,7 @@ function togglePresentation() {
   showToast(document.body.classList.contains('presentation') ? 'وضع العرض مفعّل' : 'وضع العرض متوقف');
 }
 function getRoleName(role) {
-  return ({ teacher:'المعلم', senior_teacher:'المعلم الأول', principal:'المدير', parent:'ولي الأمر', student:'الطالب' })[role] || 'مستخدم';
+  return ({ teacher:'المعلم', senior_teacher:'المعلم الأول', principal:'المدير', supervisor:'المشرف التربوي', parent:'ولي الأمر', student:'الطالب' })[role] || 'مستخدم';
 }
 function applyTeacherAssignmentFilters() {
   const gradeIds = ['intGrade'];
@@ -454,10 +456,13 @@ function applyRoleUI() {
     const visible = [...group.querySelectorAll('a[data-section]')].some(link => link.style.display !== 'none');
     group.style.display = visible ? '' : 'none';
   });
+  const supervisorPanel = document.getElementById('supervisorDashboardPanel');
+  if (supervisorPanel) supervisorPanel.hidden = currentRole !== 'supervisor';
+  document.querySelectorAll('#dashboard > *').forEach(node => { if (node.id !== 'supervisorDashboardPanel') node.hidden = currentRole === 'supervisor'; });
   const roleInfo = document.getElementById('roleInfo');
   const teacherAssignments=currentUser?.teachingAssignments||[];
   const teacherDescription = currentRole === 'teacher' ? (teacherAssignments.length ? `موادك: ${[...new Set(teacherAssignments.map(item=>item.subject))].map(esc).join('، ')} • الصفوف: ${[...new Set(teacherAssignments.map(item=>item.grade))].map(esc).join('، ')}. تظهر لك سجلات الطلبة ضمن الشعب المسندة.` : 'لم يحدد المدير موادك وصفوفك وشعبك بعد؛ اطلب منه إكمال التكليف الدراسي.') : null;
-  if (roleInfo) roleInfo.innerHTML = `<div class="card"><strong>${esc(getRoleName(currentRole))}</strong><p>${teacherDescription || esc(({ senior_teacher:'متابعة سجلات المدرسة والتدخلات ومؤشرات الصفوف.', principal:'إدارة حسابات المدرسة ومتابعة المؤشرات والسجلات.', parent:'متابعة الأبناء المرتبطين بحسابك فقط.', student:'متابعة تقدمك ونتائجك الفردية فقط.' })[currentRole] || '')}</p></div>`;
+  if (roleInfo) roleInfo.innerHTML = `<div class="card"><strong>${esc(getRoleName(currentRole))}</strong><p>${teacherDescription || esc(({ senior_teacher:'متابعة سجلات المدرسة والتدخلات ومؤشرات الصفوف.', principal:'إدارة حسابات المدرسة ومتابعة المؤشرات والسجلات.', supervisor:'اطلاع وتقارير فقط للمدارس المسندة إلى نطاق إشرافك، دون تعديل السجلات أو إدارة الحسابات.', parent:'متابعة الأبناء المرتبطين بحسابك فقط.', student:'متابعة تقدمك ونتائجك الفردية فقط.' })[currentRole] || '')}</p></div>`;
   applyTeacherAssignmentFilters();
   if (currentRole === 'teacher') updateCurriculumSubjects();
   const accountAdmin = document.getElementById('accountAdmin');
@@ -468,7 +473,7 @@ function applyRoleUI() {
   if (schoolGradeSectionsAdmin) schoolGradeSectionsAdmin.hidden = currentRole !== 'principal';
   document.getElementById('currentUserLabel') && (document.getElementById('currentUserLabel').textContent = `${currentUser?.name || ''} • ${getRoleName(currentRole)}`);
   const dataAdmin = document.getElementById('teacherDataAdmin');
-  if (dataAdmin) dataAdmin.hidden = ['parent','student'].includes(currentRole);
+  if (dataAdmin) dataAdmin.hidden = ['parent','student','supervisor'].includes(currentRole);
   const progressTitle = document.getElementById('progressPageTitle');
   if (progressTitle) progressTitle.textContent = currentRole === 'student' ? 'تقدمي الدراسي' : 'متابعة الأبناء';
   const progressLabel = document.getElementById('progressStudentLabel');
@@ -2345,6 +2350,19 @@ function latestAssessmentRows(rows = assessments) {
   }
   return [...latest.values()];
 }
+async function loadSupervisorData() {
+  const result=await api('/api/supervisor/schools');
+  supervisorSchoolsData=result.schools||[];
+  renderSupervisorDashboard();
+}
+function renderSupervisorDashboard() {
+  const host=document.getElementById('supervisorSchoolsList');
+  const summary=document.getElementById('supervisorSummary');
+  if (!host || !summary) return;
+  const totals=supervisorSchoolsData.reduce((acc,s)=>{ acc.schools++; acc.students+=Number(s.students)||0; acc.assessments+=Number(s.assessments)||0; acc.interventions+=Number(s.interventions)||0; acc.impacts+=Number(s.impacts)||0; return acc; },{schools:0,students:0,assessments:0,interventions:0,impacts:0});
+  summary.innerHTML='<div class="cards"><div class="card"><h3>المدارس المشمولة</h3><div class="stat">'+totals.schools+'</div></div><div class="card"><h3>الطلبة</h3><div class="stat">'+totals.students+'</div></div><div class="card"><h3>التقويمات</h3><div class="stat">'+totals.assessments+'</div></div><div class="card"><h3>التدخلات</h3><div class="stat">'+totals.interventions+'</div></div><div class="card"><h3>قياسات الأثر</h3><div class="stat">'+totals.impacts+'</div></div></div>';
+  host.innerHTML=supervisorSchoolsData.length?supervisorSchoolsData.map(s=>'<article class="card supervisor-school-card"><h3>'+esc(s.school_name)+'</h3><p class="note">آخر نشاط: '+(s.last_activity?new Date(s.last_activity).toLocaleDateString('ar-OM'):'لا توجد سجلات بعد')+'</p><div class="cards"><div><strong>'+(Number(s.students)||0)+'</strong><small>طلبة</small></div><div><strong>'+(Number(s.assessments)||0)+'</strong><small>تقويمات</small></div><div><strong>'+(Number(s.interventions)||0)+'</strong><small>تدخلات</small></div><div><strong>'+(Number(s.impacts)||0)+'</strong><small>قياسات أثر</small></div></div></article>').join(''):'<p class="note">لا توجد مدارس مسندة إلى حساب الإشراف بعد. يضيف مسؤول النظام المدارس إلى نطاق الحساب.</p>';
+}
 function updateDashboard() {
   const currentAssessments = latestAssessmentRows();
   const avg = currentAssessments.length ? Math.round(currentAssessments.reduce((sum, a) => sum + Number(a.pct || 0), 0) / currentAssessments.length) : null;
@@ -2461,6 +2479,11 @@ function renderPrincipalView() {
 function renderReports() {
   const el = document.getElementById('reportSummary');
   if (!el) return;
+  if (currentRole === 'supervisor') {
+    const total=supervisorSchoolsData.reduce((sum,s)=>sum+(Number(s.assessments)||0),0);
+    el.innerHTML='<header class="report-print-header"><h2>أثَر | تقرير متابعة الإشراف التربوي</h2><p>تاريخ إعداد التقرير: '+new Date().toLocaleDateString('ar-OM')+'</p></header><p>المدارس المشمولة: '+supervisorSchoolsData.length+' • التقويمات: '+total+'</p><h4>ملخص المدارس</h4><ul>'+supervisorSchoolsData.map(s=>'<li><strong>'+esc(s.school_name)+'</strong> — الطلبة: '+(Number(s.students)||0)+' • التقويمات: '+(Number(s.assessments)||0)+' • التدخلات: '+(Number(s.interventions)||0)+' • قياسات الأثر: '+(Number(s.impacts)||0)+'</li>').join('')+'</ul><p class="report-print-note">تقرير اطلاع ومتابعة للمدارس المسندة فقط. لا يتيح هذا الدور تعديل السجلات أو اعتماد التدخلات.</p><footer class="report-print-footer">حقوق التصميم والتطوير © أ. نصراء سعيد البهلولي | منصة أثَر</footer>';
+    return;
+  }
   const currentAssessments = latestAssessmentRows();
   const skillGroups = new Map();
   currentAssessments.forEach(assessment => {
