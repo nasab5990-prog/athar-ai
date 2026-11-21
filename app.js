@@ -777,7 +777,7 @@ async function saveAssessment() {
     // لا نحوّل نص السؤال أو مستوى إتقانه إلى "ملاحظة معلم".
     // نمرر الملاحظات التي كتبها المعلم فقط؛ ويرتبط التحليل بسجل التقويم عبر assessment_record_id.
     const assessmentObservation = diagnosticQuestions
-      .map(item => item.note ? String(item.note).trim() : '')
+      .map(item => item.note ? cleanTeacherObservation(item.note) : '')
       .filter(Boolean)
       .join('؛ ');
     const radarRequest = {
@@ -1203,6 +1203,15 @@ function useAnalysisForIntervention(analysis) {
   const hasCustomPlan = !!(ai?.goal && ai?.interventionSteps?.length);
   showToast(hasCustomPlan ? 'نُقل التحليل، وأُعدت المسودة وفق بيانات الدرس. راجعها قبل الحفظ.' : 'بيانات الحالة جاهزة؛ اضغط «اقتراح ذكي» لتوليد خطة مخصصة قبل الحفظ.');
 }
+function cleanTeacherObservation(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const autoAssessmentPrompt = /إتقان جزئي في:|يحتاج إلى دعم في:|قدّم مهمة قصيرة مباشرة|قدّم مثالًا ثانيًا مختلفًا|اعرض إجابة تتضمن خطأ شائعًا/;
+  const parts = raw.split(/[؛\n]+/).map(part => part.trim()).filter(Boolean);
+  const cleaned = parts.filter(part => !autoAssessmentPrompt.test(part));
+  return cleaned.join('؛ ').trim();
+}
+
 function renderAnalysis(analysis, destinationId) {
   const el = document.getElementById(destinationId);
   if (!el) return;
@@ -1214,7 +1223,8 @@ function renderAnalysis(analysis, destinationId) {
     status:item.score === null ? 'غير مقاس — يحتاج إلى تقويم تشخيصي' : item.score < 70 ? 'فجوة محتملة وفق النتائج' : 'لا تظهر فجوة في النتائج المتاحة',
     evidence:item.score === null ? 'لا توجد نتيجة مسجلة لهذه المهارة السابقة.' : `متوسط أحدث النتائج ${item.score}% من ${item.sampleSize || 0} سجل/سجلات.`
   }));
-  const teacherObservation = analysis.observedErrors || (analysis.evidence || []).find(item => String(item).startsWith('ملاحظة المعلم:'))?.replace('ملاحظة المعلم:', '').trim() || 'لم تُسجل ملاحظة عن نمط الخطأ؛ افحص إجابات الطلبة لتحديده.';
+  const rawTeacherObservation = analysis.observedErrors || (analysis.evidence || []).find(item => String(item).startsWith('ملاحظة المعلم:'))?.replace('ملاحظة المعلم:', '').trim() || '';
+  const teacherObservation = cleanTeacherObservation(rawTeacherObservation) || 'لا توجد ملاحظة صفية موثقة؛ راجع إجابات التقويم لتحديد موضع الصعوبة.';
   const normalizedObservation = teacherObservation.replace(/[أإآ]/g, 'ا').replace(/ى/g, 'ي');
   const patternHint = /استخراج|استخرج|يستخرج/.test(normalizedObservation) && /نص|مقروء|قراء/.test(normalizedObservation)
     ? 'مؤشر أولي محتمل: صعوبة تحديد موضع الإجابة أو الدليل في النص.'
@@ -1226,7 +1236,7 @@ function renderAnalysis(analysis, destinationId) {
           ? 'مؤشر أولي محتمل: صعوبة الاستدلال وربط القرائن.'
           : '';
   const rootStatus = analysis.rootCauseStatus || (roots.length ? 'تحتاج المهارات السابقة إلى مراجعة الأدلة.' : 'لا تتوفر خريطة موثقة للمهارات السابقة.');
-  const evidenceItems = analysis.evidence || [];
+  const evidenceItems = (analysis.evidence || []).filter(item => !cleanTeacherObservation(String(item).replace(/^ملاحظة المعلم:\s*/, '')) && !/ملاحظة المعلم:\s*(?:إتقان جزئي في:|يحتاج إلى دعم في:|قدّم مهمة قصيرة مباشرة|قدّم مثالًا ثانيًا مختلفًا|اعرض إجابة تتضمن خطأ شائعًا)/.test(String(item)));
   const hasNoAssessmentEvidence = (analysis.targetScore === null || analysis.targetScore === undefined) && Number(analysis.sampleSize || 0) === 0;
   window.atharLastAnalysisPrerequisites = roots.map(item => ({ skill:item.skill, score:item.score, sampleSize:item.sampleSize || 0 }));
   const rootItems = roots.map(item => {
@@ -1710,7 +1720,7 @@ function suggestForIntervention(recordId) {
   const aiSkill = document.getElementById('aiSkill');
   if (aiSkill) aiSkill.value = displaySkillName(item.skill || '');
   const observed = document.getElementById('intObservedErrors');
-  if (observed) observed.value = item.observed_errors || item.observedErrors || '';
+  if (observed) observed.value = cleanTeacherObservation(item.observed_errors || item.observedErrors || '');
   suggestIntervention();
 }
 
@@ -1720,7 +1730,9 @@ async function suggestIntervention() {
   const target = window.atharInterventionTarget || null;
   const studentId = target ? (target.student_id || '') : (document.getElementById('interventionStudent')?.value || '');
   const student = students.find(item => item.student_id === studentId);
-  const observedErrors = document.getElementById('intObservedErrors')?.value.trim() || '';
+  const observedErrors = cleanTeacherObservation(document.getElementById('intObservedErrors')?.value || '');
+  const observationField = document.getElementById('intObservedErrors');
+  if (observationField && observationField.value !== observedErrors) observationField.value = observedErrors;
   let skill = target?.skill ? displaySkillName(target.skill) : (document.getElementById('aiSkill')?.value.trim() || '');
 
   if (studentId && !student) return showToast('تعذر العثور على الطالب المحدد.');
