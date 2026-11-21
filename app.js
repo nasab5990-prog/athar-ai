@@ -1603,7 +1603,7 @@ async function suggestIntervention() {
       method:'POST',
       body:JSON.stringify({
         skill, student_id:studentId, observedErrors,
-        assessment_record_id:target?.assessment_record_id || window.atharSuggestedIntervention?.assessmentRecordId || window.atharLastAnalysisRequest?.assessment_record_id || null,
+        assessment_record_id:target ? (target.assessment_record_id || null) : (window.atharSuggestedIntervention?.assessmentRecordId || window.atharLastAnalysisRequest?.assessment_record_id || null),
         grade:document.getElementById('intGrade')?.value || '',
         subject:document.getElementById('intSubject')?.value || '',
         unit:document.getElementById('intUnit')?.value || '',
@@ -1634,7 +1634,7 @@ async function suggestIntervention() {
     document.getElementById('intEnrich').value = ai.differentiated?.enrichment || '';
     window.atharSuggestedIntervention = {
       analysisId:response.id,
-      assessmentRecordId:target?.assessment_record_id || window.atharLastAnalysisRequest?.assessment_record_id || null,
+      assessmentRecordId:target ? (target.assessment_record_id || null) : (window.atharLastAnalysisRequest?.assessment_record_id || null),
       skill:displaySkillName(analysis.skill),
       studentId:studentId || null,
       interventionRecordId:target?.recordId || null
@@ -1860,6 +1860,7 @@ function editIntervention(recordId) {
 }
 function cancelInterventionEdit() {
   editingInterventionId = null;
+  window.atharInterventionTarget = null;
   const statusField = document.getElementById('intStatusField');
   if (statusField) statusField.hidden = true;
   const saveButton = document.getElementById('saveInterventionBtn');
