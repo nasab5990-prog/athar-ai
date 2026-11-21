@@ -207,8 +207,9 @@ function updateCurriculumSubjects() {
   setCurriculumOptions(subject, grade ? (currentRole === 'teacher' && !verifiedSubjects.length ? 'المادة غير مسندة لهذا الصف' : 'اختر المادة') : 'تُحدد حسب الصف والتكليف', verifiedSubjects);
   if (currentRole === 'teacher') {
     if (subject) {
-      subject.value = verifiedSubjects[0] || '';
-      subject.disabled = true;
+      const previousSubject = subject.value;
+      subject.disabled = verifiedSubjects.length <= 1;
+      subject.value = verifiedSubjects.includes(previousSubject) ? previousSubject : (verifiedSubjects[0] || '');
     }
     const field = document.getElementById('intSubjectField');
     if (field) field.hidden = !verifiedSubjects.length;
@@ -1265,20 +1266,29 @@ function buildWordOpeningIntervention(grade, mode, classSize) {
 }
 function classifyTeacherObservation(observation) {
   const clauses = String(observation || '')
+    .replace(/\s+و(لا\s+(?:يستطيع|تستطيع|يتمكن|تتمكن|يمكنه|يمكنها))/g, '؛ $1')
+    .replace(/\s+و(لم\s+(?:يستطع|تستطع|يتمكن|تتمكن))/g, '؛ $1')
     .replace(/\s+(لكن|ولكن|بينما|في حين)\s+/g, '؛')
-    .split(/[؛؛\n]+/)
+    .split(/[؛;\n]+/)
     .map(item => item.trim().replace(/^[،,.]+|[،,.]+$/g, ''))
     .filter(Boolean);
   const strengths = [];
   const supportNeeds = [];
   const unclassified = [];
   const normalize = value => value.replace(/[أإآ]/g, 'ا').replace(/ى/g, 'ي');
+  const negativeLead = /^(?:لا\s+(?:يستطيع|تستطيع|يتمكن|تتمكن|يمكنه|يمكنها)|لم\s+(?:يستطع|تستطع|يتمكن|تتمكن)|(?:يعجز|تعجز)(?:\s+عن)?|(?:يواجه|تواجه|يجد|تجد)\s+صعوبة(?:\s+في)?|(?:يحتاج|تحتاج)\s+إ?لى\s+دعم|غير\s+قادر(?:ة)?(?:\s+على)?)\s*/;
+  const actionStarts = /\s+و(?=(?:إزالة|ازالة|قص|تدوير|تعديل|تحريك|تحديد|استبدال|دمج|تقسيم|تغيير|إضافة|اضافة|حذف|تنسيق|ترتيب|استخراج|إدراج|ادراج|فتح|إغلاق|اغلاق|حفظ|نقل|نسخ|لصق|اختيار|رسم|إنشاء|انشاء))/;
   for (const clause of clauses) {
     const value = normalize(clause);
-    const negative = /لا يستطيع|لا تتمكن|لا يتمكن|لم يستطع|لم تتمكن|لم يتمكن|يعجز|تواجه صعوب|يواجه صعوب|يحتاج الى دعم|تحتاج الى دعم|يتعثر/.test(value);
+    const negative = /لا\s+(?:يستطيع|تستطيع|يتمكن|تتمكن|يمكنه|يمكنها)|لم\s+(?:يستطع|تستطع|يتمكن|تتمكن)|(?:يعجز|تعجز)|(?:يواجه|تواجه|يجد|تجد)\s+صعوب|(?:يحتاج|تحتاج)\s+الى\s+دعم|غير\s+قادر|يتعثر|تتعثر/.test(value);
     const positive = /يستطيع|تستطيع|تمكن من|تمكنت من|يتقن|تتقن|يجيد|تجيد|ينجح في|تنجح في|بنجاح/.test(value);
-    if (negative && !positive) supportNeeds.push(clause);
-    else if (positive && !negative) strengths.push(clause);
+    if (negative) {
+      const actionText = clause.replace(negativeLead, '').trim();
+      const actions = actionText && actionText !== clause
+        ? actionText.split(actionStarts).map(item => item.trim()).filter(Boolean)
+        : [];
+      supportNeeds.push(...(actions.length > 1 ? actions : [clause]));
+    } else if (positive) strengths.push(clause);
     else unclassified.push(clause);
   }
   return { strengths, supportNeeds, unclassified };
