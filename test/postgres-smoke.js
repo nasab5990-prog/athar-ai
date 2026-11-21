@@ -77,6 +77,8 @@ async function main() {
   await request('/api/records',{method:'POST',cookie:supervisorCookie,body:{kind:'assessment',payload:{student_id:'ATHAR-DEMO-STUDENT-002'}},expected:403});
   await request('/api/analysis',{method:'POST',cookie:supervisorCookie,body:{skill:'الكسور'},expected:403});
   await request('/api/users',{cookie:supervisorCookie,expected:403});
+  const supervisorRecordId=supervisorRecords.data.records.find(row=>row.kind==='assessment')?.id;
+  if (supervisorRecordId) await request('/api/records/'+supervisorRecordId,{method:'DELETE',cookie:supervisorCookie,expected:403});
   const demoStudentId='ATHAR-DEMO-STUDENT-001';
   if (!me.data.user.assignedStudentIds.includes(demoStudentId)) throw new Error('Demo teacher is not assigned to the synthetic learner.');
   if (!me.data.user.teachingSubjects.includes('تقنية المعلومات') || !me.data.user.teachingSubjects.includes('اللغة العربية')) throw new Error('Demo teacher subject assignments are incomplete.');
