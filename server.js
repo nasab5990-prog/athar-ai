@@ -562,13 +562,13 @@ function analyzeLearning(user, body) {
   if (studentId && !studentRecord) throw Object.assign(new Error('الطالب غير تابع لسجلاتك أو غير موجود في المدرسة.'), { status: 403 });
   let rows;
   if (user.role === 'principal' || user.role === 'senior_teacher') {
-    rows = db.prepare("SELECT payload FROM records WHERE school_id=? AND kind='assessment' ORDER BY id DESC LIMIT 1000").all(user.school_id);
+    rows = db.prepare("SELECT id, payload FROM records WHERE school_id=? AND kind='assessment' ORDER BY id DESC LIMIT 1000").all(user.school_id);
   } else {
     const assigned = user.role === 'teacher' ? assignedStudentIds(user) : [];
     const assignmentClause = assigned.length ? ` OR json_extract(payload,'$.student_id') IN (${assigned.map(() => '?').join(',')})` : '';
-    rows = db.prepare(`SELECT payload FROM records WHERE school_id=? AND kind='assessment' AND (owner_id=?${assignmentClause}) ORDER BY id DESC LIMIT 800`).all(user.school_id, user.id, ...assigned);
+    rows = db.prepare(`SELECT id, payload FROM records WHERE school_id=? AND kind='assessment' AND (owner_id=?${assignmentClause}) ORDER BY id DESC LIMIT 800`).all(user.school_id, user.id, ...assigned);
   }
-  let assessments = rows.map(r => JSON.parse(r.payload));
+  let assessments = rows.map(r => ({ ...JSON.parse(r.payload), recordId:r.id }));
   if (studentId) assessments = assessments.filter(a => a.student_id === studentId);
   const mapped = findSkill(skill);
   const analysisSkill = mapped?.title || skill;
@@ -607,6 +607,19 @@ function analyzeLearning(user, body) {
   const roots = weakRoots.length ? weakRoots : prereqEvidence;
   const strategy = mapped?.strategies || ['ابدأ بتقويم تشخيصي قصير يحدد نوع الخطأ.', 'قسّم المهارة إلى خطوات أصغر، ثم قدّم نموذجًا محلولًا.', 'استخدم سؤال تحقق مستقلًا بعد النشاط.'];
   const observedErrors = safeText(body.observedErrors, 1000);
+  const linkedAssessmentId = safeText(body.assessment_record_id, 80);
+  const linkedAssessment = linkedAssessmentId
+    ? assessments.find(item => String(item.recordId) === linkedAssessmentId) || null
+    : null;
+  const diagnosticEvidence = Array.isArray(linkedAssessment?.diagnostic_questions)
+    ? linkedAssessment.diagnostic_questions.map(item => ({
+        number:Number(item.number) || null,
+        question:safeText(item.question, 500),
+        score:Number.isFinite(Number(item.score)) ? Number(item.score) : null,
+        rating:safeText(item.rating, 80),
+        teacherNote:safeText(item.note, 500)
+      })).filter(item => item.question)
+    : [];
   const rootCandidates = roots.map(item => ({
     skill:item.skill,
     score:item.score,
@@ -626,6 +639,11 @@ function analyzeLearning(user, body) {
   if (!weakRoots.length && prereqEvidence.length) evidence.push('لا توجد نتائج منخفضة مسجلة للمهارات السابقة ضمن البيانات المتاحة؛ يُنصح بالتأكد منها بتقويم تشخيصي عند الحاجة.');
   if (!studentId && sampleSize) evidence.push(`احتُسب متوسط المهارة من أحدث نتيجة لكل طالب/مجموعة؛ عدد السجلات الممثلة: ${sampleSize}.`);
   if (observedErrors) evidence.push(`ملاحظة المعلم: ${observedErrors}`);
+  if (diagnosticEvidence.length) {
+    const low = diagnosticEvidence.filter(item => item.score !== null && item.score < 100);
+    evidence.push(`تفاصيل التقويم المرتبط: ${diagnosticEvidence.length} سؤالًا/مهمة؛ ${diagnosticEvidence.length - low.length} بإتقان كامل و${low.length} بإتقان جزئي أو بحاجة إلى دعم.`);
+    diagnosticEvidence.filter(item => item.teacherNote).forEach(item => evidence.push(`ملاحظة المعلم للسؤال ${item.number || ''}: ${item.teacherNote}`));
+  }
   return {
     skill: mapped?.title || skill,
     level,
@@ -633,6 +651,8 @@ function analyzeLearning(user, body) {
     trend,
     sampleSize,
     observedErrors,
+    assessmentRecordId:linkedAssessment?.recordId || null,
+    diagnosticEvidence,
     errorPattern: observedErrors || 'لم تُسجل ملاحظة عن نمط الخطأ؛ يلزم فحص إجابات الطلبة لتحديده.',
     rootCauseStatus: weakRoots.length ? 'توجد مهارات سابقة منخفضة مدعومة بنتائج' : prereqEvidence.length ? 'لا توجد فجوة مثبتة؛ بعض المهارات السابقة تحتاج إلى تحقق' : 'لا تتوفر خريطة موثقة للمهارات السابقة',
     rootCandidates,
