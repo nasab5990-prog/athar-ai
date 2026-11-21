@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { pool } from './database.js';
 
 const expected = {
-  users: ['id','email','name','role','school_id','student_id','active','created_at'],
+  users: ['id','email','name','role','school_id','student_id','active','created_at','teaching_subject','teaching_grades'],
   otp_codes: ['email','code_hash','expires_at','attempts','created_at'],
   audit_log: ['id','user_id','event','details','created_at'],
   records: ['id','school_id','owner_id','kind','payload','created_at'],
