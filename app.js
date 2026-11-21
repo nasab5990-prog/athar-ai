@@ -1458,7 +1458,7 @@ function printWordOpenWorksheet(title, skill) {
   win.document.close();
 }
 function printSuggestedActivityWorksheet(title, skill, subject = '', lesson = '') {
-  if (/فتح.*(?:تطبيق|برنامج)?.*(?:معالج الكلمات|\\bword\\b)|(?:معالج الكلمات|\\bword\\b).*فتح/i.test(skill)) return printWordOpenWorksheet(title, skill);
+  if (/فتح.*(?:تطبيق|برنامج)?.*(?:معالج الكلمات|word)|(?:معالج الكلمات|word).*فتح/i.test(skill)) return printWordOpenWorksheet(title, skill);
   const savedContext = getInterventionLessonContext();
   lesson = String(lesson || savedContext.lesson || '').trim();
   subject = String(subject || savedContext.subject || '').trim();
