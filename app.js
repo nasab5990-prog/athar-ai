@@ -267,13 +267,20 @@ function updateCurriculumOutcome() {
   const subject = document.getElementById('intSubject')?.value || '';
   const unit = document.getElementById('intUnit')?.value || '';
   const lesson = document.getElementById('intLesson')?.value || '';
-  const record = ATHAR_CURRICULUM_CATALOG[grade]?.[subject]?.[unit]?.lessons?.[lesson];
+  const unitRecord = ATHAR_CURRICULUM_CATALOG[grade]?.[subject]?.[unit];
+  const record = unitRecord?.lessons?.[lesson];
   const outcome = document.getElementById('intOutcome');
   if (outcome) outcome.value = record?.learning_outcome || '';
   const outcomeField = document.getElementById('curriculumOutcomeField');
   if (outcomeField) outcomeField.hidden = !record?.learning_outcome;
+  const unitOutcomesOnly = !record?.learning_outcome && unitRecord?.outcome_scope === 'unit' && unitRecord?.learning_outcomes?.length;
   const status = document.getElementById('curriculumCatalogStatus');
-  if (status) { status.hidden = !!record?.learning_outcome; status.textContent = record?.learning_outcome ? '' : 'لا يوجد ناتج تعلم موثق لهذا الدرس حتى الآن.'; }
+  if (status) {
+    status.hidden = !!record?.learning_outcome;
+    status.textContent = record?.learning_outcome ? '' : unitOutcomesOnly
+      ? 'نواتج التعلم موثقة على مستوى الوحدة في الكتاب، ولم تُوزع على الدروس منفردة.'
+      : 'لا يوجد ناتج تعلم موثق لهذا الدرس حتى الآن.';
+  }
 }
 
 function toggleGroup(el) {
