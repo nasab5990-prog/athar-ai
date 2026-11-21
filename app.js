@@ -1236,7 +1236,10 @@ function renderAnalysis(analysis, destinationId) {
           ? 'مؤشر أولي محتمل: صعوبة الاستدلال وربط القرائن.'
           : '';
   const rootStatus = analysis.rootCauseStatus || (roots.length ? 'تحتاج المهارات السابقة إلى مراجعة الأدلة.' : 'لا تتوفر خريطة موثقة للمهارات السابقة.');
-  const evidenceItems = (analysis.evidence || []).filter(item => !cleanTeacherObservation(String(item).replace(/^ملاحظة المعلم:\s*/, '')) && !/ملاحظة المعلم:\s*(?:إتقان جزئي في:|يحتاج إلى دعم في:|قدّم مهمة قصيرة مباشرة|قدّم مثالًا ثانيًا مختلفًا|اعرض إجابة تتضمن خطأ شائعًا)/.test(String(item)));
+  const evidenceItems = (analysis.evidence || []).filter(item => {
+    const value = String(item || '');
+    return !value.startsWith('ملاحظة المعلم:') || Boolean(cleanTeacherObservation(value.replace(/^ملاحظة المعلم:\\s*/, '')));
+  });
   const hasNoAssessmentEvidence = (analysis.targetScore === null || analysis.targetScore === undefined) && Number(analysis.sampleSize || 0) === 0;
   window.atharLastAnalysisPrerequisites = roots.map(item => ({ skill:item.skill, score:item.score, sampleSize:item.sampleSize || 0 }));
   const rootItems = roots.map(item => {
