@@ -610,11 +610,20 @@ function updateAssessmentCurriculumOutcome() {
   const subject=document.getElementById('assessmentSubject')?.value||'';
   const unit=document.getElementById('assessmentUnit')?.value||'';
   const lesson=document.getElementById('assessmentLesson')?.value||'';
-  const record=ATHAR_CURRICULUM_CATALOG[grade]?.[subject]?.[unit]?.lessons?.[lesson];
+  const unitRecord=ATHAR_CURRICULUM_CATALOG[grade]?.[subject]?.[unit];
+  const record=unitRecord?.lessons?.[lesson];
   const outcome=document.getElementById('assessmentOutcome');
   const outcomeField=document.getElementById('assessmentOutcomeField');
+  const note=document.getElementById('assessmentCurriculumNote');
   if(outcome)outcome.value=record?.learning_outcome||'';
   if(outcomeField)outcomeField.hidden=!record?.learning_outcome;
+  if(note) {
+    const hasUnitOutcomes=unitRecord?.outcome_scope==='unit' && Array.isArray(unitRecord.learning_outcomes) && unitRecord.learning_outcomes.length;
+    note.hidden=!hasUnitOutcomes || !lesson;
+    note.textContent=hasUnitOutcomes && lesson
+      ? 'مرجع نواتج التعلم متاح على مستوى الوحدة في الكتاب، وليس موزعًا على هذا الدرس منفردًا. حدّد المهارة التي تريد تقويمها بناءً على محتوى الدرس.'
+      : '';
+  }
   const skill=document.getElementById('assessName');
   if(record?.title&&skill&&!skill.value.trim())skill.value=record.title;
 }
