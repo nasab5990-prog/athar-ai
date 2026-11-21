@@ -1303,6 +1303,8 @@ function buildSuggestedActivityOptions(analysis) {
   const skill = displaySkillName(analysis.skill || 'المهارة المستهدفة');
   const mode = document.getElementById('activityMode')?.value || 'offline';
   const duration = Number(document.getElementById('activityDuration')?.value || 15);
+  const subjectSelect = document.getElementById('intSubject');
+  const subject = (subjectSelect?.selectedOptions?.[0]?.textContent || subjectSelect?.value || '').trim();
   const lessonSelect = document.getElementById('intLesson');
   const lesson = (lessonSelect?.selectedOptions?.[0]?.textContent || lessonSelect?.value || '').trim();
   if (/إنشاء القوائم/.test(lesson)) {
@@ -1315,8 +1317,6 @@ function buildSuggestedActivityOptions(analysis) {
     return '<div class="card" style="margin-top:.8rem"><h4>أنشطة درس إنشاء القوائم</h4><p class="note">' + modeLabel + '. التدريب الورقي تمهيدي، ويُتحقق من المهارة بالتنفيذ على برنامج معالجة النصوص.</p>' + activities.map(a => '<div class="card" style="margin:.5rem 0"><strong>' + esc(a.title) + '</strong><p>' + esc(a.steps) + '</p><button class="btn small outline" type="button" onclick=\'printSuggestedActivityWorksheet(' + JSON.stringify(a.title) + ',' + JSON.stringify(skill) + ',' + JSON.stringify(subject) + ',' + JSON.stringify(lesson) + ')\'>عرض ورقة النشاط وطباعتها</button> <button class="btn small outline" type="button" onclick=\'useSuggestedActivity(' + JSON.stringify(a.steps) + ')\'>إضافة إلى خطة التدخل</button></div>').join('') + '</div>';
   }
   const isReading = /الفهم المقروء|فهم المقروء|الفهم القرائي/.test(skill);
-  const subjectSelect = document.getElementById('intSubject');
-  const subject = (subjectSelect?.selectedOptions?.[0]?.textContent || subjectSelect?.value || '').trim();
   const isComputerSubject = /تقنية المعلومات|الحاسوب|التقانة/.test(subject) || /التعامل مع الحاسوب/.test(skill);
   const isPracticalSubject = isComputerSubject || /العلوم|الفيزياء|الكيمياء|الأحياء|الأحياء|الفنون|التربية الفنية|التربية البدنية|الرياضة|المهارات الحياتية|التصميم|الزراعة|المجال المهني/.test(subject);
   let activities;
