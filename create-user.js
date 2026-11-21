@@ -21,12 +21,14 @@ async function main() {
     throw new Error('Parent requires linked students; student requires exactly one; principal and senior_teacher do not take student assignments. For supervisor, pass school IDs after the primary school ID.');
   }
 
-  for (const studentId of studentIds) {
-    const found = await pool.query(
-      "SELECT 1 FROM records WHERE school_id=$1 AND kind='student' AND payload->>'student_id'=$2 LIMIT 1",
-      [school, studentId]
-    );
-    if (!found.rowCount) throw new Error(`Student ${studentId} was not found in school ${school}.`);
+  if (['teacher','parent','student'].includes(role)) {
+    for (const studentId of studentIds) {
+      const found = await pool.query(
+        "SELECT 1 FROM records WHERE school_id=$1 AND kind='student' AND payload->>'student_id'=$2 LIMIT 1",
+        [school, studentId]
+      );
+      if (!found.rowCount) throw new Error(`Student ${studentId} was not found in school ${school}.`);
+    }
   }
 
   await withTransaction(async client => {
