@@ -1265,8 +1265,8 @@ function buildWordOpeningIntervention(grade, mode, classSize) {
 }
 function classifyTeacherObservation(observation) {
   const clauses = String(observation || '')
-    .replace(/\\s+(لكن|ولكن|بينما|في حين)\\s+/g, '؛')
-    .split(/[؛؛\\n]+/)
+    .replace(/\s+(لكن|ولكن|بينما|في حين)\s+/g, '؛')
+    .split(/[؛؛\n]+/)
     .map(item => item.trim().replace(/^[،,.]+|[،,.]+$/g, ''))
     .filter(Boolean);
   const strengths = [];
@@ -1434,7 +1434,7 @@ function buildSuggestedActivityOptions(analysis) {
     const modeLabel = mode === 'offline' ? 'تدريب ورقي تمهيدي ثم تحقق على جهاز عند توفره' : 'تطبيق عملي على جهاز المعلم أو جهاز متاح';
     return '<div class="card" style="margin-top:.8rem"><h4>أنشطة مهارة فتح تطبيق Word</h4><p class="note">' + modeLabel + '. لا يُعد التعرف إلى الرمز أو ترتيب الصور إتقانًا؛ يسجل المعلم نجاح الطالبة عند فتح التطبيق فعليًا.</p>' + activities.map(a => '<div class="card" style="margin:.5rem 0"><strong>' + esc(a.title) + '</strong><p>' + esc(a.steps) + '</p><button class="btn small outline" type="button" onclick=\'printSuggestedActivityWorksheet(' + JSON.stringify(a.title) + ',' + JSON.stringify(skill) + ',' + JSON.stringify(subject) + ',' + JSON.stringify(lesson) + ')\'>عرض ورقة النشاط وطباعتها</button> <button class="btn small outline" type="button" onclick=\'useSuggestedActivity(' + JSON.stringify(a.steps) + ')\'>إضافة إلى خطة التدخل</button></div>').join('') + '</div>';
   }
-  if (context.isListLesson || /إنشاء\\s*القوائم|القوائم النقطية|القوائم الرقمية/.test(lesson)) {
+  if (context.isListLesson || /إنشاء\s*القوائم|القوائم النقطية|القوائم الرقمية/.test(lesson)) {
     const activities = [
       {title:'أحوّل النص إلى قائمة نقطية',steps:'أنشئ قائمة نقطية بعنوان أدواتي المدرسية تتضمن قلمًا ودفترًا ومسطرة وممحاة. ظلّل العناصر واختر أمر التعداد النقطي.'},
       {title:'أنشئ قائمة رقمية بالترتيب',steps:'أنشئ قائمة رقمية لخطوات حفظ مستند: اختيار ملف، حفظ باسم، كتابة اسم الملف، الضغط على حفظ. تحقق من ظهور الأرقام بالترتيب.'},
@@ -1590,7 +1590,7 @@ function useSuggestedActivity(steps) {
   const field = document.getElementById('intSteps');
   if (!field) return;
   const existing = field.value.trim();
-  if (!existing.includes(steps)) field.value = existing ? existing + '\\n' + steps : steps;
+  if (!existing.includes(steps)) field.value = existing ? existing + '\n' + steps : steps;
   showToast('أُضيف النشاط إلى خطة التدخل؛ راجعه قبل الحفظ.');
 }
 function getImpactEvidenceStatus(item) {
@@ -1608,7 +1608,7 @@ function buildInterventionGuide(analysis, observedErrors = '') {
   const skill = displaySkillName(analysis.skill || '');
   const lessonContext = getInterventionLessonContext();
   const lesson = lessonContext.lesson;
-  const isListLesson = lessonContext.isListLesson || /إنشاء\\s*القوائم|القوائم النقطية|القوائم الرقمية/.test(lesson);
+  const isListLesson = lessonContext.isListLesson || /إنشاء\s*القوائم|القوائم النقطية|القوائم الرقمية/.test(lesson);
   const isOpenWordSkill = /فتح.*(?:تطبيق|برنامج)?.*(?:معالج الكلمات|\\bword\\b)|(?:معالج الكلمات|\\bword\\b).*فتح/i.test(skill);
   const isReading = /الفهم المقروء|فهم المقروء|الفهم القرائي/.test(skill);
   const score = analysis.targetScore;
