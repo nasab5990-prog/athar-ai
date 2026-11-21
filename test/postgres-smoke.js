@@ -95,7 +95,7 @@ async function main() {
     if (roleLogin.data.user.role!==persona) throw new Error(`Demo ${persona} login returned the wrong role.`);
     const roleCookie=(roleLogin.response.headers.get('set-cookie')||'').split(';')[0];
     const roleRecords=await request('/api/records',{cookie:roleCookie});
-    await request('/api/users',{cookie:roleCookie,expected:403});
+    await request('/api/users',{cookie:roleCookie,expected:persona==='principal'?200:403});
     if (!roleRecords.data.records.some(row=>row.kind==='student' && row.payload?.student_id===demoStudentId)) throw new Error(`Demo ${persona} cannot see the synthetic school learner.`);
     await request('/api/auth/logout',{method:'POST',cookie:roleCookie});
   }
