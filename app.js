@@ -226,9 +226,12 @@ function updateCurriculumSubjects() {
   if (status) {
     status.hidden = !grade || !verifiedSubjects.length;
     status.textContent = !grade ? '' : verifiedSubjects.length
-      ? 'لم تُفهرس وحدات هذا الصف بالكامل بعد؛ لن نعرض إلا المحتوى الموثق.'
+      ? 'تُعرض الوحدات والدروس المتاحة بعد التحقق من مصدرها.'
       : 'فهرسة مواد هذا الصف قيد الاستكمال.';
   }
+  // في حساب المعلم تُحدد المادة تلقائيًا وتكون القائمة معطلة؛
+  // لذلك يجب تحميل وحداتها مباشرة دون انتظار حدث تغيير يدوي.
+  if (subject?.value) updateCurriculumUnits();
 }
 function updateCurriculumUnits() {
   const grade = document.getElementById('intGrade')?.value || '';
