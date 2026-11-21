@@ -1425,7 +1425,7 @@ function printSuggestedActivityWorksheet(title, skill, subject = '', lesson = ''
   const savedContext = getInterventionLessonContext();
   lesson = String(lesson || savedContext.lesson || '').trim();
   subject = String(subject || savedContext.subject || '').trim();
-  if (/إنشاء\\s*القوائم/.test(lesson)) return printListLessonWorksheet(title, skill);
+  if (/إنشاء\s*القوائم/.test(lesson)) return printListLessonWorksheet(title, skill);
   const reading = /الفهم المقروء|فهم المقروء|الفهم القرائي/.test(skill);
   const computer = /تقنية المعلومات|الحاسوب|التقانة/.test(subject) || /التعامل مع الحاسوب/.test(skill);
   const practical = /العلوم|الفيزياء|الكيمياء|الأحياء|تقنية المعلومات|الحاسوب|التقانة|الفنون|التربية الفنية|التربية البدنية|الرياضة|المهارات الحياتية|التصميم|الزراعة|المجال المهني/.test(subject);
