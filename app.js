@@ -1797,7 +1797,11 @@ function setInterventionMode(mode) {
 function suggestForIntervention(recordId) {
   const item = interventions.find(row => String(row.recordId) === String(recordId));
   if (!item) return showToast('تعذر العثور على التدخل المحدد. حدّث السجلات وحاول مجددًا.');
-  editIntervention(recordId);
+  const targetRecordId = String(item.recordId);
+  editIntervention(item.recordId);
+  if (String(editingInterventionId) !== targetRecordId) {
+    return showToast('لم يتم تثبيت سجل التدخل المحدد؛ أعد فتح السجل قبل إنشاء الاقتراح.');
+  }
   const savedCurriculum = item.curriculum || {};
   const selectedLessonText = document.getElementById('intLesson')?.selectedOptions?.[0]?.textContent || '';
   window.atharInterventionTarget = {
@@ -1823,6 +1827,7 @@ async function suggestIntervention() {
   const button = document.getElementById('suggestInterventionBtn');
   const resultEl = document.getElementById('intAiResult');
   const target = window.atharInterventionTarget || null;
+  const targetRecordId = target?.recordId ? String(target.recordId) : null;
   const studentId = target ? (target.student_id || '') : (document.getElementById('interventionStudent')?.value || '');
   const student = students.find(item => item.student_id === studentId);
   const observedErrors = cleanTeacherObservation(document.getElementById('intObservedErrors')?.value || '');
@@ -1859,6 +1864,9 @@ async function suggestIntervention() {
         class_size:String(students.filter(item => String(gradeNumber(item.grade)) === String(document.getElementById('intGrade')?.value || '')).length || 1)
       })
     });
+    if (targetRecordId && String(window.atharInterventionTarget?.recordId || '') !== targetRecordId) {
+      throw new Error('تغيّر سجل التدخل أثناء التحليل؛ لم نربط الاقتراح بأي سجل آخر. أعد المحاولة من السجل المطلوب.');
+    }
     const analysis = response.analysis;
     const score = analysis?.targetScore === null || analysis?.targetScore === undefined ? null : Number(analysis.targetScore);
     let ai = response.aiAssist && response.aiAssist.status === 'ok' ? response.aiAssist : null;
@@ -1899,7 +1907,7 @@ async function suggestIntervention() {
       assessmentRecordId:target ? (target.assessment_record_id || null) : (window.atharLastAnalysisRequest?.assessment_record_id || null),
       skill:displaySkillName(analysis.skill),
       studentId:studentId || null,
-      interventionRecordId:target?.recordId || null
+      interventionRecordId:targetRecordId
     };
 
     const roots = (analysis.likelyRoots?.length ? analysis.likelyRoots : analysis.prerequisiteEvidence || []);
@@ -1965,6 +1973,20 @@ async function saveIntervention() {
       ? interventions.find(item => String(item.recordId) === String(editingInterventionId))
       : null;
     if (editingInterventionId && !existing) return showToast('تعذر العثور على التدخل المراد تعديله. حدّث السجلات وحاول مجددًا.');
+    if (suggestion?.interventionRecordId && String(suggestion.interventionRecordId) !== String(editingInterventionId || '')) {
+      return showToast('هذا الاقتراح مرتبط بتدخل آخر؛ لم يتم حفظه على السجل الحالي.');
+    }
+    const suggestionMatchesCurrent = Boolean(
+      suggestion &&
+      suggestion.skill === displaySkillName(skill) &&
+      suggestion.studentId === studentId &&
+      (!suggestion.interventionRecordId || String(suggestion.interventionRecordId) === String(editingInterventionId || ''))
+    );
+    const unchangedExistingCase = Boolean(
+      existing &&
+      displaySkillName(existing.skill) === displaySkillName(skill) &&
+      String(existing.student_id || '') === String(studentId || '')
+    );
     const oldCurriculum = existing?.curriculum || {};
     const curriculum = {
       grade:document.getElementById('intGrade')?.value || oldCurriculum.grade || null,
@@ -1987,9 +2009,9 @@ async function saveIntervention() {
       activity_mode:document.getElementById('activityMode')?.value || existing?.activity_mode || 'offline',
       activity_duration:Number(document.getElementById('activityDuration')?.value || existing?.activity_duration || 15),
       date:existing?.date || new Date().toISOString(),
-      suggestion_source:existing?.suggestion_source || (suggestion && suggestion.skill === displaySkillName(skill) && suggestion.studentId === studentId ? 'athar-analysis' : 'teacher'),
-      analysis_record_id:existing?.analysis_record_id ?? (suggestion && suggestion.skill === displaySkillName(skill) && suggestion.studentId === studentId ? suggestion.analysisId : null),
-      assessment_record_id:existing?.assessment_record_id ?? (suggestion && suggestion.skill === displaySkillName(skill) && suggestion.studentId === studentId ? suggestion.assessmentRecordId : null)
+      suggestion_source:suggestionMatchesCurrent ? 'athar-analysis' : (unchangedExistingCase ? (existing.suggestion_source || 'teacher') : 'teacher'),
+      analysis_record_id:suggestionMatchesCurrent ? suggestion.analysisId : (unchangedExistingCase ? (existing.analysis_record_id ?? null) : null),
+      assessment_record_id:suggestionMatchesCurrent ? suggestion.assessmentRecordId : (unchangedExistingCase ? (existing.assessment_record_id ?? null) : null)
     };
     let result;
     if (editingInterventionId) {
