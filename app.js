@@ -1846,6 +1846,8 @@ async function suggestIntervention() {
     return showToast('لا توجد نتيجة تقويم لهذا الطالب بعد. سجّل تقويمًا أولًا حتى يكون الاقتراح مبنيًا على بياناته.');
   }
 
+  // Never let a previous AI draft or its assessment link leak into a new request.
+  window.atharSuggestedIntervention = null;
   if (button) { button.disabled = true; button.textContent = 'جارٍ تحليل الحالة وإعداد التدخل...'; }
   if (resultEl) resultEl.innerHTML = '<div class="note">يجري فحص أحدث النتائج والمهارات السابقة المسجلة...</div>';
   try {
@@ -2097,6 +2099,10 @@ function editIntervention(recordId) {
   const item = interventions.find(row => String(row.recordId) === String(recordId));
   if (!item) return showToast('تعذر العثور على التدخل. حدّث السجلات وحاول مجددًا.');
   editingInterventionId = item.recordId;
+  window.atharSuggestedIntervention = null;
+  window.atharAiDraftReady = false;
+  const previousAiResult = document.getElementById('intAiResult');
+  if (previousAiResult) previousAiResult.innerHTML = '';
   window.atharInterventionTarget = { ...item };
   fillStudentSelects();
   const setValue = (id, value) => {
