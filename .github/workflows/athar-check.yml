@@ -37,8 +37,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install declared dependencies
-        run: npm install --ignore-scripts --package-lock=false --no-audit
+      - name: Resolve dependency lock for audit
+        run: npm install --package-lock-only --ignore-scripts --no-audit
       - name: Report dependency advisories
         run: |
           npm audit --json > audit-report.json || true
