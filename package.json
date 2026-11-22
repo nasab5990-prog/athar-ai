@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "create-user": "node create-user.js",
-    "check": "node --check server.js && node --check app.js && node --check create-user.js"
+    "check": "node --check server.js && node --check app.js && node --check create-user.js && npm test",
+    "test": "node --test test/*.test.js"
   },
   "dependencies": {
     "better-sqlite3": "^11.8.1",
