@@ -51,6 +51,7 @@
     <div class="menu-items" id="nav-home">
       <a href="#" data-section="dashboard" class="active">لوحة القيادة</a>
       <a href="#" data-section="reports">التقارير</a>
+      <a href="#" data-section="supervisorRecommendations">التوصيات الإشرافية</a>
     </div>
   </div>
 
@@ -106,7 +107,7 @@
     <div id="supervisorDashboardPanel" hidden>
       <div class="note"><strong>بيئة اختبار معزولة:</strong> تعرض هذه اللوحة مدارس تجريبية وبيانات اصطناعية.</div>
       <h1>لوحة متابعة الإشراف التربوي</h1>
-      <p class="subtitle">متابعة مؤشرات المدارس المسندة إليك — صلاحية اطلاع وتقارير فقط</p>
+      <p class="subtitle">متابعة مؤشرات المدارس المسندة إليك والتوصيات الإشرافية</p>
       <div id="supervisorSummary"></div>
       <h3 style="margin-top:1rem">المدارس المشمولة</h3>
       <div id="supervisorSchoolsList"></div>
@@ -410,6 +411,28 @@
     <div class="note">لا يُنسب التحسن إلى التدخل وحده.</div>
   </section>
 
+  <section id="supervisorRecommendations" class="section">
+    <h1>التوصيات الإشرافية</h1>
+    <p class="subtitle">توصيات موثقة بين المشرف التربوي ومدير المدرسة، مع متابعة حالة التنفيذ.</p>
+    <div id="supervisorRecommendationForm" class="card" hidden>
+      <h3>إضافة توصية جديدة</h3>
+      <label for="recommendationSchool">المدرسة المعنية</label>
+      <select id="recommendationSchool"><option value="">اختر المدرسة</option></select>
+      <label for="recommendationArea">مجال التوصية</label>
+      <select id="recommendationArea"><option value="">اختر المجال</option><option>تحسين نواتج التعلم</option><option>التقويم والتشخيص</option><option>التدخلات العلاجية</option><option>متابعة قياس الأثر</option><option>التخطيط والتدريس</option><option>التطوير المهني</option><option>مجال آخر</option></select>
+      <label for="recommendationSubject">المادة أو الموضوع (اختياري)</label>
+      <input id="recommendationSubject" type="text" maxlength="160" placeholder="مثال: تقنية المعلومات — الصف السابع">
+      <label for="recommendationBody">الملاحظة والتوصية</label>
+      <textarea id="recommendationBody" rows="4" maxlength="3000" placeholder="اكتب الملاحظة المستندة إلى الزيارة أو التقرير، ثم التوصية العملية المطلوبة."></textarea>
+      <div class="grid-two">
+        <div><label for="recommendationPriority">الأولوية</label><select id="recommendationPriority"><option value="medium">متوسطة</option><option value="high">عالية</option><option value="low">منخفضة</option></select></div>
+        <div><label for="recommendationFollowup">تاريخ المتابعة</label><input id="recommendationFollowup" type="date"></div>
+      </div>
+      <button class="btn" id="saveRecommendationBtn" type="button" onclick="createRecommendation()">حفظ التوصية وإرسالها للمدرسة</button>
+    </div>
+    <div id="recommendationsList" class="recommendations-list"></div>
+  </section>
+
   <section id="reports" class="section">
     <h1>التقارير</h1>
     <div class="card">
@@ -571,6 +594,6 @@
 <div id="currentUserLabel" class="current-user-label"></div>
 <script src="config.js?v=20261108-2"></script>
 <script src="curriculum-data.js?v=20261121-3"></script>
-<script src="app.js?v=20261122-03"></script>
+<script src="app.js?v=20261122-04"></script>
 </body>
 </html>
