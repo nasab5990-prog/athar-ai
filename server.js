@@ -123,10 +123,9 @@ async function findStudentOwnedBy(user,studentId) {
 }
 async function getRecordsForUser(user) {
   if (user.role==='supervisor') {
-    const assigned=await query('SELECT school_id FROM supervisor_schools WHERE user_id=$1 ORDER BY school_name',[user.id]);
-    const schoolIds=assigned.rows.map(row=>row.school_id);
-    if (!schoolIds.length) return [];
-    return (await query('SELECT id,school_id,kind,payload,created_at FROM records WHERE school_id=ANY($1::text[]) ORDER BY id DESC LIMIT 3000',[schoolIds])).rows;
+    // Supervisors use the aggregate school and recommendation endpoints only.
+    // Do not expose identifiable student, assessment, or intervention records.
+    return [];
   }
   if (['principal','senior_teacher'].includes(user.role)) {
     return (await query('SELECT id,kind,payload,created_at FROM records WHERE school_id=$1 ORDER BY id DESC LIMIT 1000',[user.school_id])).rows;
