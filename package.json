@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "create-user": "node create-user.js",
-    "check": "node --check server.js && node --check database.js && node --check db-setup.js && node --check db-verify.js && node --check app.js && node --check create-user.js && node --check seed-user.js && node --check test/postgres-smoke.js",
+    "check": "node --check server.js && node --check database.js && node --check db-setup.js && node --check db-verify.js && node --check app.js && node --check create-user.js && node --check seed-user.js && node --check test/postgres-smoke.js && node --test test/postgres-scope-regression.test.js",
     "db:setup": "node db-setup.js",
     "db:verify": "node db-verify.js",
     "test:postgres": "node test/postgres-smoke.js"
