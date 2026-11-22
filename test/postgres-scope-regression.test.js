@@ -1,0 +1,62 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+
+// Static regression checks only: never imports server.js or touches PostgreSQL.
+const server = readFileSync(new URL('../server.js', import.meta.url), 'utf8');
+
+function section(start, end) {
+  const from = server.indexOf(start);
+  assert.notEqual(from, -1, `Missing source marker: ${start}`);
+  const to = server.indexOf(end, from + start.length);
+  assert.notEqual(to, -1, `Missing end marker: ${end}`);
+  return server.slice(from, to);
+}
+
+test('supervisor record feed is empty to prevent identifiable-record exposure', () => {
+  const scope = section('async function getRecordsForUser(user) {', 'async function sessionLogin');
+  assert.match(scope, /user\.role==='supervisor'[\s\S]*?return \[\]/);
+});
+
+test('principal and senior-teacher records are restricted to their own school', () => {
+  const scope = section('async function getRecordsForUser(user) {', 'async function sessionLogin');
+  assert.match(scope, /\['principal','senior_teacher'\][\s\S]*?WHERE school_id=\$1[\s\S]*?\[user\.school_id\]/);
+});
+
+test('parent and student records are restricted to linked IDs and matching school', () => {
+  const scope = section('async function getRecordsForUser(user) {', 'async function sessionLogin');
+  assert.match(scope, /linkedStudentIds\(user\)/);
+  assert.match(scope, /WHERE r\.school_id=\$1/);
+  assert.match(scope, /r\.payload->>'student_id'=ANY\(\$2::text\[\]\)/);
+});
+
+test('linked parent and student accounts can see class interventions for matching grade and section only', () => {
+  const scope = section('async function getRecordsForUser(user) {', 'async function sessionLogin');
+  assert.match(scope, /r\.kind='intervention'/);
+  assert.match(scope, /COALESCE\(r\.payload->>'student_id',''\)=''/);
+  assert.match(scope, /SELECT 1 FROM records s/);
+  assert.match(scope, /s\.payload->>'student_id'=ANY\(\$2::text\[\]\)/);
+  assert.match(scope, /r\.payload->'curriculum'->>'grade'/);
+  assert.match(scope, /r\.payload->'curriculum'->>'section'/);
+});
+
+test('teacher record access remains school and assignment scoped', () => {
+  const scope = section('async function getRecordsForUser(user) {', 'async function sessionLogin');
+  assert.match(scope, /assignedStudentIds\(user\)/);
+  assert.match(scope, /teacherTeachingAssignment\(user\)/);
+  assert.match(scope, /WHERE school_id=\$1/);
+  assert.match(scope, /payload->>'student_id'=ANY\(\$3::text\[\]\)/);
+});
+
+test('supervisor recommendations are limited to explicitly assigned schools', () => {
+  const route = section("app.get('/api/supervisor/recommendations'", "app.get('/api/principal/recommendations'");
+  assert.match(route, /supervisor_schools ss/);
+  assert.match(route, /ss\.user_id=r\.supervisor_id AND ss\.school_id=r\.school_id/);
+  assert.match(route, /WHERE r\.supervisor_id=\$1/);
+});
+
+test('principal recommendation updates are limited to the principal school', () => {
+  const route = section("app.put('/api/principal/recommendations/:id'", "app.post('/api/supervisor/recommendations'");
+  assert.match(route, /WHERE id=\$4 AND school_id=\$5/);
+  assert.match(route, /req\.user\.school_id/);
+});
