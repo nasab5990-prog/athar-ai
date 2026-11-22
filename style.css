@@ -639,11 +639,7 @@ body.dark .root-map-arrow { color:#91b6dc; }
   .section { display: none !important; visibility: hidden !important; }
   #reports { display: block !important; visibility: visible !important; position: static !important; width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; background: #fff !important; }
   #reports * { visibility: visible !important; }
-  #reports > h1 {
-    display: block !important; margin: 0 0 6mm !important; padding: 0 0 3mm !important;
-    border-bottom: 2px solid #2d9b91 !important; color: #174b78 !important;
-    font-size: 21pt !important; font-weight: 800 !important; break-after: avoid;
-  }
+  #reports > h1 { display: none !important; }
   #reports > .card {
     width: 100% !important; max-width: 100% !important; margin: 0 !important;
     padding: 5mm !important; border: 1px solid #d8e3ed !important;
