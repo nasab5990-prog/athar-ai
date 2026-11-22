@@ -410,7 +410,7 @@ app.get('/api/supervisor/schools',requireAuth,requireRole('supervisor'),asyncRou
            AND length(COALESCE(r.payload->>'sessions_done','')) BETWEEN 1 AND 2
            AND COALESCE(r.payload->>'sessions_done','') !~ '[^0-9]'
           THEN LPAD(r.payload->>'sessions_planned',2,'0') BETWEEN '01' AND '30'
-           AND LPAD(r.payload->>'sessions_done',2,'0') BETWEEN '00' AND '30'
+           AND LPAD(r.payload->>'sessions_done',2,'0') BETWEEN '01' AND '30'
            AND LPAD(r.payload->>'sessions_done',2,'0') <= LPAD(r.payload->>'sessions_planned',2,'0')
           ELSE FALSE
         END)::int AS documented_impacts,
