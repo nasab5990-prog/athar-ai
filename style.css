@@ -880,3 +880,9 @@ body.dark .root-map-arrow { color:#91b6dc; }
   .report-metric-definitions ul{margin:1mm 0 0!important}
   .report-metric-definitions li{font-size:9pt!important;margin:.5mm 0!important}
 }
+
+.recommendations-list{display:grid;gap:1rem;margin-top:1rem}
+.recommendation-card{border-right:4px solid var(--accent)}
+.recommendation-card-head{display:flex;align-items:center;justify-content:space-between;gap:.8rem;flex-wrap:wrap}
+.recommendation-followup{margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)}
+.recommendation-followup textarea{width:100%;margin:.3rem 0 .7rem}
