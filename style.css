@@ -928,3 +928,18 @@ body.dark .root-map-arrow { color:#91b6dc; }
     display: none !important;
   }
 }
+
+/* إبقاء هوية التقرير وتاريخ إعداده متماسكين في بداية الطباعة */
+@media print {
+  #reportSummary .report-print-header {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+  }
+  #reportSummary .report-print-header h2,
+  #reportSummary .report-print-header p {
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+  }
+}
