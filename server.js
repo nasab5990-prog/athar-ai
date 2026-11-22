@@ -399,8 +399,12 @@ app.get('/api/supervisor/schools',requireAuth,requireRole('supervisor'),asyncRou
       COUNT(r.id) FILTER (WHERE r.kind='impact')::int AS impacts,
       COUNT(r.id) FILTER (WHERE r.kind='impact' AND COALESCE(r.payload->>'intervention_record_id','')<>'')::int AS linked_impacts,
       COUNT(r.id) FILTER (WHERE r.kind='impact'
-        AND COALESCE(r.payload->>'evidence_tool','')<>''
-        AND COALESCE(r.payload->>'before_date','') ~ '^\\d{4}-\\d{2}-\\d{2}
+        AND length(btrim(COALESCE(r.payload->>'evidence_tool',''))) BETWEEN 1 AND 180
+        AND COALESCE(r.payload->>'before_date','') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+        AND COALESCE(r.payload->>'after_date','') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+        AND r.payload->>'before_date' <= r.payload->>'after_date'
+        AND COALESCE(r.payload->>'activity_mode','') IN ('offline','shared','online')
+        AND length(btrim(COALESCE(r.payload->>'evidence_note',''))) BETWEEN 1 AND 2000
         AND CASE
           WHEN length(COALESCE(r.payload->>'sessions_planned','')) BETWEEN 1 AND 2
            AND COALESCE(r.payload->>'sessions_planned','') !~ '[^0-9]'
@@ -564,7 +568,7 @@ app.post('/api/records',recordLimiter,requireAuth,requireRole('teacher','senior_
       const validEvidenceDate=value=>{
         if(value===undefined||value===null||value==='')return true;
         const date=String(value).trim();
-        if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(date))return false;
+        if(!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(date))return false;
         const parsed=new Date(date+'T00:00:00.000Z');
         return Number.isFinite(parsed.getTime())&&parsed.toISOString().slice(0,10)===date;
       };
