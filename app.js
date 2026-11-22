@@ -679,7 +679,7 @@ async function fillImpactInterventions() {
     if (!studentId) return true;
     if (item.student_id) return item.student_id === studentId;
     const curriculum = item.curriculum || {};
-    const gradeMatches = String(curriculum.grade || '').trim() === String(selectedStudent?.grade || '').trim();
+    const gradeMatches = Boolean(selectedStudent && gradeNumber(curriculum.grade) && gradeNumber(curriculum.grade) === gradeNumber(selectedStudent.grade));
     const interventionSection = String(curriculum.section || '').trim();
     const sectionMatches = !interventionSection || interventionSection === String(selectedStudent?.section || '').trim();
     return Boolean(selectedStudent && gradeMatches && sectionMatches);
@@ -2208,7 +2208,7 @@ async function calcImpact() {
     const curriculum = intervention.curriculum || {};
     const interventionGrade = String(curriculum.grade || '').trim();
     const studentGrade = String(selectedStudent?.grade || '').trim();
-    if (!selectedStudent || !interventionGrade || interventionGrade !== studentGrade) return showToast('الطالب لا ينتمي إلى الصف المستهدف في التدخل الصفي.');
+    if (!selectedStudent || !gradeNumber(interventionGrade) || gradeNumber(interventionGrade) !== gradeNumber(studentGrade)) return showToast('الطالب لا ينتمي إلى الصف المستهدف في التدخل الصفي.');
     const interventionSection = String(curriculum.section || '').trim();
     const studentSection = String(selectedStudent.section || '').trim();
     if (interventionSection && interventionSection !== studentSection) return showToast('الطالب لا ينتمي إلى الشعبة المستهدفة في التدخل الصفي.');
@@ -2595,7 +2595,7 @@ function renderStudentProgress() {
   const interventionRows = interventions.filter(i => {
     if (i.student_id) return i.student_id === student.student_id;
     const curriculum = i.curriculum || {};
-    const gradeMatches = String(curriculum.grade || '').trim() === String(student.grade || '').trim();
+    const gradeMatches = Boolean(gradeNumber(curriculum.grade) && gradeNumber(curriculum.grade) === gradeNumber(student.grade));
     const section = String(curriculum.section || '').trim();
     return Boolean(gradeMatches && (!section || section === String(student.section || '').trim()));
   });
