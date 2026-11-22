@@ -2493,16 +2493,47 @@ function renderReports() {
     if (supervisorReportSchoolId !== 'all' && !selected) supervisorReportSchoolId = 'all';
     const schools = selected ? [selected] : supervisorSchoolsData;
     const sum = key => schools.reduce((total, school) => total + (Number(school[key]) || 0), 0);
+    const percent = (part, whole) => whole > 0 ? Math.round((part / whole) * 100) : null;
+    const ratioLabel = (part, whole) => whole > 0 ? percent(part, whole) + '%' : 'لا ينطبق';
     const reportDate = new Date().toLocaleDateString('ar-OM', {year:'numeric',month:'long',day:'numeric'});
     const options = supervisorSchoolsData.map(school =>
       '<option value="'+esc(school.school_id)+'" '+(supervisorReportSchoolId === String(school.school_id) ? 'selected' : '')+'>'+esc(school.school_name)+'</option>'
     ).join('');
-    const selector = '<div class="report-filter no-print"><label for="supervisorReportSchool">المدرسة</label> <select id="supervisorReportSchool" onchange="setSupervisorReportSchool(this.value)"><option value="all" '+(supervisorReportSchoolId === 'all' ? 'selected' : '')+'>جميع المدارس</option>'+options+'</select></div>';
-    const summary = '<p>المدارس المشمولة: '+schools.length+' • الطلبة: '+sum('students')+' • التقويمات: '+sum('assessments')+' • التدخلات: '+sum('interventions')+' (المكتمل: '+sum('completed_interventions')+') • قياسات الأثر: '+sum('impacts')+'</p><p>من قياسات الأثر: المرتبط بتدخل '+sum('linked_impacts')+' • مكتمل حقول التوثيق '+sum('documented_impacts')+'</p>';
-    const details = schools.map(school =>
-      '<section class="card supervisor-report-school"><h3>'+esc(school.school_name)+'</h3><p>الطلبة: '+(Number(school.students)||0)+' • التقويمات: '+(Number(school.assessments)||0)+' • التدخلات: '+(Number(school.interventions)||0)+' • المكتمل منها: '+(Number(school.completed_interventions)||0)+'</p><p>قياسات الأثر: '+(Number(school.impacts)||0)+' • المرتبط بتدخل: '+(Number(school.linked_impacts)||0)+' • مكتمل حقول التوثيق: '+(Number(school.documented_impacts)||0)+'</p><p class="note">آخر نشاط: '+(school.last_activity ? new Date(school.last_activity).toLocaleDateString('ar-OM') : 'لا يوجد نشاط مسجل')+'</p></section>'
-    ).join('');
-    el.innerHTML='<header class="report-print-header"><h2>أثَر | تقرير متابعة الإشراف التربوي</h2><p>تاريخ إعداد التقرير: '+reportDate+'</p></header>'+selector+summary+'<h4>'+(selected ? 'تفاصيل المدرسة' : 'ملخص المدارس')+'</h4>'+(details || '<p>لا توجد مدارس مسندة لهذا الحساب.</p>')+'<p class="report-print-note">تقرير اطلاع ومتابعة للمدارس المسندة فقط. لا يتيح هذا الدور تعديل السجلات أو اعتماد التدخلات.</p><footer class="report-print-footer">حقوق التصميم والتطوير © أ. نصراء سعيد البهلولي | منصة أثَر</footer>';
+    const selector = '<div class="report-filter no-print"><label for="supervisorReportSchool">نطاق التقرير</label> <select id="supervisorReportSchool" onchange="setSupervisorReportSchool(this.value)"><option value="all" '+(supervisorReportSchoolId === 'all' ? 'selected' : '')+'>جميع المدارس</option>'+options+'</select></div>';
+    const studentsCount = sum('students');
+    const assessmentsCount = sum('assessments');
+    const interventionsCount = sum('interventions');
+    const completedCount = sum('completed_interventions');
+    const impactsCount = sum('impacts');
+    const linkedCount = sum('linked_impacts');
+    const documentedCount = sum('documented_impacts');
+    const metrics = '<div class="supervisor-report-metrics">'+
+      '<div><span>المدارس المشمولة</span><strong>'+schools.length+'</strong></div>'+
+      '<div><span>الطلبة</span><strong>'+studentsCount+'</strong></div>'+
+      '<div><span>التقويمات</span><strong>'+assessmentsCount+'</strong></div>'+
+      '<div><span>التدخلات المكتملة</span><strong>'+completedCount+' <small>من '+interventionsCount+'</small></strong><em>نسبة الإكمال: '+ratioLabel(completedCount,interventionsCount)+'</em></div>'+
+      '<div><span>قياسات الأثر المرتبطة بتدخل</span><strong>'+linkedCount+' <small>من '+impactsCount+'</small></strong><em>نسبة الربط: '+ratioLabel(linkedCount,impactsCount)+'</em></div>'+
+      '<div><span>قياسات مكتملة حقول التوثيق</span><strong>'+documentedCount+' <small>من '+impactsCount+'</small></strong><em>نسبة اكتمال التوثيق: '+ratioLabel(documentedCount,impactsCount)+'</em></div>'+
+      '</div>';
+    const details = schools.map(school => {
+      const schoolInterventions = Number(school.interventions) || 0;
+      const schoolCompleted = Number(school.completed_interventions) || 0;
+      const schoolImpacts = Number(school.impacts) || 0;
+      const schoolLinked = Number(school.linked_impacts) || 0;
+      const schoolDocumented = Number(school.documented_impacts) || 0;
+      return '<section class="card supervisor-report-school"><h3>'+esc(school.school_name)+'</h3>'+
+        '<p>الطلبة: '+(Number(school.students)||0)+' • التقويمات: '+(Number(school.assessments)||0)+'</p>'+
+        '<p>التدخلات: '+schoolInterventions+' • المكتمل: '+schoolCompleted+' ('+ratioLabel(schoolCompleted,schoolInterventions)+')</p>'+
+        '<p>قياسات الأثر: '+schoolImpacts+' • المرتبط بتدخل: '+schoolLinked+' ('+ratioLabel(schoolLinked,schoolImpacts)+')</p>'+
+        '<p>مكتمل حقول التوثيق: '+schoolDocumented+' ('+ratioLabel(schoolDocumented,schoolImpacts)+')</p>'+
+        '<p class="note">آخر نشاط: '+(school.last_activity ? new Date(school.last_activity).toLocaleDateString('ar-OM') : 'لا يوجد نشاط مسجل')+'</p></section>';
+    }).join('');
+    const interpretation = '<div class="report-metric-definitions"><strong>قراءة المؤشرات</strong><ul>'+
+      '<li>نسبة إكمال التدخلات: التدخلات التي سُجلت حالتها «مكتمل» من إجمالي التدخلات.</li>'+
+      '<li>نسبة ربط قياسات الأثر: القياسات المرتبطة بسجل تدخل محدد من إجمالي قياسات الأثر.</li>'+
+      '<li>نسبة اكتمال التوثيق: القياسات التي استوفت حقول التوثيق المطلوبة من إجمالي القياسات. اكتمال التوثيق لا يثبت وحده حدوث تحسن أو أن التدخل سبّبه.</li>'+
+      '</ul></div>';
+    el.innerHTML='<header class="report-print-header"><h2>أثَر | تقرير متابعة الإشراف التربوي</h2><p>تاريخ إعداد التقرير: '+reportDate+'</p></header>'+selector+metrics+'<h4>'+(selected ? 'تفاصيل المدرسة' : 'ملخص المدارس')+'</h4>'+(details || '<p>لا توجد مدارس مسندة لهذا الحساب.</p>')+interpretation+'<p class="report-print-note">تقرير اطلاع ومتابعة للمدارس المسندة فقط. لا يتيح هذا الدور تعديل السجلات أو اعتماد التدخلات. تعكس المؤشرات السجلات المتاحة وقت إعداد التقرير.</p><footer class="report-print-footer">حقوق التصميم والتطوير © أ. نصراء سعيد البهلولي | منصة أثَر</footer>';
     return;
   }
   const currentAssessments = latestAssessmentRows();
