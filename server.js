@@ -498,12 +498,24 @@ app.post('/api/records',recordLimiter,requireAuth,requireRole('teacher','senior_
         return res.status(400).json({message:'المهارة والهدف وخطوات التدخل مطلوبة.'});
       }
       if (req.user.role==='teacher') {
-        if (curriculum.grade && curriculum.subject) {
-          try { await validateTeacherTeachingContext(req.user,{grade:curriculum.grade,section:curriculum.section,subject:curriculum.subject}); }
-          catch(error) { return res.status(error.status||403).json({message:error.message}); }
-        } else if (!clean.student_id) {
-          return res.status(403).json({message:'حدد الصف والمادة المسندين إليك قبل إنشاء تدخل صفي.'});
+        if (!curriculum.subject) return res.status(403).json({message:'حدد المادة المسندة إليك قبل إنشاء التدخل.'});
+        let assignedGrade=curriculum.grade, assignedSection=curriculum.section;
+        if (clean.student_id) {
+          const studentRow=(await query(
+            "SELECT payload FROM records WHERE school_id=$1 AND kind='student' AND payload->>'student_id'=$2 LIMIT 1",
+            [req.user.school_id,safeText(clean.student_id,80)]
+          )).rows[0];
+          if (!studentRow) return res.status(403).json({message:'الطالب غير موجود في سجلات المدرسة.'});
+          assignedGrade=studentRow.payload?.grade;
+          assignedSection=studentRow.payload?.section;
+          if (curriculum.grade && String(curriculum.grade).trim()!==String(assignedGrade||'').trim()) {
+            return res.status(400).json({message:'الصف المحدد في التدخل لا يطابق صف الطالب المسجل.'});
+          }
+        } else if (!assignedGrade || !assignedSection) {
+          return res.status(403).json({message:'حدد الصف والشعبة والمادة المسندة إليك قبل إنشاء تدخل صفي.'});
         }
+        try { await validateTeacherTeachingContext(req.user,{grade:assignedGrade,section:assignedSection,subject:curriculum.subject}); }
+        catch(error) { return res.status(error.status||403).json({message:error.message}); }
       }
       if (clean.activity_mode!==undefined && !['offline','shared','online'].includes(clean.activity_mode)) return res.status(400).json({message:'طريقة تنفيذ التدخل غير صالحة.'});
       if (clean.activity_duration!==undefined && ![10,15,20].includes(Number(clean.activity_duration))) return res.status(400).json({message:'مدة النشاط غير صالحة.'});
