@@ -497,9 +497,13 @@ app.post('/api/records',recordLimiter,requireAuth,requireRole('teacher','senior_
       if (!safeText(clean.skill,180) || !safeText(clean.goal,2000) || !safeText(clean.steps,5000)) {
         return res.status(400).json({message:'المهارة والهدف وخطوات التدخل مطلوبة.'});
       }
-      if (req.user.role==='teacher' && !clean.student_id) {
-        try { await validateTeacherTeachingContext(req.user,{grade:curriculum.grade,subject:curriculum.subject}); }
-        catch(error) { return res.status(error.status||403).json({message:error.message}); }
+      if (req.user.role==='teacher') {
+        if (curriculum.grade && curriculum.subject) {
+          try { await validateTeacherTeachingContext(req.user,{grade:curriculum.grade,section:curriculum.section,subject:curriculum.subject}); }
+          catch(error) { return res.status(error.status||403).json({message:error.message}); }
+        } else if (!clean.student_id) {
+          return res.status(403).json({message:'حدد الصف والمادة المسندين إليك قبل إنشاء تدخل صفي.'});
+        }
       }
       if (clean.activity_mode!==undefined && !['offline','shared','online'].includes(clean.activity_mode)) return res.status(400).json({message:'طريقة تنفيذ التدخل غير صالحة.'});
       if (clean.activity_duration!==undefined && ![10,15,20].includes(Number(clean.activity_duration))) return res.status(400).json({message:'مدة النشاط غير صالحة.'});
