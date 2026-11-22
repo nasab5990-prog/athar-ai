@@ -99,3 +99,25 @@ CREATE TABLE IF NOT EXISTS supervisor_schools (
 );
 CREATE INDEX IF NOT EXISTS idx_supervisor_schools_school
   ON supervisor_schools(school_id, user_id);
+
+
+-- Recommendations issued by educational supervisors and followed up by school principals.
+CREATE TABLE IF NOT EXISTS supervisor_recommendations (
+  id BIGSERIAL PRIMARY KEY,
+  supervisor_id BIGINT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+  school_id TEXT NOT NULL,
+  area TEXT NOT NULL,
+  subject TEXT,
+  body TEXT NOT NULL,
+  priority TEXT NOT NULL CHECK (priority IN ('low','medium','high')),
+  follow_up_date DATE,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','in_progress','completed')),
+  principal_response TEXT NOT NULL DEFAULT '',
+  status_updated_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_supervisor_recommendations_school
+  ON supervisor_recommendations(school_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_supervisor_recommendations_owner
+  ON supervisor_recommendations(supervisor_id, created_at DESC);
