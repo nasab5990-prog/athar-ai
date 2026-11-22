@@ -76,6 +76,8 @@ async function main() {
   if (!supervisorRecords.data.records.some(row=>row.school_id==='DEMO-SCHOOL') || !supervisorRecords.data.records.some(row=>row.school_id==='DEMO-SCHOOL-2')) throw new Error('Supervisor cannot read records across both assigned schools.');
   await request('/api/records',{method:'POST',cookie:supervisorCookie,body:{kind:'assessment',payload:{student_id:'ATHAR-DEMO-STUDENT-002'}},expected:403});
   await request('/api/analysis',{method:'POST',cookie:supervisorCookie,body:{skill:'الكسور'},expected:403});
+  await request('/api/records/bulk',{method:'POST',cookie:supervisorCookie,body:{records:[{kind:'assessment',payload:{student_id:'ATHAR-DEMO-STUDENT-002'}}]},expected:403});
+  await request('/api/records/1',{method:'PUT',cookie:supervisorCookie,body:{payload:{skill:'اختبار',goal:'اختبار',steps:'اختبار'}},expected:403});
   await request('/api/users',{cookie:supervisorCookie,expected:403});
   const supervisorRecordId=supervisorRecords.data.records.find(row=>row.kind==='assessment')?.id;
   if (supervisorRecordId) await request('/api/records/'+supervisorRecordId,{method:'DELETE',cookie:supervisorCookie,expected:403});
