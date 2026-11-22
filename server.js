@@ -389,7 +389,9 @@ app.get('/api/supervisor/schools',requireAuth,requireRole('supervisor'),asyncRou
         AND COALESCE(r.payload->>'after_date','')<>''
         AND COALESCE(r.payload->>'activity_mode','')<>''
         AND COALESCE(r.payload->>'evidence_note','')<>''
-        AND COALESCE(r.payload->>'sessions_planned','') ~ '^[0-9]+
+        AND COALESCE(r.payload->>'sessions_planned','')<>''
+        AND COALESCE(r.payload->>'sessions_done','')<>'')::int AS documented_impacts,
+      MAX(r.created_at) AS last_activity
      FROM supervisor_schools s
      LEFT JOIN records r ON r.school_id=s.school_id
      WHERE s.user_id=$1
