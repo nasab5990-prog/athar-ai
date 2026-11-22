@@ -2618,7 +2618,13 @@ function renderPrincipalView() {
     const groupAssessments = latestAssessmentRows(assessments.filter(a => ids.has(a.student_id)));
     const average = groupAssessments.length ? Math.round(groupAssessments.reduce((sum,a)=>sum+Number(a.pct||0),0)/groupAssessments.length) : null;
     const gaps = groupAssessments.filter(a => Number(a.pct) < 70).length;
-    const groupInterventions = interventions.filter(i => ids.has(i.student_id)).length;
+    const groupInterventions = interventions.filter(i => {
+      if (i.student_id) return ids.has(i.student_id);
+      const curriculum = i.curriculum || {};
+      const gradeMatches = Boolean(gradeNumber(curriculum.grade) && gradeNumber(curriculum.grade) === gradeNumber(group[0]?.grade));
+      const interventionSection = String(curriculum.section || '').trim();
+      return Boolean(gradeMatches && (!interventionSection || interventionSection === String(group[0]?.section || '').trim()));
+    }).length;
     return `<div class="card" style="margin-top:.7rem"><h3>${esc(name)}</h3><p>عدد الطلبة: ${group.length} • متوسط الإتقان: ${average === null ? 'لا توجد بيانات' : `${average}%`} • نتائج دون 70%: ${gaps} • التدخلات: ${groupInterventions}</p></div>`;
   }).join('');
 }
