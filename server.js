@@ -612,6 +612,24 @@ app.put('/api/records/:id',recordLimiter,requireAuth,requireRole('teacher','seni
     lesson:safeText(rawCurriculum.lesson,160) || null,
     learning_outcome:safeText(rawCurriculum.learning_outcome,1000) || null
   };
+  if (req.user.role==='teacher') {
+    if (!curriculum.subject) return res.status(403).json({message:'حدد المادة المسندة إليك قبل تعديل التدخل.'});
+    let assignedGrade=curriculum.grade, assignedSection=null;
+    if (current.student_id) {
+      const studentRow=(await query(
+        "SELECT payload FROM records WHERE school_id=$1 AND kind='student' AND payload->>'student_id'=$2 LIMIT 1",
+        [req.user.school_id,safeText(current.student_id,80)]
+      )).rows[0];
+      if (!studentRow) return res.status(403).json({message:'الطالب المرتبط بالتدخل غير موجود في سجلات المدرسة.'});
+      assignedGrade=studentRow.payload?.grade;
+      assignedSection=studentRow.payload?.section;
+      if (curriculum.grade && String(curriculum.grade).trim()!==String(assignedGrade||'').trim()) {
+        return res.status(400).json({message:'الصف المحدد في التدخل لا يطابق صف الطالب المسجل.'});
+      }
+    }
+    try { await validateTeacherTeachingContext(req.user,{grade:assignedGrade,section:assignedSection,subject:curriculum.subject}); }
+    catch(error) { return res.status(error.status||403).json({message:error.message}); }
+  }
   let suggestionSource=current.suggestion_source || 'teacher';
   let analysisRecordId=current.analysis_record_id ?? null;
   let assessmentRecordId=current.assessment_record_id ?? null;
