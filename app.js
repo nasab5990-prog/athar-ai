@@ -146,7 +146,7 @@ async function restoreSession() {
 }
 async function logout() {
   try { await api('/api/auth/logout', { method:'POST' }); } catch { /* Session may already have expired. */ }
-  currentUser = null; currentRole = null; linkedStudentIds = []; supervisorSchoolsData = [];
+  currentUser = null; currentRole = null; linkedStudentIds = []; supervisorSchoolsData = []; supervisorRecommendations = [];
   const demoNotice = document.getElementById('demoEnvironmentBanner'); if (demoNotice) demoNotice.hidden = true;
   students = []; assessments = []; interventions = []; impacts = []; analyses = [];
   document.getElementById('loginCode') && (document.getElementById('loginCode').value = '');
@@ -394,7 +394,7 @@ function show(id) {
   if (id === 'studentProgress') renderStudentProgress();
   if (id === 'principalView') renderPrincipalView();
   if (id === 'roles' && currentRole === 'principal') { loadSchoolGradeSections().then(loadSchoolUsers); }
-  if (id === 'reports') renderReports();
+  if (id === 'reports') currentRole === 'supervisor' ? refreshSupervisorRecommendationsForReport() : renderReports();
   if (id === 'supervisorRecommendations') loadRecommendations();
 }
 document.addEventListener('DOMContentLoaded', () => {
@@ -2419,8 +2419,12 @@ async function updateRecommendation(id) {
 }
 
 async function loadSupervisorData() {
-  const result=await api('/api/supervisor/schools');
-  supervisorSchoolsData=result.schools||[];
+  const [schoolResult,recommendationResult]=await Promise.all([
+    api('/api/supervisor/schools'),
+    api('/api/supervisor/recommendations')
+  ]);
+  supervisorSchoolsData=schoolResult.schools||[];
+  supervisorRecommendations=recommendationResult.recommendations||[];
   renderSupervisorDashboard();
 }
 function renderSupervisorDashboard() {
@@ -2545,6 +2549,17 @@ function renderPrincipalView() {
   }).join('');
 }
 let supervisorReportSchoolId = 'all';
+async function refreshSupervisorRecommendationsForReport() {
+  const host=document.getElementById('reportSummary');
+  if(host)host.innerHTML='<p class="note">جارٍ تحديث بيانات التوصيات الإشرافية...</p>';
+  try {
+    const result=await api('/api/supervisor/recommendations');
+    supervisorRecommendations=result.recommendations||[];
+  } catch(error) {
+    showToast('تعذّر تحديث التوصيات: '+error.message);
+  }
+  renderReports();
+}
 function setSupervisorReportSchool(value) {
   supervisorReportSchoolId = value || 'all';
   renderReports();
@@ -2558,7 +2573,11 @@ function renderReports() {
       : supervisorSchoolsData.find(s => String(s.school_id) === String(supervisorReportSchoolId));
     if (supervisorReportSchoolId !== 'all' && !selected) supervisorReportSchoolId = 'all';
     const schools = selected ? [selected] : supervisorSchoolsData;
-    const sum = key => schools.reduce((total, school) => total + (Number(school[key]) || 0), 0);
+    const schoolIds = new Set(schools.map(s => String(s.school_id)));
+    const recommendations = supervisorRecommendations.filter(r => schoolIds.has(String(r.school_id)));
+    const countStatus = status => recommendations.filter(r => r.status === status).length;
+    const pendingCount=countStatus('pending'), inProgressCount=countStatus('in_progress'), completedRecommendations=countStatus('completed');
+    const overdueRecommendations=recommendations.filter(r => r.status!=='completed' && r.follow_up_date && String(r.follow_up_date).slice(0,10) < new Date().toLocaleDateString('en-CA'));
     const percent = (part, whole) => whole > 0 ? Math.round((part / whole) * 100) : null;
     const ratioLabel = (part, whole) => whole > 0 ? percent(part, whole) + '%' : 'لا ينطبق';
     const reportDate = new Date().toLocaleDateString('ar-OM', {year:'numeric',month:'long',day:'numeric'});
@@ -2566,12 +2585,9 @@ function renderReports() {
       '<option value="'+esc(school.school_id)+'" '+(supervisorReportSchoolId === String(school.school_id) ? 'selected' : '')+'>'+esc(school.school_name)+'</option>'
     ).join('');
     const selector = '<div class="report-filter no-print"><label for="supervisorReportSchool">نطاق التقرير</label> <select id="supervisorReportSchool" onchange="setSupervisorReportSchool(this.value)"><option value="all" '+(supervisorReportSchoolId === 'all' ? 'selected' : '')+'>جميع المدارس</option>'+options+'</select></div>';
-    const studentsCount = sum('students');
-    const assessmentsCount = sum('assessments');
-    const interventionsCount = sum('interventions');
-    const completedCount = sum('completed_interventions');
-    const impactsCount = sum('impacts');
-    const linkedCount = sum('linked_impacts');
+    const sum = key => schools.reduce((total, school) => total + (Number(school[key]) || 0), 0);
+    const studentsCount = sum('students'), assessmentsCount = sum('assessments'), interventionsCount = sum('interventions');
+    const completedCount = sum('completed_interventions'), impactsCount = sum('impacts'), linkedCount = sum('linked_impacts');
     const documentedCount = sum('documented_impacts');
     const metrics = '<div class="supervisor-report-metrics">'+
       '<div><span>المدارس المشمولة</span><strong>'+schools.length+'</strong></div>'+
@@ -2581,25 +2597,55 @@ function renderReports() {
       '<div><span>قياسات الأثر المرتبطة بتدخل</span><strong>'+linkedCount+' <small>من '+impactsCount+'</small></strong><em>نسبة الربط: '+ratioLabel(linkedCount,impactsCount)+'</em></div>'+
       '<div><span>قياسات مكتملة حقول التوثيق</span><strong>'+documentedCount+' <small>من '+impactsCount+'</small></strong><em>نسبة اكتمال التوثيق: '+ratioLabel(documentedCount,impactsCount)+'</em></div>'+
       '</div>';
+    const recommendationMetrics='<h4>متابعة التوصيات الإشرافية</h4><div class="supervisor-report-metrics recommendation-report-metrics">'+
+      '<div><span>إجمالي التوصيات</span><strong>'+recommendations.length+'</strong></div>'+
+      '<div><span>لم تبدأ</span><strong>'+pendingCount+'</strong></div>'+
+      '<div><span>قيد التنفيذ</span><strong>'+inProgressCount+'</strong></div>'+
+      '<div><span>نُفذت</span><strong>'+completedRecommendations+'</strong><em>نسبة التنفيذ: '+ratioLabel(completedRecommendations,recommendations.length)+'</em></div>'+
+      '<div><span>تجاوزت موعد المتابعة</span><strong>'+overdueRecommendations.length+'</strong></div>'+
+      '</div>';
+    const priorityLabels={low:'منخفضة',medium:'متوسطة',high:'عالية'};
+    const statusLabels={pending:'لم تبدأ',in_progress:'قيد التنفيذ',completed:'نُفذت'};
+    const formatDate=value=>value?new Date(String(value).slice(0,10)+'T00:00:00').toLocaleDateString('ar-OM'):'غير محدد';
+    const recommendationDetails=recommendations.length?recommendations.map(item=>{
+      const overdue=item.status!=='completed'&&item.follow_up_date&&String(item.follow_up_date).slice(0,10)<new Date().toLocaleDateString('en-CA');
+      return '<article class="recommendation-report-item"><div class="recommendation-card-head"><strong>'+esc(item.area)+'</strong><span>'+statusLabels[item.status]+'</span></div>'+
+        '<p class="note">'+(selected?'المشرف: '+esc(item.supervisor_name||'غير محدد'):'المدرسة: '+esc(item.school_name||item.school_id))+' • الأولوية: '+priorityLabels[item.priority]+'</p>'+
+        (item.subject?'<p><strong>الموضوع:</strong> '+esc(item.subject)+'</p>':'')+
+        '<p>'+esc(item.body)+'</p>'+
+        '<p class="note">موعد المتابعة: '+formatDate(item.follow_up_date)+(overdue?' • متأخرة عن الموعد':'')+'</p>'+
+        (item.principal_response?'<p class="recommendation-report-response"><strong>رد المدرسة:</strong> '+esc(item.principal_response)+'</p>':'<p class="note">لم يرد تحديث من المدرسة بعد.</p>')+
+        '</article>';
+    }).join(''):'<p class="note">لا توجد توصيات إشرافية مسجلة في النطاق المحدد.</p>';
     const details = schools.map(school => {
       const schoolInterventions = Number(school.interventions) || 0;
       const schoolCompleted = Number(school.completed_interventions) || 0;
       const schoolImpacts = Number(school.impacts) || 0;
       const schoolLinked = Number(school.linked_impacts) || 0;
       const schoolDocumented = Number(school.documented_impacts) || 0;
+      const schoolRecommendations=supervisorRecommendations.filter(r=>String(r.school_id)===String(school.school_id));
+      const schoolDone=schoolRecommendations.filter(r=>r.status==='completed').length;
+      const schoolOverdue=schoolRecommendations.filter(r=>r.status!=='completed'&&r.follow_up_date&&String(r.follow_up_date).slice(0,10)<new Date().toLocaleDateString('en-CA')).length;
       return '<section class="card supervisor-report-school"><h3>'+esc(school.school_name)+'</h3>'+
         '<p>الطلبة: '+(Number(school.students)||0)+' • التقويمات: '+(Number(school.assessments)||0)+'</p>'+
         '<p>التدخلات: '+schoolInterventions+' • المكتمل: '+schoolCompleted+' ('+ratioLabel(schoolCompleted,schoolInterventions)+')</p>'+
         '<p>قياسات الأثر: '+schoolImpacts+' • المرتبط بتدخل: '+schoolLinked+' ('+ratioLabel(schoolLinked,schoolImpacts)+')</p>'+
         '<p>مكتمل حقول التوثيق: '+schoolDocumented+' ('+ratioLabel(schoolDocumented,schoolImpacts)+')</p>'+
+        '<p><strong>التوصيات:</strong> '+schoolRecommendations.length+' • المنفذ: '+schoolDone+' ('+ratioLabel(schoolDone,schoolRecommendations.length)+') • المتأخر: '+schoolOverdue+'</p>'+
         '<p class="note">آخر نشاط: '+(school.last_activity ? new Date(school.last_activity).toLocaleDateString('ar-OM') : 'لا يوجد نشاط مسجل')+'</p></section>';
     }).join('');
     const interpretation = '<div class="report-metric-definitions"><strong>قراءة المؤشرات</strong><ul>'+
       '<li>نسبة إكمال التدخلات: التدخلات التي سُجلت حالتها «مكتمل» من إجمالي التدخلات.</li>'+
       '<li>نسبة ربط قياسات الأثر: القياسات المرتبطة بسجل تدخل محدد من إجمالي قياسات الأثر.</li>'+
       '<li>نسبة اكتمال التوثيق: القياسات التي استوفت حقول التوثيق المطلوبة من إجمالي القياسات. اكتمال التوثيق لا يثبت وحده حدوث تحسن أو أن التدخل سبّبه.</li>'+
+      '<li>نسبة تنفيذ التوصيات: التوصيات التي حدّثت المدرسة حالتها إلى «نُفذت» من إجمالي التوصيات.</li>'+
+      '<li>التوصية المتأخرة: توصية لم تُنفذ وتجاوز تاريخ متابعتها المحدد.</li>'+
       '</ul></div>';
-    el.innerHTML='<header class="report-print-header"><h2>أثَر | تقرير متابعة الإشراف التربوي</h2><p>تاريخ إعداد التقرير: '+reportDate+'</p></header>'+selector+metrics+'<h4>'+(selected ? 'تفاصيل المدرسة' : 'ملخص المدارس')+'</h4>'+(details || '<p>لا توجد مدارس مسندة لهذا الحساب.</p>')+interpretation+'<p class="report-print-note">تقرير اطلاع ومتابعة للمدارس المسندة فقط. لا يتيح هذا الدور تعديل السجلات أو اعتماد التدخلات. تعكس المؤشرات السجلات المتاحة وقت إعداد التقرير.</p><footer class="report-print-footer">حقوق التصميم والتطوير © أ. نصراء سعيد البهلولي | منصة أثَر</footer>';
+    el.innerHTML='<header class="report-print-header"><h2>أثَر | تقرير متابعة الإشراف التربوي</h2><p>تاريخ إعداد التقرير: '+reportDate+'</p></header>'+selector+metrics+recommendationMetrics+
+      '<h4>'+(selected ? 'تفاصيل المدرسة' : 'ملخص المدارس')+'</h4>'+(details || '<p>لا توجد مدارس مسندة لهذا الحساب.</p>')+
+      '<h4>تفاصيل التوصيات وردود المدارس</h4><div class="recommendation-report-list">'+recommendationDetails+'</div>'+interpretation+
+      '<p class="report-print-note">تقرير اطلاع ومتابعة للمدارس المسندة فقط. يتيح للمشرف إضافة التوصيات، ولا يتيح تعديل سجلات الطلبة أو التقويمات أو التدخلات. تعكس المؤشرات ردود المدارس والسجلات المتاحة وقت إعداد التقرير.</p>'+
+      '<footer class="report-print-footer">حقوق التصميم والتطوير © أ. نصراء سعيد البهلولي | منصة أثَر</footer>';
     return;
   }
   const currentAssessments = latestAssessmentRows();
