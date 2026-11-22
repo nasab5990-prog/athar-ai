@@ -99,6 +99,22 @@ async function validateStudentPlacement(user,gradeValue,sectionValue) {
     if(!permitted)throw Object.assign(new Error('لا يمكنك تسجيل طلبة خارج الصفوف والشعب المسندة إليك.'),{status:403});
   }
 }
+async function validateTeacherTeachingContext(user,{grade:gradeValue,section:sectionValue,subject:subjectValue}) {
+  if (user.role!=='teacher') return;
+  const gradeNames={'الأول':'1','الاول':'1','الثاني':'2','الثالث':'3','الرابع':'4','الخامس':'5','السادس':'6','السابع':'7','الثامن':'8','التاسع':'9','العاشر':'10','الحادي عشر':'11','الثاني عشر':'12'};
+  const rawGrade=String(gradeValue||'').trim().replace(/^الصف\\s*/,'');
+  const grade=/^(?:[1-9]|1[0-2])$/.test(rawGrade)?rawGrade:(gradeNames[rawGrade]||'');
+  const section=String(sectionValue||'').trim();
+  const subject=String(subjectValue||'').normalize('NFKC').toLocaleLowerCase('ar').replace(/\\s+/g,' ').trim();
+  if (!grade || !subject) throw Object.assign(new Error('حدد الصف والمادة المسندين إليك قبل تسجيل هذا السجل.'),{status:403});
+  const teaching=await teacherTeachingAssignment(user);
+  const permitted=teaching.assignments.some(item=>
+    assignedGradeLabels([item.grade]).includes(grade) &&
+    String(item.subject||'').normalize('NFKC').toLocaleLowerCase('ar').replace(/\\s+/g,' ').trim()===subject &&
+    (!section || !item.sections?.length || item.sections.map(String).includes(section))
+  );
+  if (!permitted) throw Object.assign(new Error('لا يمكنك تسجيل بيانات خارج المادة والصف والشعبة المسندة إليك.'),{status:403});
+}
 async function studentExistsInSchool(studentId,schoolId) {
   const r=await query("SELECT id FROM records WHERE school_id=$1 AND kind='student' AND payload->>'student_id'=$2 LIMIT 1",[schoolId,studentId]);
   return Boolean(r.rowCount);
@@ -459,15 +475,63 @@ app.put('/api/principal/recommendations/:id',requireAuth,requireRole('principal'
 app.post('/api/records',recordLimiter,requireAuth,requireRole('teacher','senior_teacher','principal'),asyncRoute(async(req,res)=>{
   const kind=safeText(req.body?.kind,40), payload=req.body?.payload;
   if (!['student','assessment','intervention','impact'].includes(kind) || !payload || typeof payload!=='object' || Array.isArray(payload)) return res.status(400).json({message:'نوع السجل أو بياناته غير صالحة.'});
-  const clean={...payload}; delete clean.school_id; delete clean.owner_id;
+  const clean={...payload}; delete clean.school_id; delete clean.owner_id; delete clean.recordId; delete clean.id;
   if (kind==='student') {
     clean.student_id=safeText(clean.student_id,80); clean.name=safeText(clean.name,140);
     if (!clean.student_id || !clean.name) return res.status(400).json({message:'اسم الطالب ومعرّفه مطلوبان.'});
     try { await validateStudentPlacement(req.user,clean.grade,clean.section); } catch(error) { return res.status(error.status||400).json({message:error.message}); }
     if (await studentExistsInSchool(clean.student_id,req.user.school_id)) return res.status(409).json({message:'معرّف الطالب مستخدم بالفعل في المدرسة.'});
-  } else if (clean.student_id) {
-    clean.student_id=safeText(clean.student_id,80);
-    if (!await findStudentOwnedBy(req.user,clean.student_id)) return res.status(403).json({message:'الطالب غير تابع لسجلاتك أو غير موجود في المدرسة.'});
+  } else {
+    if (kind==='assessment') {
+      const total=Number(clean.total), correct=Number(clean.correct), pct=Number(clean.pct);
+      if (!safeText(clean.skill||clean.name,180) || !safeText(clean.subject,120) || !safeText(clean.grade,2) || !safeText(clean.section,30) ||
+          !Number.isFinite(total) || total<1 || total>100 || !Number.isFinite(correct) || correct<0 || correct>total ||
+          !Number.isFinite(pct) || pct<0 || pct>100 || !['class','individual'].includes(clean.assessment_scope||'class')) {
+        return res.status(400).json({message:'بيانات التقويم غير مكتملة أو أن النتيجة خارج النطاق المسموح.'});
+      }
+      try { await validateTeacherTeachingContext(req.user,{grade:clean.grade,section:clean.section,subject:clean.subject}); }
+      catch(error) { return res.status(error.status||403).json({message:error.message}); }
+    }
+    if (kind==='intervention') {
+      const curriculum=clean.curriculum && typeof clean.curriculum==='object' ? clean.curriculum : {};
+      if (!safeText(clean.skill,180) || !safeText(clean.goal,2000) || !safeText(clean.steps,5000)) {
+        return res.status(400).json({message:'المهارة والهدف وخطوات التدخل مطلوبة.'});
+      }
+      if (req.user.role==='teacher' && !clean.student_id) {
+        try { await validateTeacherTeachingContext(req.user,{grade:curriculum.grade,subject:curriculum.subject}); }
+        catch(error) { return res.status(error.status||403).json({message:error.message}); }
+      }
+      if (clean.activity_mode!==undefined && !['offline','shared','online'].includes(clean.activity_mode)) return res.status(400).json({message:'طريقة تنفيذ التدخل غير صالحة.'});
+      if (clean.activity_duration!==undefined && ![10,15,20].includes(Number(clean.activity_duration))) return res.status(400).json({message:'مدة النشاط غير صالحة.'});
+    }
+    if (kind==='impact') {
+      const before=Number(clean.before), after=Number(clean.after), interventionId=Number(clean.intervention_record_id);
+      if (!Number.isFinite(before)||!Number.isFinite(after)||before<0||before>100||after<0||after>100||
+          !Number.isSafeInteger(interventionId)||interventionId<1) {
+        return res.status(400).json({message:'نتيجتا القياس ومعرّف التدخل المرتبط مطلوبة وبنطاق صحيح.'});
+      }
+      const linked=(await query("SELECT id,owner_id,payload FROM records WHERE id=$1 AND school_id=$2 AND kind='intervention'",[interventionId,req.user.school_id])).rows[0];
+      if (!linked) return res.status(400).json({message:'التدخل المرتبط غير موجود في مدرستك.'});
+      if (req.user.role==='teacher' && String(linked.owner_id)!==String(req.user.id)) return res.status(403).json({message:'يمكنك توثيق أثر تدخلاتك التي أنشأتها فقط.'});
+      const linkedStudentId=String(linked.payload?.student_id||'');
+      if (clean.student_id && linkedStudentId!==String(clean.student_id)) return res.status(400).json({message:'الطالب المحدد لا يطابق الطالب المرتبط بالتدخل.'});
+      if (!clean.student_id && linkedStudentId) clean.student_id=linkedStudentId;
+      clean.intervention_record_id=interventionId;
+      clean.before=before; clean.after=after; clean.difference=Number((after-before).toFixed(1));
+      if ((clean.sessions_planned===undefined||clean.sessions_planned===null||clean.sessions_planned==='') !==
+          (clean.sessions_done===undefined||clean.sessions_done===null||clean.sessions_done==='')) {
+        return res.status(400).json({message:'أدخل عدد الجلسات المخططة والمنفذة معًا.'});
+      }
+      if (clean.sessions_planned!==undefined&&clean.sessions_planned!==null&&clean.sessions_planned!=='') {
+        const planned=Number(clean.sessions_planned), done=Number(clean.sessions_done);
+        if (!Number.isInteger(planned)||planned<1||planned>30||!Number.isInteger(done)||done<0||done>planned) return res.status(400).json({message:'عدد الجلسات غير صالح.'});
+        clean.sessions_planned=planned; clean.sessions_done=done;
+      }
+    }
+    if (clean.student_id) {
+      clean.student_id=safeText(clean.student_id,80);
+      if (!await findStudentOwnedBy(req.user,clean.student_id)) return res.status(403).json({message:'الطالب غير تابع لسجلاتك أو غير موجود في المدرسة.'});
+    }
   }
   if (JSON.stringify(clean).length>30000) return res.status(413).json({message:'حجم السجل أكبر من الحد المسموح.'});
   const saved=await query('INSERT INTO records(school_id,owner_id,kind,payload) VALUES($1,$2,$3,$4::jsonb) RETURNING id',[req.user.school_id,req.user.id,kind,JSON.stringify(clean)]);
@@ -475,12 +539,12 @@ app.post('/api/records',recordLimiter,requireAuth,requireRole('teacher','senior_
   res.status(201).json({id:saved.rows[0].id,kind,payload:clean});
 }));
 app.post('/api/records/bulk',recordLimiter,requireAuth,requireRole('teacher','senior_teacher','principal'),asyncRoute(async(req,res)=>{
-  const incoming=req.body?.records, permitted=new Set(['student','assessment','intervention','impact']);
+  const incoming=req.body?.records, permitted=new Set(['student']);
   if (!Array.isArray(incoming) || incoming.length<1 || incoming.length>100) return res.status(400).json({message:'أرسل من 1 إلى 100 سجل في كل دفعة.'});
   const prepared=[], batchStudentIds=new Set();
   for (const item of incoming) {
     const kind=safeText(item?.kind,40), payload=item?.payload;
-    if (!permitted.has(kind) || !payload || typeof payload!=='object' || Array.isArray(payload)) return res.status(400).json({message:'تحتوي الدفعة على نوع سجل أو بيانات غير صالحة.'});
+    if (!permitted.has(kind) || !payload || typeof payload!=='object' || Array.isArray(payload)) return res.status(400).json({message:'الاستيراد الجماعي مخصص لسجلات الطلبة فقط؛ أدخل التقويمات والتدخلات وقياسات الأثر من نماذجها.'});
     const clean={...payload}; delete clean.school_id; delete clean.owner_id; delete clean.recordId; delete clean.id;
     if (kind==='student') {
       clean.student_id=safeText(clean.student_id,80); clean.name=safeText(clean.name,140);
