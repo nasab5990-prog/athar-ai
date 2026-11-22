@@ -42,4 +42,4 @@ jobs:
       - name: Report dependency advisories
         run: |
           npm audit --json > audit-report.json || true
-          node --input-type=module -e "import fs from 'node:fs'; const r=JSON.parse(fs.readFileSync('audit-report.json','utf8')); console.log('Vulnerability totals:', JSON.stringify(r.metadata?.vulnerabilities || {})); for (const [name,v] of Object.entries(r.vulnerabilities || {})) console.log(JSON.stringify({name,severity:v.severity,isDirect:v.isDirect,range:v.range,fixAvailable:v.fixAvailable,via:v.via.map(x=>typeof x==='string'?x:{name:x.name,title:x.title,url:x.url,range:x.range})}));"
+          node --input-type=module -e "import fs from 'node:fs'; const r=JSON.parse(fs.readFileSync('audit-report.json','utf8')); const meta=r.metadata?.vulnerabilities || {}; console.log('Vulnerability totals:', JSON.stringify(meta)); for (const [name,v] of Object.entries(r.vulnerabilities || {})) console.log(JSON.stringify({name,severity:v.severity,isDirect:v.isDirect,range:v.range,fixAvailable:v.fixAvailable,via:v.via.map(x=>typeof x==='string'?x:{name:x.name,title:x.title,url:x.url,range:x.range})})); if ((meta.total || 0)>0) process.exitCode=1;"
