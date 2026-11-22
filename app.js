@@ -2579,6 +2579,7 @@ function renderReports() {
     const todayKey = [todayDate.getFullYear(),String(todayDate.getMonth()+1).padStart(2,'0'),String(todayDate.getDate()).padStart(2,'0')].join('-');
     const countStatus = status => recommendations.filter(r => r.status === status).length;
     const pendingCount=countStatus('pending'), inProgressCount=countStatus('in_progress'), completedRecommendations=countStatus('completed');
+    const repliedCount=recommendations.filter(r=>String(r.principal_response||'').trim().length>0).length;
     const overdueRecommendations=recommendations.filter(r => r.status!=='completed' && r.follow_up_date && String(r.follow_up_date).slice(0,10) < todayKey);
     const percent = (part, whole) => whole > 0 ? Math.round((part / whole) * 100) : null;
     const ratioLabel = (part, whole) => whole > 0 ? percent(part, whole) + '%' : 'لا ينطبق';
@@ -2605,6 +2606,7 @@ function renderReports() {
       '<div><span>قيد التنفيذ</span><strong>'+inProgressCount+'</strong></div>'+
       '<div><span>نُفذت</span><strong>'+completedRecommendations+'</strong><em>نسبة التنفيذ: '+ratioLabel(completedRecommendations,recommendations.length)+'</em></div>'+
       '<div><span>تجاوزت موعد المتابعة</span><strong>'+overdueRecommendations.length+'</strong></div>'+
+      '<div><span>ردت عليها المدارس</span><strong>'+repliedCount+'</strong></div>'+
       '</div>';
     const priorityLabels={low:'منخفضة',medium:'متوسطة',high:'عالية'};
     const statusLabels={pending:'لم تبدأ',in_progress:'قيد التنفيذ',completed:'نُفذت'};
@@ -2627,13 +2629,17 @@ function renderReports() {
       const schoolDocumented = Number(school.documented_impacts) || 0;
       const schoolRecommendations=supervisorRecommendations.filter(r=>String(r.school_id)===String(school.school_id));
       const schoolDone=schoolRecommendations.filter(r=>r.status==='completed').length;
+      const schoolPending=schoolRecommendations.filter(r=>r.status==='pending').length;
+      const schoolInProgress=schoolRecommendations.filter(r=>r.status==='in_progress').length;
+      const schoolReplied=schoolRecommendations.filter(r=>String(r.principal_response||'').trim().length>0).length;
       const schoolOverdue=schoolRecommendations.filter(r=>r.status!=='completed'&&r.follow_up_date&&String(r.follow_up_date).slice(0,10)<todayKey).length;
       return '<section class="card supervisor-report-school"><h3>'+esc(school.school_name)+'</h3>'+
         '<p>الطلبة: '+(Number(school.students)||0)+' • التقويمات: '+(Number(school.assessments)||0)+'</p>'+
         '<p>التدخلات: '+schoolInterventions+' • المكتمل: '+schoolCompleted+' ('+ratioLabel(schoolCompleted,schoolInterventions)+')</p>'+
         '<p>قياسات الأثر: '+schoolImpacts+' • المرتبط بتدخل: '+schoolLinked+' ('+ratioLabel(schoolLinked,schoolImpacts)+')</p>'+
         '<p>مكتمل حقول التوثيق: '+schoolDocumented+' ('+ratioLabel(schoolDocumented,schoolImpacts)+')</p>'+
-        '<p><strong>التوصيات:</strong> '+schoolRecommendations.length+' • المنفذ: '+schoolDone+' ('+ratioLabel(schoolDone,schoolRecommendations.length)+') • المتأخر: '+schoolOverdue+'</p>'+
+        '<p><strong>التوصيات:</strong> '+schoolRecommendations.length+' • لم تبدأ: '+schoolPending+' • قيد التنفيذ: '+schoolInProgress+' • المنفذ: '+schoolDone+' ('+ratioLabel(schoolDone,schoolRecommendations.length)+')</p>'+
+        '<p>ردود المديرين: '+schoolReplied+' • المتأخر: '+schoolOverdue+'</p>'+
         '<p class="note">آخر نشاط: '+(school.last_activity ? new Date(school.last_activity).toLocaleDateString('ar-OM') : 'لا يوجد نشاط مسجل')+'</p></section>';
     }).join('');
     const interpretation = '<div class="report-metric-definitions"><strong>قراءة المؤشرات</strong><ul>'+
