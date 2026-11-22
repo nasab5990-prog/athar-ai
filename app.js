@@ -1967,6 +1967,9 @@ async function saveIntervention() {
   const studentId = document.getElementById('interventionStudent')?.value || null;
   const student = students.find(s => s.student_id === studentId);
   if (!skill || !goal || !steps) return showToast('أكمل المهارة والهدف وخطوات التدخل.');
+  const saveButton = document.getElementById('saveInterventionBtn');
+  if (saveButton?.disabled) return;
+  if (saveButton) saveButton.disabled = true;
   try {
     const suggestion = window.atharSuggestedIntervention;
     const existing = editingInterventionId
@@ -2036,6 +2039,7 @@ async function saveIntervention() {
       showToast('تم حفظ التدخل على قاعدة بيانات المدرسة، وتم تفريغ النموذج.');
     }
   } catch (error) { showToast(error.message); }
+  finally { if (saveButton) saveButton.disabled = false; }
 }
 function renderInt() {
   const el = document.getElementById('intList');
@@ -2144,18 +2148,8 @@ function editIntervention(recordId) {
   showToast('عدّل البيانات الناقصة أو حدّث حالة التدخل، ثم احفظ التعديلات.');
 }
 function cancelInterventionEdit() {
-  editingInterventionId = null;
-  window.atharInterventionTarget = null;
-  const statusField = document.getElementById('intStatusField');
-  if (statusField) statusField.hidden = true;
-  const saveButton = document.getElementById('saveInterventionBtn');
-  if (saveButton) saveButton.textContent = 'حفظ التدخل';
-  const cancelButton = document.getElementById('cancelInterventionEditBtn');
-  if (cancelButton) cancelButton.hidden = true;
-  ['intSkill','intGoal','intSteps','intEnrich','intObservedErrors','intOutcome'].forEach(id => {
-    const field = document.getElementById(id); if (field) field.value = '';
-  });
-  showToast('تم إلغاء التعديل دون تغيير السجل المحفوظ.');
+  resetInterventionForm();
+  showToast('تم إلغاء التعديل دون تغيير السجل المحفوظ، وتم تفريغ النموذج.');
 }
 function printWorksheet() {
   const skill = document.getElementById('intSkill')?.value || '';
