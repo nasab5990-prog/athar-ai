@@ -886,3 +886,9 @@ body.dark .root-map-arrow { color:#91b6dc; }
 .recommendation-card-head{display:flex;align-items:center;justify-content:space-between;gap:.8rem;flex-wrap:wrap}
 .recommendation-followup{margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)}
 .recommendation-followup textarea{width:100%;margin:.3rem 0 .7rem}
+
+.recommendation-report-metrics{margin-bottom:1.1rem}
+.recommendation-report-list{display:grid;gap:.75rem}
+.recommendation-report-item{border:1px solid var(--border);border-radius:12px;padding:1rem;break-inside:avoid}
+.recommendation-report-response{background:var(--surface-soft);border-radius:8px;padding:.65rem}
+@media print{.recommendation-report-item{break-inside:avoid}.recommendation-report-list{gap:.45rem}}
