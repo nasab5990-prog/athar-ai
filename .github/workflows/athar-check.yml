@@ -48,4 +48,5 @@ jobs:
             }
           }
           fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n');
+          console.log(JSON.stringify({vulnerabilities:audit.vulnerabilities || {}, metadata:meta}, null, 2));
           NODE
