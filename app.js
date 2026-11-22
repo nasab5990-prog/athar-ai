@@ -315,10 +315,10 @@ function toggleSidebar() {
 const roleSections = {
   teacher: ['dashboard','assessment','radar','assistant','intervention','activities','impact','reports','inclusive','lowresource','privacy','teacherdev','curriculum','guide','about'],
   senior_teacher: ['dashboard','assessment','radar','assistant','intervention','activities','impact','reports','principalView','inclusive','lowresource','privacy','teacherdev','curriculum','guide','about'],
-  principal: ['dashboard','students','reports','principalView','roles','privacy','guide','about'],
+  principal: ['dashboard','students','reports','principalView','roles','supervisorRecommendations','privacy','guide','about'],
   parent: ['dashboard','studentProgress','guide','privacy','about'],
   student: ['dashboard','studentProgress','guide','privacy','about'],
-  supervisor: ['dashboard','reports','guide','about']
+  supervisor: ['dashboard','reports','supervisorRecommendations','guide','about']
 };
 function canOpenSection(id) { return (roleSections[currentRole] || []).includes(id); }
 function resetSectionView(section) {
@@ -395,6 +395,7 @@ function show(id) {
   if (id === 'principalView') renderPrincipalView();
   if (id === 'roles' && currentRole === 'principal') { loadSchoolGradeSections().then(loadSchoolUsers); }
   if (id === 'reports') renderReports();
+  if (id === 'supervisorRecommendations') loadRecommendations();
 }
 document.addEventListener('DOMContentLoaded', () => {
   ['assessmentSubject','assessmentGrade','assessmentSection','assessmentScope'].forEach(id=>document.getElementById(id)?.addEventListener('change',updateAssessmentScope));
@@ -2352,6 +2353,71 @@ function latestAssessmentRows(rows = assessments) {
   }
   return [...latest.values()];
 }
+
+let supervisorRecommendations = [];
+async function loadRecommendations() {
+  const endpoint=currentRole==='supervisor'?'/api/supervisor/recommendations':'/api/principal/recommendations';
+  try {
+    const result=await api(endpoint);
+    supervisorRecommendations=result.recommendations||[];
+    renderRecommendations();
+  } catch(error) {
+    const host=document.getElementById('recommendationsList');
+    if(host)host.innerHTML='<p class="note">'+esc(error.message)+'</p>';
+  }
+}
+function renderRecommendations() {
+  const host=document.getElementById('recommendationsList');
+  const form=document.getElementById('supervisorRecommendationForm');
+  if(!host)return;
+  if(form)form.hidden=currentRole!=='supervisor';
+  const statusLabels={pending:'لم تبدأ',in_progress:'قيد التنفيذ',completed:'نُفذت'};
+  const priorityLabels={low:'منخفضة',medium:'متوسطة',high:'عالية'};
+  if(currentRole==='supervisor'){
+    const select=document.getElementById('recommendationSchool');
+    if(select){
+      const previous=select.value;
+      select.innerHTML='<option value="">اختر المدرسة</option>'+supervisorSchoolsData.map(s=>'<option value="'+esc(s.school_id)+'">'+esc(s.school_name)+'</option>').join('');
+      if(supervisorSchoolsData.some(s=>s.school_id===previous))select.value=previous;
+    }
+  }
+  host.innerHTML=supervisorRecommendations.length?supervisorRecommendations.map(item=>{
+    const follow=item.follow_up_date?new Date(item.follow_up_date).toLocaleDateString('ar-OM'):'غير محدد';
+    const controls=currentRole==='principal'
+      ? '<div class="recommendation-followup"><label for="recommendationStatus-'+item.id+'">حالة التنفيذ</label><select id="recommendationStatus-'+item.id+'"><option value="pending" '+(item.status==='pending'?'selected':'')+'>لم تبدأ</option><option value="in_progress" '+(item.status==='in_progress'?'selected':'')+'>قيد التنفيذ</option><option value="completed" '+(item.status==='completed'?'selected':'')+'>نُفذت</option></select><label for="recommendationResponse-'+item.id+'">رد المدرسة وإجراء المتابعة</label><textarea id="recommendationResponse-'+item.id+'" rows="2" placeholder="اكتب ما تم بشأن التوصية...">'+esc(item.principal_response||'')+'</textarea><button class="btn small" type="button" onclick="updateRecommendation('+item.id+')">حفظ المتابعة</button></div>'
+      : '<p class="note">حالة التنفيذ: '+statusLabels[item.status]+'</p>'+(item.principal_response?'<p><strong>رد المدرسة:</strong> '+esc(item.principal_response)+'</p>':'<p class="note">لم يضف المدير رد متابعة بعد.</p>');
+    return '<article class="card recommendation-card"><div class="recommendation-card-head"><h3>'+esc(item.area)+'</h3><span class="badge '+(item.priority==='high'?'warning':'info')+'">أولوية '+priorityLabels[item.priority]+'</span></div><p class="note">'+(currentRole==='supervisor'?'المدرسة: '+esc(item.school_name):'المشرف: '+esc(item.supervisor_name))+' • تاريخ الإضافة: '+new Date(item.created_at).toLocaleDateString('ar-OM')+'</p>'+(item.subject?'<p><strong>المادة/الموضوع:</strong> '+esc(item.subject)+'</p>':'')+'<p>'+esc(item.body)+'</p><p class="note">موعد المتابعة: '+follow+'</p>'+controls+'</article>';
+  }).join(''):'<div class="card"><p class="note">لا توجد توصيات إشرافية مسجلة حتى الآن.</p></div>';
+}
+async function createRecommendation() {
+  const payload={
+    school_id:document.getElementById('recommendationSchool')?.value||'',
+    area:document.getElementById('recommendationArea')?.value||'',
+    subject:document.getElementById('recommendationSubject')?.value||'',
+    body:document.getElementById('recommendationBody')?.value||'',
+    priority:document.getElementById('recommendationPriority')?.value||'medium',
+    follow_up_date:document.getElementById('recommendationFollowup')?.value||''
+  };
+  const button=document.getElementById('saveRecommendationBtn');
+  if(button)button.disabled=true;
+  try{
+    await api('/api/supervisor/recommendations',{method:'POST',body:JSON.stringify(payload)});
+    ['recommendationArea','recommendationSubject','recommendationBody','recommendationFollowup'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    await loadRecommendations();
+    showToast('تم حفظ التوصية وإتاحتها لمدير المدرسة.');
+  }catch(error){showToast(error.message);}
+  finally{if(button)button.disabled=false;}
+}
+async function updateRecommendation(id) {
+  const status=document.getElementById('recommendationStatus-'+id)?.value||'pending';
+  const principal_response=document.getElementById('recommendationResponse-'+id)?.value||'';
+  try{
+    await api('/api/principal/recommendations/'+encodeURIComponent(id),{method:'PUT',body:JSON.stringify({status,principal_response})});
+    await loadRecommendations();
+    showToast('تم حفظ متابعة المدرسة.');
+  }catch(error){showToast(error.message);}
+}
+
 async function loadSupervisorData() {
   const result=await api('/api/supervisor/schools');
   supervisorSchoolsData=result.schools||[];
