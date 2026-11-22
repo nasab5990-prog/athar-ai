@@ -2231,7 +2231,7 @@ async function calcImpact() {
   const followupRaw = document.getElementById('impactFollowup')?.value;
   const followup = followupRaw === '' || followupRaw === undefined ? null : Number(followupRaw);
   if (followup !== null && (!Number.isFinite(followup) || followup < 0 || followup > 100)) return showToast('أدخل نتيجة متابعة من 0 إلى 100.');
-  const hasCoreEvidence = Boolean(tool && beforeDate && afterDate && activityMode && sessionsPlanned > 0 && Number.isInteger(sessionsDone) && sessionsDone >= 0 && sessionsDone <= sessionsPlanned && evidenceNote);
+  const hasCoreEvidence = Boolean(tool && beforeDate && afterDate && activityMode && sessionsPlanned > 0 && Number.isInteger(sessionsDone) && sessionsDone > 0 && sessionsDone <= sessionsPlanned && evidenceNote);
   const outcomeLabel = difference > 0 ? 'تحسن' : difference < 0 ? 'انخفاض' : 'لا تغير';
   const evidenceLabel = hasCoreEvidence && followup !== null && followup >= after
     ? 'الأدلة موثقة — قياس متابعة يؤكد بقاء النتيجة أو ارتفاعها'
