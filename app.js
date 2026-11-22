@@ -795,8 +795,12 @@ async function saveAssessment() {
     diagnostic_source:diagnosticQuestions.length ? (curriculumDiagnosticQuestionSet()?.questions ? 'أسئلة مرتبطة بكتاب تقنية المعلومات للصف الخامس ومخرج التعلم' : curriculumDiagnosticQuestionSet()?.record ? 'مهام أولية مستندة إلى مخرج التعلم المختار وتحتاج مراجعة المعلم' : 'قوالب إرشادية عامة مرتبطة باسم المهارة') : null,
     scoring_method:diagnosticQuestions.length ? 'متقن=100، متقن جزئيًا=50، يحتاج إلى دعم=0' : 'عدد الإجابات الصحيحة من الإجمالي'
   };
+  const saveButton = document.getElementById('saveAssessmentBtn');
+  if (saveButton?.disabled) return;
+  if (saveButton) { saveButton.disabled = true; saveButton.textContent = 'جارٍ حفظ التقويم وتحليل النتيجة...'; }
   try {
     const result = await syncRecord('assessment', payload);
+    if (saveButton) { saveButton.dataset.saved = 'true'; saveButton.textContent = 'تم حفظ التقويم'; }
     assessments.unshift({ ...result.payload, recordId:result.id });
     const el = document.getElementById('assessResult');
     if (el) el.innerHTML = `<strong>نسبة الإتقان: ${payload.pct}%</strong><p class="note">${student ? `الطالب: ${esc(student.name)}` : 'تقويم صفي غير مرتبط بطالب محدد'} — ${diagnosticQuestions.length ? `تقييم ${total} أسئلة؛ ${correct} متقنة بالكامل، مع احتساب الإتقان الجزئي.` : 'احتُسبت من الإجابات الصحيحة'} — حُفظ على الخادم.</p>`;
@@ -814,6 +818,7 @@ async function saveAssessment() {
       assessment_record_id:result.id,
       observedErrors:assessmentObservation,
       grade,
+      section,
       subject,
       unit:payload.unit || '',
       lesson:payload.lesson || '',
@@ -853,6 +858,19 @@ async function saveAssessment() {
       showToast(`حُفظ التقويم، لكن تعذر عرض خريطة الجذور: ${refreshError.message}`);
     }
   } catch (error) { showToast(error.message); }
+  finally {
+    if (saveButton && saveButton.dataset.saved !== 'true') {
+      saveButton.disabled = false;
+      saveButton.textContent = 'حفظ التقويم';
+    }
+  }
+}
+function enableAssessmentSave() {
+  const button = document.getElementById('saveAssessmentBtn');
+  if (!button || button.dataset.saved !== 'true') return;
+  button.dataset.saved = 'false';
+  button.disabled = false;
+  button.textContent = 'حفظ تقويم جديد';
 }
 function diagnosticQuestionSet(skill) {
   const name = displaySkillName(skill);
@@ -2191,6 +2209,7 @@ async function calcImpact() {
   const sessionsPlanned = plannedRaw === '' ? 0 : Number(plannedRaw);
   const sessionsDone = doneRaw === '' ? 0 : Number(doneRaw);
   if ((plannedRaw !== '' && (!Number.isInteger(sessionsPlanned) || sessionsPlanned < 1 || sessionsPlanned > 30)) || (doneRaw !== '' && (!Number.isInteger(sessionsDone) || sessionsDone < 0 || sessionsDone > 30))) return showToast('تحقق من عدد الجلسات؛ المخطط من 1 إلى 30 والمنفذ من 0 إلى 30.');
+  if ((plannedRaw === '') !== (doneRaw === '')) return showToast('أدخل عدد الجلسات المخططة والمنفذة معًا، أو اترك الحقلين فارغين.');
   if (sessionsPlanned && sessionsDone > sessionsPlanned) return showToast('عدد الجلسات المنفذة لا يمكن أن يتجاوز الجلسات المخططة.');
   const evidenceNote = document.getElementById('impactEvidenceNote')?.value.trim() || '';
   const followupRaw = document.getElementById('impactFollowup')?.value;
@@ -2216,14 +2235,25 @@ async function calcImpact() {
     sessions_done:sessionsDone || null, evidence_note:evidenceNote || null,
     followup_score:followup, evidence_status:evidenceStatus
   };
+  const saveButton = document.getElementById('saveImpactBtn');
+  if (saveButton?.disabled) return;
+  if (saveButton) { saveButton.disabled = true; saveButton.textContent = 'جارٍ حفظ قياس الأثر...'; }
   try {
     const result = await syncRecord('impact', payload);
     impacts.unshift({ ...result.payload, recordId:result.id });
     renderImpactHistory();
     const el = document.getElementById('impactResult');
     if (el) el.innerHTML = `<div class="card"><strong>الفرق: ${payload.difference > 0 ? '+' : ''}${payload.difference} نقطة مئوية</strong><p>${esc(student?.name || intervention.student_name || 'تقويم صفي')}</p><p>التدخل المرتبط: ${esc(payload.intervention_skill)} — ${esc(payload.intervention_goal)}</p><p><strong>توثيق النتيجة:</strong> ${esc(evidenceStatus)}</p><p class="note">أداة القياس: ${esc(tool || 'غير محددة')} • الجلسات: ${sessionsDone || 0}/${sessionsPlanned || 'غير محدد'} • ${esc(evidenceNote || 'لا توجد ملاحظة مرفقة')}</p><span class="badge ${payload.difference > 0 ? 'success' : 'warning'}">${payload.difference > 0 ? 'تحسن مسجل' : payload.difference === 0 ? 'لا تغير' : 'انخفاض يحتاج مراجعة'}</span></div>`;
-    updateDashboard(); updateCycle(); updateAlerts(); renderReports(); showToast('تم حفظ قياس الأثر وربطه بالتدخل المحدد.');
+    updateDashboard(); updateCycle(); updateAlerts(); renderReports();
+    ['before','after','impactTool','impactBeforeDate','impactAfterDate','impactSessionsPlanned','impactSessionsDone','impactEvidenceNote','impactFollowup'].forEach(id => {
+      const field = document.getElementById(id);
+      if (field) field.value = '';
+    });
+    showToast('تم حفظ قياس الأثر وربطه بالتدخل المحدد، وأُفرغت حقول القياس لإدخال قياس جديد.');
   } catch (error) { showToast(error.message); }
+  finally {
+    if (saveButton) { saveButton.disabled = false; saveButton.textContent = 'حساب الفرق وتوثيق الأدلة'; }
+  }
 }
 function renderImpactTrendCharts(filterItem = null) {
   const groups = new Map();
