@@ -465,7 +465,7 @@ function applyRoleUI() {
   const roleInfo = document.getElementById('roleInfo');
   const teacherAssignments=currentUser?.teachingAssignments||[];
   const teacherDescription = currentRole === 'teacher' ? (teacherAssignments.length ? `موادك: ${[...new Set(teacherAssignments.map(item=>item.subject))].map(esc).join('، ')} • الصفوف: ${[...new Set(teacherAssignments.map(item=>item.grade))].map(esc).join('، ')}. تظهر لك سجلات الطلبة ضمن الشعب المسندة.` : 'لم يحدد المدير موادك وصفوفك وشعبك بعد؛ اطلب منه إكمال التكليف الدراسي.') : null;
-  if (roleInfo) roleInfo.innerHTML = `<div class="card"><strong>${esc(getRoleName(currentRole))}</strong><p>${teacherDescription || esc(({ senior_teacher:'متابعة سجلات المدرسة والتدخلات ومؤشرات الصفوف.', principal:'إدارة حسابات المدرسة ومتابعة المؤشرات والسجلات.', supervisor:'اطلاع وتقارير فقط للمدارس المسندة إلى نطاق إشرافك، دون تعديل السجلات أو إدارة الحسابات.', parent:'متابعة الأبناء المرتبطين بحسابك فقط.', student:'متابعة تقدمك ونتائجك الفردية فقط.' })[currentRole] || '')}</p></div>`;
+  if (roleInfo) roleInfo.innerHTML = `<div class="card"><strong>${esc(getRoleName(currentRole))}</strong><p>${teacherDescription || esc(({ senior_teacher:'متابعة سجلات المدرسة والتدخلات ومؤشرات الصفوف.', principal:'إدارة حسابات المدرسة ومتابعة المؤشرات والسجلات.', supervisor:'اطلاع وتقارير للمدارس المسندة إلى نطاق إشرافك، مع إضافة التوصيات الإشرافية ومتابعة ردود المدارس، دون تعديل سجلات الطلبة أو التقويمات أو التدخلات.', parent:'متابعة الأبناء المرتبطين بحسابك فقط.', student:'متابعة تقدمك ونتائجك الفردية فقط.' })[currentRole] || '')}</p></div>`;
   applyTeacherAssignmentFilters();
   if (currentRole === 'teacher') updateCurriculumSubjects();
   const accountAdmin = document.getElementById('accountAdmin');
