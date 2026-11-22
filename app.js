@@ -674,16 +674,22 @@ async function fillImpactInterventions() {
   if (!select) return;
   const studentId = document.getElementById('impactStudent')?.value || '';
   const previous = select.value;
-  const rows = interventions.filter(item => studentId
-    ? item.student_id === studentId
-    : true
-  );
+  const selectedStudent = students.find(student => student.student_id === studentId);
+  const rows = interventions.filter(item => {
+    if (!studentId) return true;
+    if (item.student_id) return item.student_id === studentId;
+    const curriculum = item.curriculum || {};
+    const gradeMatches = String(curriculum.grade || '').trim() === String(selectedStudent?.grade || '').trim();
+    const interventionSection = String(curriculum.section || '').trim();
+    const sectionMatches = !interventionSection || interventionSection === String(selectedStudent?.section || '').trim();
+    return Boolean(selectedStudent && gradeMatches && sectionMatches);
+  });
   select.innerHTML = '<option value="">اختر التدخل المرتبط بالقياس</option>';
   rows.forEach(item => {
     if (item.recordId === undefined || item.recordId === null) return;
     const option = document.createElement('option');
     option.value = String(item.recordId);
-    const studentName = item.student_name || students.find(student => student.student_id === item.student_id)?.name || 'تدخل صفي';
+    const studentName = item.student_name || students.find(student => student.student_id === item.student_id)?.name || (item.student_id ? 'تدخل فردي' : 'تدخل صفي');
     option.textContent = `${displaySkillName(item.skill || 'مهارة غير محددة')} — ${studentName} — ${formatDate(item.date)}`;
     select.appendChild(option);
   });
@@ -2196,7 +2202,17 @@ async function calcImpact() {
   if (!interventionId) return showToast('اختر التدخل الذي تريد قياس أثره أولًا.');
   const intervention = interventions.find(item => String(item.recordId) === interventionId);
   if (!intervention) return showToast('تعذر العثور على التدخل المحدد. حدّث قائمة التدخلات وحاول مجددًا.');
-  if (studentId && intervention.student_id !== studentId) return showToast('التدخل المحدد لا يرتبط بالطالب المختار.');
+  if (studentId && intervention.student_id && intervention.student_id !== studentId) return showToast('التدخل الفردي المحدد لا يرتبط بالطالب المختار.');
+  if (studentId && !intervention.student_id) {
+    const selectedStudent = students.find(item => item.student_id === studentId);
+    const curriculum = intervention.curriculum || {};
+    const interventionGrade = String(curriculum.grade || '').trim();
+    const studentGrade = String(selectedStudent?.grade || '').trim();
+    if (!selectedStudent || !interventionGrade || interventionGrade !== studentGrade) return showToast('الطالب لا ينتمي إلى الصف المستهدف في التدخل الصفي.');
+    const interventionSection = String(curriculum.section || '').trim();
+    const studentSection = String(selectedStudent.section || '').trim();
+    if (interventionSection && interventionSection !== studentSection) return showToast('الطالب لا ينتمي إلى الشعبة المستهدفة في التدخل الصفي.');
+  }
   const student = students.find(s => s.student_id === studentId);
   const difference = Number((after-before).toFixed(1));
   const tool = document.getElementById('impactTool')?.value.trim() || '';
