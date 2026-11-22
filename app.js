@@ -2478,12 +2478,31 @@ function renderPrincipalView() {
     return `<div class="card" style="margin-top:.7rem"><h3>${esc(name)}</h3><p>عدد الطلبة: ${group.length} • متوسط الإتقان: ${average === null ? 'لا توجد بيانات' : `${average}%`} • نتائج دون 70%: ${gaps} • التدخلات: ${groupInterventions}</p></div>`;
   }).join('');
 }
+let supervisorReportSchoolId = 'all';
+function setSupervisorReportSchool(value) {
+  supervisorReportSchoolId = value || 'all';
+  renderReports();
+}
 function renderReports() {
   const el = document.getElementById('reportSummary');
   if (!el) return;
   if (currentRole === 'supervisor') {
-    const total=supervisorSchoolsData.reduce((sum,s)=>sum+(Number(s.assessments)||0),0);
-    el.innerHTML='<header class="report-print-header"><h2>أثَر | تقرير متابعة الإشراف التربوي</h2><p>تاريخ إعداد التقرير: '+new Date().toLocaleDateString('ar-OM')+'</p></header><p>المدارس المشمولة: '+supervisorSchoolsData.length+' • التقويمات: '+total+'</p><h4>ملخص المدارس</h4><ul>'+supervisorSchoolsData.map(s=>'<li><strong>'+esc(s.school_name)+'</strong> — الطلبة: '+(Number(s.students)||0)+' • التقويمات: '+(Number(s.assessments)||0)+' • التدخلات: '+(Number(s.interventions)||0)+' • قياسات الأثر: '+(Number(s.impacts)||0)+'</li>').join('')+'</ul><p class="report-print-note">تقرير اطلاع ومتابعة للمدارس المسندة فقط. لا يتيح هذا الدور تعديل السجلات أو اعتماد التدخلات.</p><footer class="report-print-footer">حقوق التصميم والتطوير © أ. نصراء سعيد البهلولي | منصة أثَر</footer>';
+    const selected = supervisorReportSchoolId === 'all'
+      ? null
+      : supervisorSchoolsData.find(s => String(s.school_id) === String(supervisorReportSchoolId));
+    if (supervisorReportSchoolId !== 'all' && !selected) supervisorReportSchoolId = 'all';
+    const schools = selected ? [selected] : supervisorSchoolsData;
+    const sum = key => schools.reduce((total, school) => total + (Number(school[key]) || 0), 0);
+    const reportDate = new Date().toLocaleDateString('ar-OM', {year:'numeric',month:'long',day:'numeric'});
+    const options = supervisorSchoolsData.map(school =>
+      '<option value="'+esc(school.school_id)+'" '+(supervisorReportSchoolId === String(school.school_id) ? 'selected' : '')+'>'+esc(school.school_name)+'</option>'
+    ).join('');
+    const selector = '<div class="report-filter no-print"><label for="supervisorReportSchool">المدرسة</label> <select id="supervisorReportSchool" onchange="setSupervisorReportSchool(this.value)"><option value="all" '+(supervisorReportSchoolId === 'all' ? 'selected' : '')+'>جميع المدارس</option>'+options+'</select></div>';
+    const summary = '<p>المدارس المشمولة: '+schools.length+' • الطلبة: '+sum('students')+' • التقويمات: '+sum('assessments')+' • التدخلات: '+sum('interventions')+' • قياسات الأثر: '+sum('impacts')+'</p>';
+    const details = schools.map(school =>
+      '<section class="card supervisor-report-school"><h3>'+esc(school.school_name)+'</h3><p>الطلبة: '+(Number(school.students)||0)+' • التقويمات: '+(Number(school.assessments)||0)+' • التدخلات: '+(Number(school.interventions)||0)+' • قياسات الأثر: '+(Number(school.impacts)||0)+'</p><p class="note">آخر نشاط: '+(school.last_activity ? new Date(school.last_activity).toLocaleDateString('ar-OM') : 'لا يوجد نشاط مسجل')+'</p></section>'
+    ).join('');
+    el.innerHTML='<header class="report-print-header"><h2>أثَر | تقرير متابعة الإشراف التربوي</h2><p>تاريخ إعداد التقرير: '+reportDate+'</p></header>'+selector+summary+'<h4>'+(selected ? 'تفاصيل المدرسة' : 'ملخص المدارس')+'</h4>'+(details || '<p>لا توجد مدارس مسندة لهذا الحساب.</p>')+'<p class="report-print-note">تقرير اطلاع ومتابعة للمدارس المسندة فقط. لا يتيح هذا الدور تعديل السجلات أو اعتماد التدخلات.</p><footer class="report-print-footer">حقوق التصميم والتطوير © أ. نصراء سعيد البهلولي | منصة أثَر</footer>';
     return;
   }
   const currentAssessments = latestAssessmentRows();
