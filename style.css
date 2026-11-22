@@ -892,3 +892,16 @@ body.dark .root-map-arrow { color:#91b6dc; }
 .recommendation-report-item{border:1px solid var(--border);border-radius:12px;padding:1rem;break-inside:avoid}
 .recommendation-report-response{background:var(--surface-soft);border-radius:8px;padding:.65rem}
 @media print{.recommendation-report-item{break-inside:avoid}.recommendation-report-list{gap:.45rem}}
+
+
+/* إظهار تذييل التقرير داخل النسخة المطبوعة فقط؛ تذييل المنصة العام يكفي على الشاشة */
+.report-print-footer{display:none}
+@media print{
+  #reportSummary .report-print-footer{display:block!important}
+  .platform-footer{display:none!important}
+  #reports .card{border:0!important;padding:0!important}
+  #reportSummary .supervisor-report-school,
+  #reportSummary .recommendation-report-item{break-inside:avoid;page-break-inside:avoid}
+  #reportSummary .supervisor-report-metrics{break-inside:avoid;page-break-inside:avoid}
+  #reportSummary .report-metric-definitions{break-inside:avoid;page-break-inside:avoid}
+}
