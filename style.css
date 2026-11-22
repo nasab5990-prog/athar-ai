@@ -921,3 +921,10 @@ body.dark .root-map-arrow { color:#91b6dc; }
     page-break-inside: auto !important;
   }
 }
+
+/* إخفاء عنوان التنقل العام «التقارير» في النسخة المطبوعة؛ عنوان التقرير الرسمي موجود داخل التقرير */
+@media print {
+  #reports > h1 {
+    display: none !important;
+  }
+}
