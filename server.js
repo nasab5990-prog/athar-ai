@@ -377,7 +377,7 @@ app.get('/api/records',requireAuth,asyncRoute(async(req,res)=>{
 app.get('/api/supervisor/schools',requireAuth,requireRole('supervisor'),asyncRoute(async(req,res)=>{
   const schools=(await query(
     `SELECT s.school_id,s.school_name,
-      COUNT(r.id) FILTER (WHERE r.kind='student')::int AS students,
+      COUNT(DISTINCT r.payload->>'student_id') FILTER (WHERE r.kind='student' AND COALESCE(r.payload->>'student_id','')<>'')::int AS students,
       COUNT(r.id) FILTER (WHERE r.kind='assessment')::int AS assessments,
       COUNT(r.id) FILTER (WHERE r.kind='intervention')::int AS interventions,
       COUNT(r.id) FILTER (WHERE r.kind='impact')::int AS impacts,
