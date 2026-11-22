@@ -844,3 +844,39 @@ body.dark .root-map-arrow { color:#91b6dc; }
   .account-form-grid { grid-template-columns: 1fr; }
   .account-student-link { grid-column: auto; }
 }
+
+
+/* مؤشرات تقرير الإشراف التربوي */
+.supervisor-report-metrics{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem;margin:1rem 0 1.25rem
+}
+.supervisor-report-metrics>div{
+  min-width:0;padding:1rem;border:1px solid var(--border);border-radius:14px;
+  background:var(--surface);display:flex;flex-direction:column;gap:.3rem
+}
+.supervisor-report-metrics span{font-size:.82rem;color:var(--text-light);font-weight:700}
+.supervisor-report-metrics strong{font-size:1.5rem;color:var(--primary);font-weight:900;font-variant-numeric:tabular-nums}
+.supervisor-report-metrics strong small{font-size:.78rem;color:var(--text-light);font-weight:600}
+.supervisor-report-metrics em{font-size:.78rem;color:var(--text-light);font-style:normal}
+.supervisor-report-school{margin:.65rem 0;padding:1rem;border:1px solid var(--border);border-radius:14px}
+.supervisor-report-school h3{margin:.1rem 0 .6rem;color:var(--primary)}
+.supervisor-report-school p{margin:.35rem 0}
+.report-metric-definitions{margin:1rem 0;padding:.9rem 1rem;border-right:3px solid var(--primary);background:var(--surface-soft,#f4f7fb);border-radius:10px}
+.report-metric-definitions ul{margin:.45rem 0 0;padding-right:1.2rem}
+.report-metric-definitions li{margin:.25rem 0}
+@media(max-width:700px){.supervisor-report-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:420px){.supervisor-report-metrics{grid-template-columns:1fr}}
+@media print{
+  .supervisor-report-metrics{grid-template-columns:repeat(3,minmax(0,1fr));gap:2.5mm;margin:3mm 0 5mm}
+  .supervisor-report-metrics>div{padding:3mm;border:1px solid #d8e3ed!important;border-radius:2mm;background:#f8fbfd!important;break-inside:avoid}
+  .supervisor-report-metrics span{font-size:8.5pt;color:#52677d!important}
+  .supervisor-report-metrics strong{font-size:15pt;color:#174b78!important}
+  .supervisor-report-metrics strong small,.supervisor-report-metrics em{font-size:8pt;color:#52677d!important}
+  .supervisor-report-school{margin:2.5mm 0!important;padding:3mm!important;border:1px solid #d8e3ed!important;break-inside:avoid}
+  .supervisor-report-school h3{margin:0 0 1mm!important;color:#174b78!important}
+  .supervisor-report-school p{margin:1mm 0!important;font-size:10pt!important}
+  .report-metric-definitions{margin:3mm 0!important;padding:3mm!important;background:#f3f6f9!important;border-right:2px solid #2d9b91!important;break-inside:avoid}
+  .report-metric-definitions strong{color:#174b78!important}
+  .report-metric-definitions ul{margin:1mm 0 0!important}
+  .report-metric-definitions li{font-size:9pt!important;margin:.5mm 0!important}
+}
