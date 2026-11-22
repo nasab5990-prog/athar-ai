@@ -735,7 +735,13 @@ async function analyzeLearning(user,body) {
   const visibleRecords=await getRecordsForUser(user);
   const rows=visibleRecords.filter(record=>record.kind==='assessment');
   let assessments=rows.map(record=>record.payload);
-  if (studentId) assessments=assessments.filter(a=>a.student_id===studentId);
+  if (studentId) assessments=assessments.filter(a=>String(a.student_id||'')===studentId);
+  const subject=normalizeArabic(body.subject||'');
+  const grade=safeText(body.grade,30);
+  const section=safeText(body.section,30);
+  if (subject) assessments=assessments.filter(a=>normalizeArabic(a.subject||'')===subject);
+  if (grade) assessments=assessments.filter(a=>String(a.grade||'')===grade);
+  if (section) assessments=assessments.filter(a=>String(a.section||'')===section);
   const mapped=findSkill(skill), targetSkill=normalizeArabic(mapped?.title||skill);
   // Compare canonical skill names so aliases such as فهم المقروء / الفهم القرائي match.
   const canonicalSkill=value=>normalizeArabic(findSkill(value)?.title||value);
@@ -858,6 +864,14 @@ app.post('/api/analysis',requireAuth,requireRole('teacher','senior_teacher','pri
       const visibleRecords=await getRecordsForUser(req.user);
       const sourceAssessment=visibleRecords.find(record=>String(record.id)===String(assessmentRecordId)&&record.kind==='assessment');
       if(!sourceAssessment)return res.status(400).json({message:'التقويم المرتبط غير موجود أو غير متاح ضمن صلاحيات هذا الحساب.'});
+      const source=sourceAssessment.payload||{};
+      if(String(source.student_id||'')!==String(requestBody.student_id||''))return res.status(400).json({message:'الطالب المحدد لا يطابق الطالب المرتبط بالتقويم.'});
+      for(const field of ['subject','grade','section']){
+        if(requestBody[field]!==undefined&&String(source[field]||'')!==String(requestBody[field]||''))return res.status(400).json({message:'بيانات الصف أو المادة لا تطابق التقويم المرتبط.'});
+      }
+      const sourceSkill=normalizeArabic(findSkill(source.skill||source.name||'')?.title||source.skill||source.name||'');
+      const requestedSkill=normalizeArabic(findSkill(requestBody.skill||requestBody.question||'')?.title||requestBody.skill||requestBody.question||'');
+      if(sourceSkill&&requestedSkill&&sourceSkill!==requestedSkill)return res.status(400).json({message:'المهارة المحددة لا تطابق المهارة المسجلة في التقويم.'});
     }
     const result=await analyzeLearning(req.user,requestBody), studentId=safeText(requestBody.student_id,80)||null;
     let aiAssist={status:'not_configured'};
