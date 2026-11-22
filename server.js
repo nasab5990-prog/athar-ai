@@ -898,17 +898,6 @@ async function shutdown(signal) {
 process.on('SIGTERM',()=>shutdown('SIGTERM'));
 process.on('SIGINT',()=>shutdown('SIGINT'));
 
-           AND COALESCE(r.payload->>'sessions_done','') ~ '^[0-9]+
-      MAX(r.created_at) AS last_activity
-     FROM supervisor_schools s
-     LEFT JOIN records r ON r.school_id=s.school_id
-     WHERE s.user_id=$1
-     GROUP BY s.school_id,s.school_name
-     ORDER BY s.school_name`,
-    [req.user.id]
-  )).rows;
-  res.json({schools});
-}));
 
 app.get('/api/supervisor/recommendations',requireAuth,requireRole('supervisor'),asyncRoute(async(req,res)=>{
   const rows=(await query(
