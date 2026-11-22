@@ -168,9 +168,40 @@ async function getRecordsForUser(user) {
   }
   if (['parent','student'].includes(user.role)) {
     const ids=await linkedStudentIds(user); if (!ids.length) return [];
-    return (await query(`SELECT id,kind,payload,created_at FROM records WHERE school_id=$1
-      AND kind IN ('student','assessment','intervention','impact') AND payload->>'student_id'=ANY($2::text[])
-      ORDER BY id DESC LIMIT 500`,[user.school_id,ids])).rows;
+    return (await query(`SELECT r.id,r.kind,r.payload,r.created_at FROM records r WHERE r.school_id=$1
+      AND r.kind IN ('student','assessment','intervention','impact')
+      AND (
+        r.payload->>'student_id'=ANY($2::text[])
+        OR (
+          r.kind='intervention' AND COALESCE(r.payload->>'student_id','')=''
+          AND EXISTS (
+            SELECT 1 FROM records s
+            WHERE s.school_id=r.school_id AND s.kind='student'
+              AND s.payload->>'student_id'=ANY($2::text[])
+              AND CASE translate(btrim(COALESCE(r.payload->'curriculum'->>'grade','')),'٠١٢٣٤٥٦٧٨٩','0123456789')
+                WHEN 'الأول' THEN '1' WHEN 'الاول' THEN '1' WHEN 'الثاني' THEN '2'
+                WHEN 'الثالث' THEN '3' WHEN 'الرابع' THEN '4' WHEN 'الخامس' THEN '5'
+                WHEN 'السادس' THEN '6' WHEN 'السابع' THEN '7' WHEN 'الثامن' THEN '8'
+                WHEN 'التاسع' THEN '9' WHEN 'العاشر' THEN '10' WHEN 'الحادي عشر' THEN '11'
+                WHEN 'الثاني عشر' THEN '12'
+                ELSE translate(btrim(COALESCE(r.payload->'curriculum'->>'grade','')),'٠١٢٣٤٥٦٧٨٩','0123456789')
+              END =
+              CASE translate(btrim(COALESCE(s.payload->>'grade','')),'٠١٢٣٤٥٦٧٨٩','0123456789')
+                WHEN 'الأول' THEN '1' WHEN 'الاول' THEN '1' WHEN 'الثاني' THEN '2'
+                WHEN 'الثالث' THEN '3' WHEN 'الرابع' THEN '4' WHEN 'الخامس' THEN '5'
+                WHEN 'السادس' THEN '6' WHEN 'السابع' THEN '7' WHEN 'الثامن' THEN '8'
+                WHEN 'التاسع' THEN '9' WHEN 'العاشر' THEN '10' WHEN 'الحادي عشر' THEN '11'
+                WHEN 'الثاني عشر' THEN '12'
+                ELSE translate(btrim(COALESCE(s.payload->>'grade','')),'٠١٢٣٤٥٦٧٨٩','0123456789')
+              END
+              AND (
+                COALESCE(btrim(r.payload->'curriculum'->>'section'),'')=''
+                OR btrim(r.payload->'curriculum'->>'section')=btrim(COALESCE(s.payload->>'section',''))
+              )
+          )
+        )
+      )
+      ORDER BY r.id DESC LIMIT 500`,[user.school_id,ids])).rows;
   }
   return [];
 }
