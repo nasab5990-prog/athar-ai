@@ -511,8 +511,8 @@ app.post('/api/records',recordLimiter,requireAuth,requireRole('teacher','senior_
           if (curriculum.grade && String(curriculum.grade).trim()!==String(assignedGrade||'').trim()) {
             return res.status(400).json({message:'الصف المحدد في التدخل لا يطابق صف الطالب المسجل.'});
           }
-        } else if (!assignedGrade || !assignedSection) {
-          return res.status(403).json({message:'حدد الصف والشعبة والمادة المسندة إليك قبل إنشاء تدخل صفي.'});
+        } else if (!assignedGrade) {
+          return res.status(403).json({message:'حدد الصف والمادة المسندة إليك قبل إنشاء تدخل صفي.'});
         }
         try { await validateTeacherTeachingContext(req.user,{grade:assignedGrade,section:assignedSection,subject:curriculum.subject}); }
         catch(error) { return res.status(error.status||403).json({message:error.message}); }
