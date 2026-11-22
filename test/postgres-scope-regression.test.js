@@ -56,7 +56,7 @@ test('supervisor recommendations are limited to explicitly assigned schools', ()
 });
 
 test('principal recommendation updates are limited to the principal school', () => {
-  const route = section("app.put('/api/principal/recommendations/:id'", "app.post('/api/supervisor/recommendations'");
+  const route = section("app.put('/api/principal/recommendations/:id'", "app.get('/api/records'");
   assert.match(route, /WHERE id=\$4 AND school_id=\$5/);
   assert.match(route, /req\.user\.school_id/);
 });
