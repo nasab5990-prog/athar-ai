@@ -26,3 +26,20 @@ jobs:
           node-version: 22
       - name: Validate JavaScript files
         run: npm run check
+
+  dependency-audit:
+    name: Dependency vulnerability report
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install declared dependencies
+        run: npm install --ignore-scripts --package-lock=false --no-audit
+      - name: Report dependency advisories
+        run: |
+          npm audit --json > audit-report.json || true
+          node --input-type=module -e "import fs from 'node:fs'; const r=JSON.parse(fs.readFileSync('audit-report.json','utf8')); console.log('Vulnerability totals:', JSON.stringify(r.metadata?.vulnerabilities || {})); for (const [name,v] of Object.entries(r.vulnerabilities || {})) console.log(JSON.stringify({name,severity:v.severity,isDirect:v.isDirect,range:v.range,fixAvailable:v.fixAvailable,via:v.via.map(x=>typeof x==='string'?x:{name:x.name,title:x.title,url:x.url,range:x.range})}));"
