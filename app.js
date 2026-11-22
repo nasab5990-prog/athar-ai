@@ -2575,9 +2575,11 @@ function renderReports() {
     const schools = selected ? [selected] : supervisorSchoolsData;
     const schoolIds = new Set(schools.map(s => String(s.school_id)));
     const recommendations = supervisorRecommendations.filter(r => schoolIds.has(String(r.school_id)));
+    const todayDate = new Date();
+    const todayKey = [todayDate.getFullYear(),String(todayDate.getMonth()+1).padStart(2,'0'),String(todayDate.getDate()).padStart(2,'0')].join('-');
     const countStatus = status => recommendations.filter(r => r.status === status).length;
     const pendingCount=countStatus('pending'), inProgressCount=countStatus('in_progress'), completedRecommendations=countStatus('completed');
-    const overdueRecommendations=recommendations.filter(r => r.status!=='completed' && r.follow_up_date && String(r.follow_up_date).slice(0,10) < new Date().toLocaleDateString('en-CA'));
+    const overdueRecommendations=recommendations.filter(r => r.status!=='completed' && r.follow_up_date && String(r.follow_up_date).slice(0,10) < todayKey);
     const percent = (part, whole) => whole > 0 ? Math.round((part / whole) * 100) : null;
     const ratioLabel = (part, whole) => whole > 0 ? percent(part, whole) + '%' : 'لا ينطبق';
     const reportDate = new Date().toLocaleDateString('ar-OM', {year:'numeric',month:'long',day:'numeric'});
@@ -2608,7 +2610,7 @@ function renderReports() {
     const statusLabels={pending:'لم تبدأ',in_progress:'قيد التنفيذ',completed:'نُفذت'};
     const formatDate=value=>value?new Date(String(value).slice(0,10)+'T00:00:00').toLocaleDateString('ar-OM'):'غير محدد';
     const recommendationDetails=recommendations.length?recommendations.map(item=>{
-      const overdue=item.status!=='completed'&&item.follow_up_date&&String(item.follow_up_date).slice(0,10)<new Date().toLocaleDateString('en-CA');
+      const overdue=item.status!=='completed'&&item.follow_up_date&&String(item.follow_up_date).slice(0,10)<todayKey;
       return '<article class="recommendation-report-item"><div class="recommendation-card-head"><strong>'+esc(item.area)+'</strong><span>'+statusLabels[item.status]+'</span></div>'+
         '<p class="note">'+(selected?'المشرف: '+esc(item.supervisor_name||'غير محدد'):'المدرسة: '+esc(item.school_name||item.school_id))+' • الأولوية: '+priorityLabels[item.priority]+'</p>'+
         (item.subject?'<p><strong>الموضوع:</strong> '+esc(item.subject)+'</p>':'')+
@@ -2625,7 +2627,7 @@ function renderReports() {
       const schoolDocumented = Number(school.documented_impacts) || 0;
       const schoolRecommendations=supervisorRecommendations.filter(r=>String(r.school_id)===String(school.school_id));
       const schoolDone=schoolRecommendations.filter(r=>r.status==='completed').length;
-      const schoolOverdue=schoolRecommendations.filter(r=>r.status!=='completed'&&r.follow_up_date&&String(r.follow_up_date).slice(0,10)<new Date().toLocaleDateString('en-CA')).length;
+      const schoolOverdue=schoolRecommendations.filter(r=>r.status!=='completed'&&r.follow_up_date&&String(r.follow_up_date).slice(0,10)<todayKey).length;
       return '<section class="card supervisor-report-school"><h3>'+esc(school.school_name)+'</h3>'+
         '<p>الطلبة: '+(Number(school.students)||0)+' • التقويمات: '+(Number(school.assessments)||0)+'</p>'+
         '<p>التدخلات: '+schoolInterventions+' • المكتمل: '+schoolCompleted+' ('+ratioLabel(schoolCompleted,schoolInterventions)+')</p>'+
