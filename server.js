@@ -36,7 +36,7 @@ app.use(session({
   name:'athar.sid', secret:process.env.SESSION_SECRET || 'development-only-change-this-secret-before-deploying',
   resave:false, saveUninitialized:false,
   store:new PgSession({ pool, tableName:'session', createTableIfMissing:true }),
-  cookie:{ httpOnly:true, secure:production, sameSite:process.env.COOKIE_SAMESITE || (production ? 'none':'lax'), maxAge:8*60*60*1000 }
+  cookie:{ httpOnly:true, secure:production, sameSite:process.env.COOKIE_SAMESITE || (production ? 'none':'lax'), partitioned:production, maxAge:8*60*60*1000 }
 }));
 const loginLimiter = rateLimit({ windowMs:15*60*1000, limit:10, standardHeaders:true, legacyHeaders:false, message:{ message:'محاولات كثيرة. حاول لاحقًا.' } });
 const recordLimiter = rateLimit({ windowMs:60*1000, limit:60, standardHeaders:true, legacyHeaders:false });
