@@ -905,3 +905,19 @@ body.dark .root-map-arrow { color:#91b6dc; }
   #reportSummary .supervisor-report-metrics{break-inside:avoid;page-break-inside:avoid}
   #reportSummary .report-metric-definitions{break-inside:avoid;page-break-inside:avoid}
 }
+
+/* إصلاح ظهور عنوان «التقارير» منفردًا في صفحة الطباعة */
+@media print {
+  #reports > h1 {
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+  }
+  #reports > .card {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+  #reportSummary {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+}
