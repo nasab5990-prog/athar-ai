@@ -532,6 +532,36 @@ app.put('/api/records/:id',recordLimiter,requireAuth,requireRole('teacher','seni
     lesson:safeText(rawCurriculum.lesson,160) || null,
     learning_outcome:safeText(rawCurriculum.learning_outcome,1000) || null
   };
+  let suggestionSource=current.suggestion_source || 'teacher';
+  let analysisRecordId=current.analysis_record_id ?? null;
+  let assessmentRecordId=current.assessment_record_id ?? null;
+  if (incoming.suggestion_source==='teacher') {
+    suggestionSource='teacher';
+    analysisRecordId=null;
+    assessmentRecordId=null;
+  } else if (incoming.suggestion_source==='athar-analysis') {
+    const requestedAnalysisId=Number(incoming.analysis_record_id);
+    if (!Number.isSafeInteger(requestedAnalysisId) || requestedAnalysisId<1) {
+      return res.status(400).json({message:'معرّف تحليل أثَر المرتبط غير صالح.'});
+    }
+    const visibleRecords=await getRecordsForUser(req.user);
+    const analysisRecord=visibleRecords.find(record=>Number(record.id)===requestedAnalysisId&&record.kind==='analysis');
+    if (!analysisRecord) return res.status(400).json({message:'التحليل المرتبط غير موجود أو غير متاح ضمن صلاحيات هذا الحساب.'});
+    const analysisPayload=analysisRecord.payload || {};
+    if (String(analysisPayload.student_id || '')!==String(current.student_id || '')) {
+      return res.status(400).json({message:'لا يمكن ربط التدخل بتحليل يخص طالبًا آخر.'});
+    }
+    const requestedAssessmentId=Number(incoming.assessment_record_id || analysisPayload.assessment_record_id || 0) || null;
+    if (requestedAssessmentId) {
+      const assessmentRecord=visibleRecords.find(record=>Number(record.id)===requestedAssessmentId&&record.kind==='assessment');
+      if (!assessmentRecord || Number(analysisPayload.assessment_record_id || 0)!==requestedAssessmentId) {
+        return res.status(400).json({message:'التقويم المرتبط لا يطابق التحليل أو غير متاح ضمن صلاحيات هذا الحساب.'});
+      }
+    }
+    suggestionSource='athar-analysis';
+    analysisRecordId=requestedAnalysisId;
+    assessmentRecordId=requestedAssessmentId;
+  }
   const updated={
     ...current,
     skill,goal,steps,
@@ -540,7 +570,10 @@ app.put('/api/records/:id',recordLimiter,requireAuth,requireRole('teacher','seni
     curriculum,
     activity_mode:activityMode,
     activity_duration:duration,
-    status
+    status,
+    suggestion_source:suggestionSource,
+    analysis_record_id:analysisRecordId,
+    assessment_record_id:assessmentRecordId
   };
   const serialized=JSON.stringify(updated);
   if (serialized.length>30000) return res.status(413).json({message:'حجم السجل أكبر من الحد المسموح.'});
