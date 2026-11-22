@@ -401,6 +401,54 @@ app.get('/api/supervisor/schools',requireAuth,requireRole('supervisor'),asyncRou
   )).rows;
   res.json({schools});
 }));
+
+app.get('/api/supervisor/recommendations',requireAuth,requireRole('supervisor'),asyncRoute(async(req,res)=>{
+  const rows=(await query(
+    "SELECT r.id,r.school_id,ss.school_name,r.area,r.subject,r.body,r.priority,r.follow_up_date,r.status,r.principal_response,r.created_at,r.updated_at,u.name AS supervisor_name " +
+    "FROM supervisor_recommendations r JOIN supervisor_schools ss ON ss.user_id=r.supervisor_id AND ss.school_id=r.school_id " +
+    "JOIN users u ON u.id=r.supervisor_id WHERE r.supervisor_id=$1 ORDER BY r.created_at DESC,r.id DESC",
+    [req.user.id]
+  )).rows;
+  res.json({recommendations:rows});
+}));
+app.get('/api/principal/recommendations',requireAuth,requireRole('principal'),asyncRoute(async(req,res)=>{
+  const rows=(await query(
+    "SELECT r.id,r.school_id,r.area,r.subject,r.body,r.priority,r.follow_up_date,r.status,r.principal_response,r.created_at,r.updated_at,u.name AS supervisor_name " +
+    "FROM supervisor_recommendations r JOIN users u ON u.id=r.supervisor_id WHERE r.school_id=$1 ORDER BY r.created_at DESC,r.id DESC",
+    [req.user.school_id]
+  )).rows;
+  res.json({recommendations:rows});
+}));
+app.post('/api/supervisor/recommendations',recordLimiter,requireAuth,requireRole('supervisor'),asyncRoute(async(req,res)=>{
+  const schoolId=safeText(req.body?.school_id,100), area=safeText(req.body?.area,100);
+  const subject=safeText(req.body?.subject,160), body=safeText(req.body?.body,3000);
+  const priority=safeText(req.body?.priority,20), followUpDate=safeText(req.body?.follow_up_date,10);
+  if(!schoolId||!area||!body||!['low','medium','high'].includes(priority))
+    return res.status(400).json({message:'حدد المدرسة والمجال ونص التوصية والأولوية.'});
+  if(followUpDate&&!/^\d{4}-\d{2}-\d{2}$/.test(followUpDate))
+    return res.status(400).json({message:'تاريخ المتابعة غير صالح.'});
+  const assigned=await query('SELECT school_id FROM supervisor_schools WHERE user_id=$1 AND school_id=$2',[req.user.id,schoolId]);
+  if(!assigned.rowCount)return res.status(403).json({message:'هذه المدرسة غير مسندة إلى نطاق إشرافك.'});
+  const saved=await query(
+    'INSERT INTO supervisor_recommendations(supervisor_id,school_id,area,subject,body,priority,follow_up_date) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id',
+    [req.user.id,schoolId,area,subject||null,body,priority,followUpDate||null]
+  );
+  await audit(req.user.id,'supervisor.recommendation.create',schoolId+': '+area);
+  res.status(201).json({id:saved.rows[0].id});
+}));
+app.put('/api/principal/recommendations/:id',requireAuth,requireRole('principal'),asyncRoute(async(req,res)=>{
+  const id=Number(req.params.id), status=safeText(req.body?.status,20);
+  const response=safeText(req.body?.principal_response,2000);
+  if(!Number.isSafeInteger(id)||id<1||!['pending','in_progress','completed'].includes(status))
+    return res.status(400).json({message:'حالة التنفيذ غير صالحة.'});
+  const updated=await query(
+    'UPDATE supervisor_recommendations SET status=$1,principal_response=$2,status_updated_by=$3,updated_at=NOW() WHERE id=$4 AND school_id=$5 RETURNING id',
+    [status,response,req.user.id,id,req.user.school_id]
+  );
+  if(!updated.rowCount)return res.status(404).json({message:'التوصية غير موجودة ضمن مدرستك.'});
+  await audit(req.user.id,'supervisor.recommendation.followup',String(id)+': '+status);
+  res.json({ok:true});
+}));
 app.post('/api/records',recordLimiter,requireAuth,requireRole('teacher','senior_teacher','principal'),asyncRoute(async(req,res)=>{
   const kind=safeText(req.body?.kind,40), payload=req.body?.payload;
   if (!['student','assessment','intervention','impact'].includes(kind) || !payload || typeof payload!=='object' || Array.isArray(payload)) return res.status(400).json({message:'نوع السجل أو بياناته غير صالحة.'});
@@ -794,6 +842,15 @@ await query("CREATE TABLE IF NOT EXISTS supervisor_schools (" +
   "school_id TEXT NOT NULL, school_name TEXT NOT NULL, " +
   "created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY(user_id,school_id))");
 await query("CREATE INDEX IF NOT EXISTS idx_supervisor_schools_school ON supervisor_schools(school_id,user_id)");
+await query("CREATE TABLE IF NOT EXISTS supervisor_recommendations (" +
+  "id BIGSERIAL PRIMARY KEY, supervisor_id BIGINT NOT NULL REFERENCES users(id) ON DELETE RESTRICT, " +
+  "school_id TEXT NOT NULL, area TEXT NOT NULL, subject TEXT, body TEXT NOT NULL, " +
+  "priority TEXT NOT NULL CHECK(priority IN ('low','medium','high')), follow_up_date DATE, " +
+  "status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','in_progress','completed')), " +
+  "principal_response TEXT NOT NULL DEFAULT '', status_updated_by BIGINT REFERENCES users(id) ON DELETE SET NULL, " +
+  "created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())");
+await query("CREATE INDEX IF NOT EXISTS idx_supervisor_recommendations_school ON supervisor_recommendations(school_id,created_at DESC)");
+await query("CREATE INDEX IF NOT EXISTS idx_supervisor_recommendations_owner ON supervisor_recommendations(supervisor_id,created_at DESC)");
 await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS teaching_grades TEXT[] NOT NULL DEFAULT '{}'::text[]");
 await query("CREATE TABLE IF NOT EXISTS account_students (" +
   "user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE, " +
