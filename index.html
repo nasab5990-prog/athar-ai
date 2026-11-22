@@ -223,7 +223,7 @@
     </div>
   </section>
 
-  <section id="assessment" class="section">
+  <section id="assessment" class="section" oninput="enableAssessmentSave()" onchange="enableAssessmentSave()">
     <h1>إدخال التقويمات</h1>
     <div class="card">
       <h3>نطاق التقويم</h3>
@@ -253,7 +253,7 @@
         <label>الإجابات الصحيحة</label>
         <input type="number" id="correct" min="0" placeholder="مثال: 7">
       </div>
-      <button class="btn" onclick="saveAssessment()">حفظ التقويم</button>
+      <button class="btn" id="saveAssessmentBtn" onclick="saveAssessment()">حفظ التقويم</button>
       <div id="assessResult" style="margin-top:.8rem;"></div>
     </div>
     <div id="assessList"></div>
@@ -404,7 +404,7 @@
           <input type="number" id="impactFollowup" min="0" max="100" placeholder="0–100">
         </div>
       </details>
-      <button class="btn" onclick="calcImpact()">حساب الفرق وتوثيق الأدلة</button>
+      <button class="btn" id="saveImpactBtn" onclick="calcImpact()">حساب الفرق وتوثيق الأدلة</button>
       <div id="impactResult" style="margin-top:.8rem;"></div>
       <div id="impactHistory" style="margin-top:1rem;"></div>
     </div>
@@ -594,6 +594,6 @@
 <div id="currentUserLabel" class="current-user-label"></div>
 <script src="config.js?v=20261108-2"></script>
 <script src="curriculum-data.js?v=20261121-3"></script>
-<script src="app.js?v=20261122-11"></script>
+<script src="app.js?v=20261122-12"></script>
 </body>
 </html>
