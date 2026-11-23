@@ -50,22 +50,13 @@ test('teacher record access remains school and assignment scoped', () => {
 
 test('supervisor linked-impact counts require an existing intervention in the same school', () => {
   const route = section("app.get('/api/supervisor/schools'", "app.get('/api/supervisor/recommendations'");
-  assert.match(route, /intervention_record_id',''\) ~ '\^\[0-9\]\+\
-  const route = section("app.get('/api/supervisor/recommendations'", "app.get('/api/principal/recommendations'");
-  assert.match(route, /supervisor_schools ss/);
-  assert.match(route, /ss\.user_id=r\.supervisor_id AND ss\.school_id=r\.school_id/);
-  assert.match(route, /WHERE r\.supervisor_id=\$1/);
+  assert.ok(route.includes("COALESCE(r.payload->>'intervention_record_id','') ~ '^[0-9]+$'"));
+  assert.ok(route.includes('EXISTS ('));
+  assert.ok(route.includes('i.school_id=r.school_id'));
+  assert.ok(route.includes("i.kind='intervention'"));
+  assert.ok(route.includes("i.id::text=r.payload->>'intervention_record_id'"));
 });
 
-test('principal recommendation updates are limited to the principal school', () => {
-  const route = section("app.put('/api/principal/recommendations/:id'", "app.post('/api/records'");
-  assert.match(route, /WHERE id=\$4 AND school_id=\$5/);
-  assert.match(route, /req\.user\.school_id/);
-});
-/);
-  assert.match(route, /EXISTS \([\s\S]*?FROM records i[\s\S]*?i\.school_id=r\.school_id[\s\S]*?i\.kind='intervention'[\s\S]*?i\.id::text=r\.payload->>'intervention_record_id'/);
-});
- 
 test('supervisor recommendations are limited to explicitly assigned schools', () => {
   const route = section("app.get('/api/supervisor/recommendations'", "app.get('/api/principal/recommendations'");
   assert.match(route, /supervisor_schools ss/);
