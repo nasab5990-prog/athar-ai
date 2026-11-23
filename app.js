@@ -2663,14 +2663,17 @@ function renderPrincipalView() {
       ? learnerMastery.filter(value => value < 70).length
       : classAssessments.filter(assessment => Number(assessment.pct) < 70).length;
     const gapLabel = individualAssessments.length ? 'طلبة دون 70%' : 'نتائج صفية دون 70%';
-    const groupInterventions = interventions.filter(i => {
+    const groupInterventionRows = interventions.filter(i => {
       if (i.student_id) return ids.has(i.student_id);
       const curriculum = i.curriculum || {};
       const gradeMatches = Boolean(gradeNumber(curriculum.grade) && gradeNumber(curriculum.grade) === gradeNumber(group[0]?.grade));
       const interventionSection = sectionNumber(curriculum.section);
       return Boolean(gradeMatches && (!interventionSection || interventionSection === sectionNumber(group[0]?.section)));
-    }).length;
-    return `<div class="card" style="margin-top:.7rem"><h3>${esc(name)}</h3><p>عدد الطلبة: ${group.length} • متوسط الإتقان ${individualAssessments.length ? '(من النتائج الفردية)' : classAssessments.length ? '(من التقويمات الصفية)' : ''}: ${average === null ? 'لا توجد بيانات' : `${average}%`} • ${gapLabel}: ${gaps}</p><p class="note">النتائج الفردية: ${individualAssessments.length} • التقويمات الصفية: ${classAssessments.length} • التدخلات: ${groupInterventions}</p></div>`;
+    });
+    const completedInterventions = groupInterventionRows.filter(i => i.status === 'completed').length;
+    const activeInterventions = groupInterventionRows.filter(i => !i.status || i.status === 'active').length;
+    const pausedInterventions = groupInterventionRows.filter(i => i.status === 'paused').length;
+    return `<div class="card" style="margin-top:.7rem"><h3>${esc(name)}</h3><p>عدد الطلبة: ${group.length} • متوسط الإتقان ${individualAssessments.length ? '(من النتائج الفردية)' : classAssessments.length ? '(من التقويمات الصفية)' : ''}: ${average === null ? 'لا توجد بيانات' : `${average}%`} • ${gapLabel}: ${gaps}</p><p class="note">النتائج الفردية: ${individualAssessments.length} • التقويمات الصفية: ${classAssessments.length}</p><p class="note">التدخلات المسجلة: ${groupInterventionRows.length} • مكتملة: ${completedInterventions} • نشطة: ${activeInterventions} • متوقفة مؤقتًا: ${pausedInterventions}</p></div>`;
   }).join('');
 }
 let supervisorReportSchoolId = 'all';
