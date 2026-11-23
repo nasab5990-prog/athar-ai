@@ -576,9 +576,12 @@ app.post('/api/records',recordLimiter,requireAuth,requireRole('teacher','senior_
           if (!studentRow) return res.status(403).json({message:'الطالب غير موجود في سجلات المدرسة.'});
           assignedGrade=studentRow.payload?.grade;
           assignedSection=studentRow.payload?.section;
-          if (curriculum.grade && String(curriculum.grade).trim()!==String(assignedGrade||'').trim()) {
-            return res.status(400).json({message:'الصف المحدد في التدخل لا يطابق صف الطالب المسجل.'});
+          if ((curriculum.grade && normalizedGradeKey(curriculum.grade)!==normalizedGradeKey(assignedGrade)) ||
+              (curriculum.section && normalizedSectionKey(curriculum.section)!==normalizedSectionKey(assignedSection))) {
+            return res.status(400).json({message:'الصف أو الشعبة المحددان في التدخل لا يطابقان بيانات الطالب المسجلة.'});
           }
+          curriculum.grade=assignedGrade;
+          curriculum.section=assignedSection;
         } else if (!assignedGrade) {
           return res.status(403).json({message:'حدد الصف والمادة المسندة إليك قبل إنشاء تدخل صفي.'});
         }
@@ -751,9 +754,12 @@ app.put('/api/records/:id',recordLimiter,requireAuth,requireRole('teacher','seni
       if (!studentRow) return res.status(403).json({message:'الطالب المرتبط بالتدخل غير موجود في سجلات المدرسة.'});
       assignedGrade=studentRow.payload?.grade;
       assignedSection=studentRow.payload?.section;
-      if (curriculum.grade && String(curriculum.grade).trim()!==String(assignedGrade||'').trim()) {
-        return res.status(400).json({message:'الصف المحدد في التدخل لا يطابق صف الطالب المسجل.'});
+      if ((curriculum.grade && normalizedGradeKey(curriculum.grade)!==normalizedGradeKey(assignedGrade)) ||
+          (curriculum.section && normalizedSectionKey(curriculum.section)!==normalizedSectionKey(assignedSection))) {
+        return res.status(400).json({message:'الصف أو الشعبة المحددان في التدخل لا يطابقان بيانات الطالب المسجلة.'});
       }
+      curriculum.grade=assignedGrade;
+      curriculum.section=assignedSection;
     }
     try { await validateTeacherTeachingContext(req.user,{grade:assignedGrade,section:assignedSection,subject:curriculum.subject}); }
     catch(error) { return res.status(error.status||403).json({message:error.message}); }
