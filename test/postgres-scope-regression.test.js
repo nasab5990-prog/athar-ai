@@ -299,7 +299,7 @@ test('individual impact on a class intervention must match the target grade and 
   const impact = section("if (kind==='impact') {", "if (clean.student_id) {");
   assert.match(impact, /if \(clean\.student_id && !linkedStudentId\)/);
   assert.match(impact, /interventionGrade!==studentGrade/);
-  assert.match(impact, /interventionSection&&interventionSection!==studentSection/);
+  assert.match(impact, /if \(interventionSection && interventionSection!==studentSection\)/);
   assert.match(impact, /validateTeacherTeachingContext/);
 });
 
@@ -307,7 +307,7 @@ test('impact evidence fields remain optional for saving but are required for doc
   const impact = section("if (kind==='impact') {", "if (clean.student_id) {");
   assert.match(impact, /if\(clean\.evidence_tool!==undefined/);
   assert.match(impact, /if\(clean\.evidence_note!==undefined/);
-  assert.match(impact, /clean\.before_date=String\(value\)\.trim\(\)/);
+  assert.match(impact, /clean\[key\]=String\(value\)\.trim\(\)/);
   const report = section("app.get('/api/supervisor/schools'", "app.get('/api/supervisor/recommendations'");
   const documented = report.slice(report.indexOf("AS documented_impacts") > -1 ? report.lastIndexOf("COUNT(r.id) FILTER (WHERE r.kind='impact'", report.indexOf("AS documented_impacts")) : report.indexOf("COUNT(r.id) FILTER (WHERE r.kind='impact' AND length"));
   for (const field of ["evidence_tool","before_date","after_date","activity_mode","evidence_note","sessions_planned","sessions_done"]) {
