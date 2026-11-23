@@ -148,7 +148,7 @@ test('principal mastery average weights each learner equally and labels low-mast
 });
 
 test('latest assessment selection relies on newest-first record ordering', () => {
-  const loader = section(server, 'async function getRecordsForUser(user) {', 'async function sessionLogin');
+  const loader = section(server, 'function getRecordsForUser(user) {', 'function findStudentOwnedBy');
   assert.match(loader, /ORDER BY id DESC/);
   const latest = section(app, 'function latestAssessmentRows(rows = assessments) {', 'let supervisorRecommendations');
   assert.match(latest, /if \(!latest\.has\(key\)\) latest\.set\(key, assessment\)/);
