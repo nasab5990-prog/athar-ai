@@ -2768,12 +2768,18 @@ function renderReports() {
       '<footer class="report-print-footer">حقوق التصميم والتطوير © أ. نصراء سعيد البهلولي | منصة أثَر</footer>';
     return;
   }
-  const currentAssessments = latestAssessmentRows();
+  const allLatestAssessments = latestAssessmentRows();
+  const individualReportAssessments = latestAssessmentRows(allLatestAssessments.filter(a => a.student_id));
+  const classReportAssessments = latestAssessmentRows(allLatestAssessments.filter(a => !a.student_id));
+  // Keep one reporting population per summary so class-wide and learner-level results are not blended.
+  const currentAssessments = individualReportAssessments.length ? individualReportAssessments : classReportAssessments;
   const skillGroups = new Map();
   currentAssessments.forEach(assessment => {
     const skill = displaySkillName(assessment.skill || assessment.name || 'مهارة غير محددة');
-    if (!skillGroups.has(skill)) skillGroups.set(skill, []);
-    skillGroups.get(skill).push(Number(assessment.pct) || 0);
+    const subject = String(assessment.subject || '').trim();
+    const label = subject ? subject + ' — ' + skill : skill;
+    if (!skillGroups.has(label)) skillGroups.set(label, []);
+    skillGroups.get(label).push(Number(assessment.pct) || 0);
   });
   const skillRows = [...skillGroups.entries()].map(([skill, scores]) => {
     const average = Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length);
@@ -2791,7 +2797,7 @@ function renderReports() {
   }).join('');
   const latestAverage = currentAssessments.length ? Math.round(currentAssessments.reduce((sum,a)=>sum+Number(a.pct||0),0)/currentAssessments.length) : null;
   const reportDate = new Date().toLocaleDateString('ar-OM', {year:'numeric',month:'long',day:'numeric'});
-  el.innerHTML = `<header class="report-print-header"><h2>منصة أثَر | التقرير التربوي</h2><p>تاريخ إعداد التقرير: ${reportDate}</p></header><p>الطلبة: ${students.length} • سجلات التقويم المحفوظة: ${assessments.length} • التدخلات: ${interventions.length} • قياسات الأثر المسجلة: ${impacts.length}</p><p>أحدث النتائج المحتسبة: ${currentAssessments.length} • متوسط الإتقان: ${latestAverage === null ? 'لا توجد بيانات' : `${latestAverage}%`}</p><h4>ملخص المهارات (أحدث نتيجة لكل طالب ولكل مهارة)</h4><ul>${skillRows || '<li>لا توجد نتائج مهارية كافية لإعداد الملخص.</li>'}</ul><h4>أثر التدخلات المرتبطة</h4><ul>${impactRowsHtml || '<li>لم تُسجل قياسات أثر مرتبطة بتدخلات بعد.</li>'}</ul><p class="report-print-note">تعكس هذه المؤشرات السجلات المتاحة وقت إعداد التقرير، وتُستخدم لدعم قرار المعلم ولا تمثل حكمًا نهائيًا على مستوى الطالب. الفرق بين القياس القبلي والبعدي تغير مسجل بعد تنفيذ التدخل، ولا يثبت وحده أن التدخل هو سبب هذا التغير؛ فقد تتداخل عوامل تعليمية أخرى.</p><footer class="report-print-footer">حقوق التصميم والتطوير © أ. نصراء سعيد البهلولي | منصة أثَر</footer>`;
+  el.innerHTML = `<header class="report-print-header"><h2>منصة أثَر | التقرير التربوي</h2><p>تاريخ إعداد التقرير: ${reportDate}</p></header><p>الطلبة: ${students.length} • سجلات التقويم المحفوظة: ${assessments.length} • التدخلات: ${interventions.length} • قياسات الأثر المسجلة: ${impacts.length}</p><p>أحدث النتائج المحتسبة: ${currentAssessments.length} • متوسط الإتقان: ${latestAverage === null ? 'لا توجد بيانات' : `${latestAverage}%`} • نوع النتائج: ${individualReportAssessments.length ? 'فردية' : classReportAssessments.length ? 'صفية' : 'لا توجد نتائج'}</p><p class="note">عدد النتائج الفردية: ${individualReportAssessments.length} • عدد التقويمات الصفية: ${classReportAssessments.length}</p><h4>ملخص المهارات حسب المادة (أحدث نتيجة لكل طالب ولكل مهارة)</h4><ul>${skillRows || '<li>لا توجد نتائج مهارية كافية لإعداد الملخص.</li>'}</ul><h4>أثر التدخلات المرتبطة</h4><ul>${impactRowsHtml || '<li>لم تُسجل قياسات أثر مرتبطة بتدخلات بعد.</li>'}</ul><p class="report-print-note">تعكس هذه المؤشرات السجلات المتاحة وقت إعداد التقرير، وتُستخدم لدعم قرار المعلم ولا تمثل حكمًا نهائيًا على مستوى الطالب. الفرق بين القياس القبلي والبعدي تغير مسجل بعد تنفيذ التدخل، ولا يثبت وحده أن التدخل هو سبب هذا التغير؛ فقد تتداخل عوامل تعليمية أخرى.</p><footer class="report-print-footer">حقوق التصميم والتطوير © أ. نصراء سعيد البهلولي | منصة أثَر</footer>`;
 }
 let schoolGradeSections = [];
 async function loadSchoolGradeSections() {
