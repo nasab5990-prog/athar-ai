@@ -565,26 +565,26 @@ app.post('/api/records',recordLimiter,requireAuth,requireRole('teacher','senior_
       if (!safeText(clean.skill,180) || !safeText(clean.goal,2000) || !safeText(clean.steps,5000)) {
         return res.status(400).json({message:'المهارة والهدف وخطوات التدخل مطلوبة.'});
       }
+      let assignedGrade=curriculum.grade, assignedSection=curriculum.section;
+      if (clean.student_id) {
+        const studentRow=(await query(
+          "SELECT payload FROM records WHERE school_id=$1 AND kind='student' AND payload->>'student_id'=$2 LIMIT 1",
+          [req.user.school_id,safeText(clean.student_id,80)]
+        )).rows[0];
+        if (!studentRow) return res.status(403).json({message:'الطالب غير موجود في سجلات المدرسة.'});
+        assignedGrade=studentRow.payload?.grade;
+        assignedSection=studentRow.payload?.section;
+        if ((curriculum.grade && normalizedGradeKey(curriculum.grade)!==normalizedGradeKey(assignedGrade)) ||
+            (curriculum.section && normalizedSectionKey(curriculum.section)!==normalizedSectionKey(assignedSection))) {
+          return res.status(400).json({message:'الصف أو الشعبة المحددان في التدخل لا يطابقان بيانات الطالب المسجلة.'});
+        }
+        curriculum.grade=assignedGrade;
+        curriculum.section=assignedSection;
+      } else if (!assignedGrade) {
+        return res.status(400).json({message:'حدد الصف المستهدف قبل إنشاء التدخل الصفي.'});
+      }
       if (req.user.role==='teacher') {
         if (!curriculum.subject) return res.status(403).json({message:'حدد المادة المسندة إليك قبل إنشاء التدخل.'});
-        let assignedGrade=curriculum.grade, assignedSection=curriculum.section;
-        if (clean.student_id) {
-          const studentRow=(await query(
-            "SELECT payload FROM records WHERE school_id=$1 AND kind='student' AND payload->>'student_id'=$2 LIMIT 1",
-            [req.user.school_id,safeText(clean.student_id,80)]
-          )).rows[0];
-          if (!studentRow) return res.status(403).json({message:'الطالب غير موجود في سجلات المدرسة.'});
-          assignedGrade=studentRow.payload?.grade;
-          assignedSection=studentRow.payload?.section;
-          if ((curriculum.grade && normalizedGradeKey(curriculum.grade)!==normalizedGradeKey(assignedGrade)) ||
-              (curriculum.section && normalizedSectionKey(curriculum.section)!==normalizedSectionKey(assignedSection))) {
-            return res.status(400).json({message:'الصف أو الشعبة المحددان في التدخل لا يطابقان بيانات الطالب المسجلة.'});
-          }
-          curriculum.grade=assignedGrade;
-          curriculum.section=assignedSection;
-        } else if (!assignedGrade) {
-          return res.status(403).json({message:'حدد الصف والمادة المسندة إليك قبل إنشاء تدخل صفي.'});
-        }
         try { await validateTeacherTeachingContext(req.user,{grade:assignedGrade,section:assignedSection,subject:curriculum.subject}); }
         catch(error) { return res.status(error.status||403).json({message:error.message}); }
       }
@@ -743,24 +743,24 @@ app.put('/api/records/:id',recordLimiter,requireAuth,requireRole('teacher','seni
     lesson:safeText(rawCurriculum.lesson,160) || null,
     learning_outcome:safeText(rawCurriculum.learning_outcome,1000) || null
   };
+  let assignedGrade=curriculum.grade, assignedSection=curriculum.section;
+  if (current.student_id) {
+    const studentRow=(await query(
+      "SELECT payload FROM records WHERE school_id=$1 AND kind='student' AND payload->>'student_id'=$2 LIMIT 1",
+      [req.user.school_id,safeText(current.student_id,80)]
+    )).rows[0];
+    if (!studentRow) return res.status(403).json({message:'الطالب المرتبط بالتدخل غير موجود في سجلات المدرسة.'});
+    assignedGrade=studentRow.payload?.grade;
+    assignedSection=studentRow.payload?.section;
+    if ((curriculum.grade && normalizedGradeKey(curriculum.grade)!==normalizedGradeKey(assignedGrade)) ||
+        (curriculum.section && normalizedSectionKey(curriculum.section)!==normalizedSectionKey(assignedSection))) {
+      return res.status(400).json({message:'الصف أو الشعبة المحددان في التدخل لا يطابقان بيانات الطالب المسجلة.'});
+    }
+    curriculum.grade=assignedGrade;
+    curriculum.section=assignedSection;
+  }
   if (req.user.role==='teacher') {
     if (!curriculum.subject) return res.status(403).json({message:'حدد المادة المسندة إليك قبل تعديل التدخل.'});
-    let assignedGrade=curriculum.grade, assignedSection=curriculum.section;
-    if (current.student_id) {
-      const studentRow=(await query(
-        "SELECT payload FROM records WHERE school_id=$1 AND kind='student' AND payload->>'student_id'=$2 LIMIT 1",
-        [req.user.school_id,safeText(current.student_id,80)]
-      )).rows[0];
-      if (!studentRow) return res.status(403).json({message:'الطالب المرتبط بالتدخل غير موجود في سجلات المدرسة.'});
-      assignedGrade=studentRow.payload?.grade;
-      assignedSection=studentRow.payload?.section;
-      if ((curriculum.grade && normalizedGradeKey(curriculum.grade)!==normalizedGradeKey(assignedGrade)) ||
-          (curriculum.section && normalizedSectionKey(curriculum.section)!==normalizedSectionKey(assignedSection))) {
-        return res.status(400).json({message:'الصف أو الشعبة المحددان في التدخل لا يطابقان بيانات الطالب المسجلة.'});
-      }
-      curriculum.grade=assignedGrade;
-      curriculum.section=assignedSection;
-    }
     try { await validateTeacherTeachingContext(req.user,{grade:assignedGrade,section:assignedSection,subject:curriculum.subject}); }
     catch(error) { return res.status(error.status||403).json({message:error.message}); }
   }
