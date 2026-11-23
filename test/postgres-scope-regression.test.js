@@ -65,6 +65,21 @@ test('demo login is explicitly gated and restricted to supported personas', () =
   assert.match(demo, /ensureDemoFixtures\(\)/);
 });
 
+test('login regenerates the session and logout destroys it and clears the cookie', () => {
+  const login = section('async function sessionLogin', "app.get('/api/health'");
+  const logout = section("app.post('/api/auth/logout'", "app.get('/api/records'");
+  assert.match(login, /req\.session\.regenerate\(/);
+  assert.match(login, /req\.session\.user=\{ id:user\.id \}/);
+  assert.match(logout, /req\.session\.destroy\(/);
+  assert.match(logout, /res\.clearCookie\('athar\.sid'\)/);
+});
+
+test('OTP request does not reveal whether an official email is registered', () => {
+  const request = section("app.post('/api/auth/request-code'", "app.post('/api/auth/verify-code'");
+  assert.match(request, /res\.json\(\{ message:'إذا كان البريد مسجلًا ومفعّلًا، فسيصلك رمز تحقق خلال لحظات\.' \}\)/);
+  assert.match(request, /if \(user\?\.active\)/);
+});
+
 test('supervisor record feed is empty to prevent identifiable-record exposure', () => {
   const scope = section('async function getRecordsForUser(user) {', 'async function sessionLogin');
   assert.match(scope, /user\.role==='supervisor'[\s\S]*?return \[\]/);
