@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs';
 // connects to PostgreSQL/SQLite, or writes application data.
 const server = readFileSync(new URL('../server.js', import.meta.url), 'utf8');
 const app = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+const css = readFileSync(new URL('../style.css', import.meta.url), 'utf8');
 
 function section(source, start, end) {
   const from = source.indexOf(start);
@@ -218,4 +219,16 @@ test('assessment to radar to intervention to impact workflow preserves exact rec
   assert.match(impact, /interventions\.find\(item => String\(item\.recordId\) === interventionId\)/);
   assert.match(impact, /intervention_record_id:intervention\.recordId/);
   assert.match(impact, /syncRecord\('impact', payload\)/);
+});
+
+
+test('A4 report printing keeps one report title, readable report body and author footer', () => {
+  const printRules = css.slice(css.lastIndexOf('@media print'));
+  assert.match(printRules, /#reports > h1\s*\{\s*display:\s*none\s*!important;/);
+  assert.match(printRules, /#reportSummary \.report-print-header/);
+  assert.match(printRules, /#reportSummary \.report-print-footer/);
+  assert.match(printRules, /position:\s*static\s*!important/);
+  assert.match(printRules, /break-inside:\s*avoid/);
+  assert.match(app, /<header class="report-print-header">/);
+  assert.match(app, /حقوق التصميم والتطوير © أ\. نصراء سعيد البهلولي \| منصة أثَر/);
 });
