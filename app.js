@@ -2419,7 +2419,14 @@ if (localStorage.getItem('athar_team') && document.getElementById('teamName')) d
 function latestAssessmentRows(rows = assessments) {
   const latest = new Map();
   for (const assessment of rows) {
-    const key = `${assessment.student_id || 'class'}|${displaySkillName(assessment.skill || assessment.name || 'skill')}`;
+    const scope = [
+      assessment.student_id || 'class',
+      String(assessment.subject || '').trim().toLowerCase(),
+      gradeNumber(assessment.grade) || String(assessment.grade || '').trim(),
+      sectionNumber(assessment.section) || String(assessment.section || '').trim(),
+      displaySkillName(assessment.skill || assessment.name || 'skill')
+    ].join('|');
+    const key = scope;
     if (!latest.has(key)) latest.set(key, assessment);
   }
   return [...latest.values()];
