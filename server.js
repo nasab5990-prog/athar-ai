@@ -179,7 +179,17 @@ async function getRecordsForUser(user) {
     return (await query(`SELECT r.id,r.kind,r.payload,r.created_at FROM records r WHERE r.school_id=$1
       AND r.kind IN ('student','assessment','intervention','impact')
       AND (
-        r.payload->>'student_id'=ANY($2::text[])
+        (r.kind<>'impact' AND r.payload->>'student_id'=ANY($2::text[]))
+        OR (
+          r.kind='impact' AND COALESCE(r.payload->>'intervention_record_id','')<>''
+          AND COALESCE(r.payload->>'student_id','')=ANY($2::text[])
+          AND EXISTS (
+            SELECT 1 FROM records i
+            WHERE i.school_id=r.school_id AND i.kind='intervention'
+              AND i.id::text=r.payload->>'intervention_record_id'
+              AND i.payload->>'student_id'=r.payload->>'student_id'
+          )
+        )
         OR (
           r.kind='intervention' AND COALESCE(r.payload->>'student_id','')=''
           AND EXISTS (
