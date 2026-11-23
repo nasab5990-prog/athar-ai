@@ -2643,9 +2643,26 @@ function renderPrincipalView() {
     // Never blend class-level results with individual learner results in one average.
     const individualAssessments = latestAssessmentRows(scopedAssessments.filter(a => a.student_id));
     const classAssessments = latestAssessmentRows(scopedAssessments.filter(a => !a.student_id));
-    const averageRows = individualAssessments.length ? individualAssessments : classAssessments;
-    const average = averageRows.length ? Math.round(averageRows.reduce((sum,a)=>sum+Number(a.pct||0),0)/averageRows.length) : null;
-    const gaps = averageRows.filter(a => Number(a.pct) < 70).length;
+    // Weight each learner equally: a learner with more recorded skills must not dominate the class average.
+    const learnerAverages = new Map();
+    for (const assessment of individualAssessments) {
+      const learnerId = String(assessment.student_id || '');
+      if (!learnerId) continue;
+      if (!learnerAverages.has(learnerId)) learnerAverages.set(learnerId, []);
+      learnerAverages.get(learnerId).push(Number(assessment.pct || 0));
+    }
+    const learnerMastery = [...learnerAverages.values()].map(values =>
+      values.reduce((sum, value) => sum + value, 0) / values.length
+    );
+    const average = learnerMastery.length
+      ? Math.round(learnerMastery.reduce((sum, value) => sum + value, 0) / learnerMastery.length)
+      : classAssessments.length
+        ? Math.round(classAssessments.reduce((sum, assessment) => sum + Number(assessment.pct || 0), 0) / classAssessments.length)
+        : null;
+    const gaps = individualAssessments.length
+      ? learnerMastery.filter(value => value < 70).length
+      : classAssessments.filter(assessment => Number(assessment.pct) < 70).length;
+    const gapLabel = individualAssessments.length ? 'طلبة دون 70%' : 'نتائج صفية دون 70%';
     const groupInterventions = interventions.filter(i => {
       if (i.student_id) return ids.has(i.student_id);
       const curriculum = i.curriculum || {};
@@ -2653,7 +2670,7 @@ function renderPrincipalView() {
       const interventionSection = sectionNumber(curriculum.section);
       return Boolean(gradeMatches && (!interventionSection || interventionSection === sectionNumber(group[0]?.section)));
     }).length;
-    return `<div class="card" style="margin-top:.7rem"><h3>${esc(name)}</h3><p>عدد الطلبة: ${group.length} • متوسط الإتقان ${individualAssessments.length ? '(من النتائج الفردية)' : classAssessments.length ? '(من التقويمات الصفية)' : ''}: ${average === null ? 'لا توجد بيانات' : `${average}%`} • نتائج دون 70%: ${gaps}</p><p class="note">النتائج الفردية: ${individualAssessments.length} • التقويمات الصفية: ${classAssessments.length} • التدخلات: ${groupInterventions}</p></div>`;
+    return `<div class="card" style="margin-top:.7rem"><h3>${esc(name)}</h3><p>عدد الطلبة: ${group.length} • متوسط الإتقان ${individualAssessments.length ? '(من النتائج الفردية)' : classAssessments.length ? '(من التقويمات الصفية)' : ''}: ${average === null ? 'لا توجد بيانات' : `${average}%`} • ${gapLabel}: ${gaps}</p><p class="note">النتائج الفردية: ${individualAssessments.length} • التقويمات الصفية: ${classAssessments.length} • التدخلات: ${groupInterventions}</p></div>`;
   }).join('');
 }
 let supervisorReportSchoolId = 'all';
