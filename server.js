@@ -224,6 +224,7 @@ async function getRecordsForUser(user) {
             SELECT 1 FROM records i
             JOIN records s ON s.school_id=i.school_id AND s.kind='student'
               AND s.payload->>'student_id'=ANY($2::text[])
+              AND (COALESCE(r.payload->>'student_id','')='' OR r.payload->>'student_id'=s.payload->>'student_id')
             WHERE i.school_id=r.school_id AND i.kind='intervention'
               AND i.id::text=r.payload->>'intervention_record_id'
               AND COALESCE(i.payload->>'student_id','')=''
