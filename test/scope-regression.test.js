@@ -53,6 +53,14 @@ test('principal class intervention counts include matching grade and normalized 
   assert.match(view, /sectionNumber\(group\[0\]\?\.section\)/);
 });
 
+test('class impact validation normalizes Arabic and Western section digits', () => {
+  const validation = section(app, 'function calcImpact() {', 'function ');
+  assert.match(validation, /const interventionSection = sectionNumber\(curriculum\.section\)/);
+  assert.match(validation, /const studentSection = sectionNumber\(selectedStudent\.section\)/);
+  assert.match(validation, /interventionSection !== studentSection/);
+  assert.doesNotMatch(validation, /interventionSection !== studentSection/);
+});
+
 test('reports list only impact measurements linked to an existing intervention', () => {
   const report = section(app, 'const interventionById = new Map(interventions.map', 'const impactRowsHtml = linkedImpactRows');
   assert.match(report, /interventions\.map\(item => \[String\(item\.recordId\), item\]\)/);
