@@ -606,17 +606,17 @@ app.post('/api/records',recordLimiter,requireAuth,requireRole('teacher','senior_
         return res.status(400).json({message:'الطالب المحدد لا يطابق الطالب المرتبط بالتدخل.'});
       }
       if (!clean.student_id && linkedStudentId) clean.student_id=linkedStudentId;
+      const linkedCurriculum=linked.payload?.curriculum || {};
       if (clean.student_id && !linkedStudentId) {
         const studentRow=(await query(
           "SELECT payload FROM records WHERE school_id=$1 AND kind='student' AND payload->>'student_id'=$2 LIMIT 1",
           [req.user.school_id,clean.student_id]
         )).rows[0];
         if (!studentRow) return res.status(400).json({message:'الطالب المحدد غير موجود في سجلات المدرسة.'});
-        const curriculum=linked.payload?.curriculum || {};
-        const interventionGrade=normalizedGradeKey(curriculum.grade);
+        const interventionGrade=normalizedGradeKey(linkedCurriculum.grade);
         const studentGrade=normalizedGradeKey(studentRow.payload?.grade);
         if (!interventionGrade || !studentGrade || interventionGrade!==studentGrade) return res.status(400).json({message:'لا يمكن ربط قياس فردي بهذا التدخل الصفي؛ صف الطالب لا يطابق صف التدخل أو أن صف التدخل غير محدد.'});
-        const interventionSection=normalizedSectionKey(curriculum.section);
+        const interventionSection=normalizedSectionKey(linkedCurriculum.section);
         const studentSection=normalizedSectionKey(studentRow.payload?.section);
         if (interventionSection && interventionSection!==studentSection) {
           return res.status(400).json({message:'الطالب المحدد لا ينتمي إلى الشعبة المستهدفة في التدخل الصفي.'});
@@ -624,11 +624,23 @@ app.post('/api/records',recordLimiter,requireAuth,requireRole('teacher','senior_
         if (req.user.role==='teacher') {
           try {
             await validateTeacherTeachingContext(req.user,{
-              grade:studentGrade,section:studentSection,subject:curriculum.subject
+              grade:studentGrade,section:studentSection,subject:linkedCurriculum.subject
             });
           } catch(error) {
             return res.status(error.status||403).json({message:error.message});
           }
+        }
+      } else if (!clean.student_id && !linkedStudentId && req.user.role==='teacher') {
+        const classGrade=normalizedGradeKey(linkedCurriculum.grade);
+        if (!classGrade || !linkedCurriculum.subject) {
+          return res.status(400).json({message:'التدخل الصفي لا يحتوي صفًا ومادة صالحين لقياس الأثر.'});
+        }
+        try {
+          await validateTeacherTeachingContext(req.user,{
+            grade:classGrade,section:normalizedSectionKey(linkedCurriculum.section),subject:linkedCurriculum.subject
+          });
+        } catch(error) {
+          return res.status(error.status||403).json({message:error.message});
         }
       }
       const validEvidenceDate=value=>{
