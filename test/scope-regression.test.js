@@ -92,7 +92,7 @@ test('student progress shows impact linked to visible class interventions', () =
 
 
 test('supervisor report separates unlinked and linked-but-undocumented impacts', () => {
-  const report = section("function renderReports()", "function ");
+  const report = section(app, 'function renderReports() {', 'let schoolGradeSections');
   assert.match(report, /Math\.max\(0, impactsCount - linkedCount\)/);
   assert.match(report, /Math\.max\(0, linkedCount - documentedCount\)/);
   assert.match(report, /من '\+linkedCount\+' المرتبطة/);
