@@ -135,6 +135,23 @@ test('principal mastery average never blends class-wide and individual assessmen
   assert.match(view, /التقويمات الصفية:/);
 });
 
+test('principal mastery average weights each learner equally and labels low-mastery counts accurately', () => {
+  const view = section(app, 'function renderPrincipalView() {', 'let supervisorReportSchoolId');
+  assert.match(view, /const learnerAverages = new Map\(\)/);
+  assert.match(view, /learnerAverages\.get\(learnerId\)\.push\(Number\(assessment\.pct \|\| 0\)\)/);
+  assert.match(view, /const learnerMastery = \[\.\.\.learnerAverages\.values\(\)\]/);
+  assert.match(view, /learnerMastery\.reduce\(\(sum, value\) => sum \+ value, 0\) \/ learnerMastery\.length/);
+  assert.match(view, /classAssessments\.reduce\(\(sum, assessment\) => sum \+ Number\(assessment\.pct \|\| 0\), 0\) \/ classAssessments\.length/);
+  assert.match(view, /const gapLabel = individualAssessments\.length \? 'طلبة دون 70%' : 'نتائج صفية دون 70%'/);
+});
+
+test('latest assessment selection relies on newest-first record ordering', () => {
+  const loader = section(server, 'async function getRecordsForUser(user) {', 'async function sessionLogin');
+  assert.match(loader, /ORDER BY id DESC/);
+  const latest = section(app, 'function latestAssessmentRows(rows = assessments) {', 'let supervisorRecommendations');
+  assert.match(latest, /if \(!latest\.has\(key\)\) latest\.set\(key, assessment\)/);
+});
+
 test('general reports separate individual and class assessment populations and group skills by subject', () => {
   const view = section(app, 'function renderReports() {', 'let schoolGradeSections');
   assert.match(view, /const individualReportAssessments = latestAssessmentRows\(allLatestAssessments\.filter\(a => a\.student_id\)\)/);
