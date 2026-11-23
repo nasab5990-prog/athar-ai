@@ -113,3 +113,14 @@ test('impact linked to a class intervention normalizes grade prefixes and Arabic
   assert.match(route, /interventionGrade!==studentGrade/);
   assert.match(route, /interventionSection!==studentSection/);
 });
+
+test('individual intervention create and edit enforce normalized student grade and section', () => {
+  const createRoute = section("app.post('/api/records'", "app.put('/api/records/:id'");
+  const updateRoute = section("app.put('/api/records/:id'", "app.delete('/api/records/:id'");
+  for (const route of [createRoute, updateRoute]) {
+    assert.match(route, /normalizedGradeKey\(curriculum\.grade\)!==normalizedGradeKey\(assignedGrade\)/);
+    assert.match(route, /normalizedSectionKey\(curriculum\.section\)!==normalizedSectionKey\(assignedSection\)/);
+    assert.match(route, /curriculum\.grade=assignedGrade/);
+    assert.match(route, /curriculum\.section=assignedSection/);
+  }
+});
