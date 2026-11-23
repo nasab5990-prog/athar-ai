@@ -105,12 +105,12 @@ async function validateTeacherTeachingContext(user,{grade:gradeValue,section:sec
   const rawGrade=String(gradeValue||'').trim().replace(/^الصف\s*/,'');
   const grade=/^(?:[1-9]|1[0-2])$/.test(rawGrade)?rawGrade:(gradeNames[rawGrade]||'');
   const section=String(sectionValue||'').trim();
-  const subject=String(subjectValue||'').normalize('NFKC').toLocaleLowerCase('ar').replace(/\\s+/g,' ').trim();
+  const subject=String(subjectValue||'').normalize('NFKC').toLocaleLowerCase('ar').replace(/\s+/g,' ').trim();
   if (!grade || !subject) throw Object.assign(new Error('حدد الصف والمادة المسندين إليك قبل تسجيل هذا السجل.'),{status:403});
   const teaching=await teacherTeachingAssignment(user);
   const permitted=teaching.assignments.some(item=>
     assignedGradeLabels([item.grade]).includes(grade) &&
-    String(item.subject||'').normalize('NFKC').toLocaleLowerCase('ar').replace(/\\s+/g,' ').trim()===subject &&
+    String(item.subject||'').normalize('NFKC').toLocaleLowerCase('ar').replace(/\s+/g,' ').trim()===subject &&
     (!section || !item.sections?.length || item.sections.map(String).includes(section))
   );
   if (!permitted) throw Object.assign(new Error('لا يمكنك تسجيل بيانات خارج المادة والصف والشعبة المسندة إليك.'),{status:403});
