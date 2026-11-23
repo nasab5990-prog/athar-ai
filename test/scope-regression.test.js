@@ -52,6 +52,12 @@ test('principal class intervention counts include matching grade and section rec
   assert.match(view, /interventionSection === String\(group\[0\]\?\.section/);
 });
 
+test('reports list only impact measurements linked to an existing intervention', () => {
+  const report = section(app, 'const validInterventionIds = new Set(interventions.map', 'const impactRowsHtml = linkedImpactRows');
+  assert.match(report, /interventions\.map\(item => String\(item\.recordId\)\)/);
+  assert.match(report, /item\.intervention_record_id && validInterventionIds\.has\(String\(item\.intervention_record_id\)\)/);
+});
+
 test('student progress includes individual and matching class interventions', () => {
   const view = section(app, 'function renderStudentProgress() {', 'function renderPrincipalView()');
   assert.match(view, /if \(i\.student_id\) return i\.student_id === student\.student_id/);
