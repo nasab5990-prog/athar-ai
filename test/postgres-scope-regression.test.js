@@ -286,3 +286,32 @@ test('supervisor documented impact count requires a valid same-school interventi
   assert.match(documented, /evidence_tool/);
   assert.match(documented, /sessions_done/);
 });
+
+
+test('impact records cannot be linked across schools or to another teacher owned intervention', () => {
+  const impact = section("if (kind==='impact') {", "if (clean.student_id) {");
+  assert.match(impact, /WHERE id=\$1 AND school_id=\$2 AND kind='intervention'/);
+  assert.match(impact, /req\.user\.role==='teacher'[\s\S]*?linked\.owner_id/);
+  assert.match(impact, /linkedStudentId!==clean\.student_id/);
+});
+
+test('individual impact on a class intervention must match the target grade and section', () => {
+  const impact = section("if (kind==='impact') {", "if (clean.student_id) {");
+  assert.match(impact, /if \(clean\.student_id && !linkedStudentId\)/);
+  assert.match(impact, /interventionGrade!==studentGrade/);
+  assert.match(impact, /interventionSection&&interventionSection!==studentSection/);
+  assert.match(impact, /validateTeacherTeachingContext/);
+});
+
+test('impact evidence fields remain optional for saving but are required for documented reporting', () => {
+  const impact = section("if (kind==='impact') {", "if (clean.student_id) {");
+  assert.match(impact, /if\(clean\.evidence_tool!==undefined/);
+  assert.match(impact, /if\(clean\.evidence_note!==undefined/);
+  assert.match(impact, /clean\.before_date=String\(value\)\.trim\(\)/);
+  const report = section("app.get('/api/supervisor/schools'", "app.get('/api/supervisor/recommendations'");
+  const documented = report.slice(report.indexOf("AS documented_impacts") > -1 ? report.lastIndexOf("COUNT(r.id) FILTER (WHERE r.kind='impact'", report.indexOf("AS documented_impacts")) : report.indexOf("COUNT(r.id) FILTER (WHERE r.kind='impact' AND length"));
+  for (const field of ["evidence_tool","before_date","after_date","activity_mode","evidence_note","sessions_planned","sessions_done"]) {
+    assert.ok(documented.includes(field), "documented impact count must validate " + field);
+  }
+  assert.match(documented, /LPAD\(r\.payload->>'sessions_done',2,'0'\) <= LPAD\(r\.payload->>'sessions_planned',2,'0'\)/);
+});
