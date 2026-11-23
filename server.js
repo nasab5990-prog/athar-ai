@@ -119,6 +119,14 @@ async function studentExistsInSchool(studentId,schoolId) {
   const r=await query("SELECT id FROM records WHERE school_id=$1 AND kind='student' AND payload->>'student_id'=$2 LIMIT 1",[schoolId,studentId]);
   return Boolean(r.rowCount);
 }
+function normalizedGradeKey(value) {
+  const labels={'الأول':'1','الاول':'1','الثاني':'2','الثالث':'3','الرابع':'4','الخامس':'5','السادس':'6','السابع':'7','الثامن':'8','التاسع':'9','العاشر':'10','الحادي عشر':'11','الثاني عشر':'12'};
+  const raw=String(value||'').trim().replace(/^الصف\\s*/,'').replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+  return labels[raw] || raw;
+}
+function normalizedSectionKey(value) {
+  return String(value??'').trim().replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+}
 function assignedGradeLabels(grades) {
   const labels={1:'الأول',2:'الثاني',3:'الثالث',4:'الرابع',5:'الخامس',6:'السادس',7:'السابع',8:'الثامن',9:'التاسع',10:'العاشر',11:'الحادي عشر',12:'الثاني عشر'};
   return [...new Set((grades || []).flatMap(value => {
@@ -602,15 +610,11 @@ app.post('/api/records',recordLimiter,requireAuth,requireRole('teacher','senior_
         )).rows[0];
         if (!studentRow) return res.status(400).json({message:'الطالب المحدد غير موجود في سجلات المدرسة.'});
         const curriculum=linked.payload?.curriculum || {};
-        const interventionGrade=String(curriculum.grade||'').trim();
-        const studentGrade=String(studentRow.payload?.grade||'').trim();
-        const gradeMatches=interventionGrade && (
-          assignedGradeLabels([interventionGrade]).includes(studentGrade) ||
-          assignedGradeLabels([studentGrade]).includes(interventionGrade)
-        );
-        if (!gradeMatches) return res.status(400).json({message:'لا يمكن ربط قياس فردي بهذا التدخل الصفي؛ صف الطالب لا يطابق صف التدخل أو أن صف التدخل غير محدد.'});
-        const interventionSection=String(curriculum.section||'').trim();
-        const studentSection=String(studentRow.payload?.section||'').trim();
+        const interventionGrade=normalizedGradeKey(curriculum.grade);
+        const studentGrade=normalizedGradeKey(studentRow.payload?.grade);
+        if (!interventionGrade || !studentGrade || interventionGrade!==studentGrade) return res.status(400).json({message:'لا يمكن ربط قياس فردي بهذا التدخل الصفي؛ صف الطالب لا يطابق صف التدخل أو أن صف التدخل غير محدد.'});
+        const interventionSection=normalizedSectionKey(curriculum.section);
+        const studentSection=normalizedSectionKey(studentRow.payload?.section);
         if (interventionSection && interventionSection!==studentSection) {
           return res.status(400).json({message:'الطالب المحدد لا ينتمي إلى الشعبة المستهدفة في التدخل الصفي.'});
         }
