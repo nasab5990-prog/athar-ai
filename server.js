@@ -178,25 +178,25 @@ async function getRecordsForUser(user) {
             SELECT 1 FROM records s
             WHERE s.school_id=r.school_id AND s.kind='student'
               AND s.payload->>'student_id'=ANY($2::text[])
-              AND CASE translate(btrim(COALESCE(r.payload->'curriculum'->>'grade','')),'٠١٢٣٤٥٦٧٨٩','0123456789')
+              AND CASE translate(regexp_replace(btrim(COALESCE(r.payload->'curriculum'->>'grade','')), '^الصف\\s*', ''),'٠١٢٣٤٥٦٧٨٩','0123456789')
                 WHEN 'الأول' THEN '1' WHEN 'الاول' THEN '1' WHEN 'الثاني' THEN '2'
                 WHEN 'الثالث' THEN '3' WHEN 'الرابع' THEN '4' WHEN 'الخامس' THEN '5'
                 WHEN 'السادس' THEN '6' WHEN 'السابع' THEN '7' WHEN 'الثامن' THEN '8'
                 WHEN 'التاسع' THEN '9' WHEN 'العاشر' THEN '10' WHEN 'الحادي عشر' THEN '11'
                 WHEN 'الثاني عشر' THEN '12'
-                ELSE translate(btrim(COALESCE(r.payload->'curriculum'->>'grade','')),'٠١٢٣٤٥٦٧٨٩','0123456789')
+                ELSE translate(regexp_replace(btrim(COALESCE(r.payload->'curriculum'->>'grade','')), '^الصف\\s*', ''),'٠١٢٣٤٥٦٧٨٩','0123456789')
               END =
-              CASE translate(btrim(COALESCE(s.payload->>'grade','')),'٠١٢٣٤٥٦٧٨٩','0123456789')
+              CASE translate(regexp_replace(btrim(COALESCE(s.payload->>'grade','')), '^الصف\\s*', ''),'٠١٢٣٤٥٦٧٨٩','0123456789')
                 WHEN 'الأول' THEN '1' WHEN 'الاول' THEN '1' WHEN 'الثاني' THEN '2'
                 WHEN 'الثالث' THEN '3' WHEN 'الرابع' THEN '4' WHEN 'الخامس' THEN '5'
                 WHEN 'السادس' THEN '6' WHEN 'السابع' THEN '7' WHEN 'الثامن' THEN '8'
                 WHEN 'التاسع' THEN '9' WHEN 'العاشر' THEN '10' WHEN 'الحادي عشر' THEN '11'
                 WHEN 'الثاني عشر' THEN '12'
-                ELSE translate(btrim(COALESCE(s.payload->>'grade','')),'٠١٢٣٤٥٦٧٨٩','0123456789')
+                ELSE translate(regexp_replace(btrim(COALESCE(s.payload->>'grade','')), '^الصف\\s*', ''),'٠١٢٣٤٥٦٧٨٩','0123456789')
               END
               AND (
                 COALESCE(btrim(r.payload->'curriculum'->>'section'),'')=''
-                OR btrim(r.payload->'curriculum'->>'section')=btrim(COALESCE(s.payload->>'section',''))
+                OR translate(btrim(r.payload->'curriculum'->>'section'),'٠١٢٣٤٥٦٧٨٩','0123456789')=translate(btrim(COALESCE(s.payload->>'section','')),'٠١٢٣٤٥٦٧٨٩','0123456789')
               )
           )
         )
