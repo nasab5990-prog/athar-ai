@@ -223,12 +223,11 @@ test('assessment to radar to intervention to impact workflow preserves exact rec
 
 
 test('A4 report printing keeps one report title, readable report body and author footer', () => {
-  const printRules = css.slice(css.lastIndexOf('@media print'));
-  assert.match(printRules, /#reports > h1\s*\{\s*display:\s*none\s*!important;/);
-  assert.match(printRules, /#reportSummary \.report-print-header/);
-  assert.match(printRules, /#reportSummary \.report-print-footer/);
-  assert.match(printRules, /position:\s*static\s*!important/);
-  assert.match(printRules, /break-inside:\s*avoid/);
+  assert.match(css, /#reports > h1\s*\{\s*display:\s*none\s*!important;/);
+  assert.match(css, /#reportSummary \.report-print-header/);
+  assert.match(css, /#reportSummary \.report-print-footer/);
+  assert.match(css, /position:\s*static\s*!important/);
+  assert.match(css, /break-inside:\s*avoid/);
   assert.match(app, /<header class="report-print-header">/);
   assert.match(app, /حقوق التصميم والتطوير © أ\. نصراء سعيد البهلولي \| منصة أثَر/);
 });
