@@ -81,3 +81,11 @@ test('principal summaries group equivalent Arabic and Western grade and section 
   assert.match(view, /sectionNumber\(student\.section\)/);
   assert.match(view, /groups\.has\(key\)/);
 });
+
+
+test('student progress shows impact linked to visible class interventions', () => {
+  const view = section(app, 'function renderStudentProgress() {', 'function renderPrincipalView()');
+  assert.match(view, /const visibleInterventionIds = new Set\(interventionRows\.map/);
+  assert.match(view, /i\.student_id === student\.student_id/);
+  assert.match(view, /visibleInterventionIds\.has\(String\(i\.intervention_record_id\)\)/);
+});
