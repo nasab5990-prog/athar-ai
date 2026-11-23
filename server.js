@@ -121,7 +121,7 @@ async function studentExistsInSchool(studentId,schoolId) {
 }
 function normalizedGradeKey(value) {
   const labels={'الأول':'1','الاول':'1','الثاني':'2','الثالث':'3','الرابع':'4','الخامس':'5','السادس':'6','السابع':'7','الثامن':'8','التاسع':'9','العاشر':'10','الحادي عشر':'11','الثاني عشر':'12'};
-  const raw=String(value||'').trim().replace(/^الصف\\s*/,'').replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+  const raw=String(value||'').trim().replace(/^الصف\s*/,'').replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
   return labels[raw] || raw;
 }
 function normalizedSectionKey(value) {
