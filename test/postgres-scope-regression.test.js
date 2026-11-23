@@ -44,6 +44,12 @@ test('OTP login is rate limited, expires codes, caps attempts and compares hashe
   assert.match(otp, /attempts=attempts\+1/);
 });
 
+test('failed OTP email delivery only removes the code from that send attempt', () => {
+  const otp = section("app.post('/api/auth/request-code'", "app.post('/api/auth/verify-code'");
+  assert.match(otp, /DELETE FROM otp_codes WHERE email=\$1 AND code_hash=\$2/);
+  assert.match(otp, /hashOtp\(email,code\)/);
+});
+
 test('OTP verification consumes the matching unexpired code atomically to prevent replay', () => {
   const otp = section("app.post('/api/auth/verify-code'", "async function ensureDemoFixtures");
   assert.match(otp, /DELETE FROM otp_codes WHERE email=\$1 AND code_hash=\$2 AND attempts<5 AND expires_at>NOW\(\) RETURNING email/);
