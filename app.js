@@ -484,10 +484,13 @@ function applyRoleUI() {
 }
 
 function gradeNumber(value) {
-  const raw = String(value ?? '').trim();
+  const raw = String(value ?? '').trim().replace(/^الصف\\s*/,'').replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
   if (/^(?:[1-9]|1[0-2])$/.test(raw)) return raw;
   const names = {'الأول':'1','الاول':'1','الثاني':'2','الثالث':'3','الرابع':'4','الخامس':'5','السادس':'6','السابع':'7','الثامن':'8','التاسع':'9','العاشر':'10','الحادي عشر':'11','الثاني عشر':'12'};
-  return names[raw.replace(/^الصف\s*/,'')] || '';
+  return names[raw] || '';
+}
+function sectionNumber(value) {
+  return String(value ?? '').trim().replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
 }
 function filterInterventionStudents() {
   const select = document.getElementById('interventionStudent');
@@ -2596,8 +2599,8 @@ function renderStudentProgress() {
     if (i.student_id) return i.student_id === student.student_id;
     const curriculum = i.curriculum || {};
     const gradeMatches = Boolean(gradeNumber(curriculum.grade) && gradeNumber(curriculum.grade) === gradeNumber(student.grade));
-    const section = String(curriculum.section || '').trim();
-    return Boolean(gradeMatches && (!section || section === String(student.section || '').trim()));
+    const section = sectionNumber(curriculum.section);
+    return Boolean(gradeMatches && (!section || section === sectionNumber(student.section)));
   });
   const impactRows = impacts.filter(i => i.student_id === student.student_id);
   el.innerHTML = `<div class="card"><h3>${esc(student.name)}</h3><p>${esc(student.grade || '')} • شعبة ${esc(student.section || '')}</p></div>${[...latest.values()].map(a => `<div class="card" style="margin-top:.7rem"><strong>${esc(displaySkillName(a.skill || a.name))}</strong><div class="progress"><div class="progress-bar" style="width:${Math.max(0,Math.min(100,Number(a.pct)||0))}%"></div></div><p>نسبة الإتقان المسجلة: ${Number(a.pct)}%</p></div>`).join('') || '<p class="note">لا توجد تقويمات فردية مرتبطة بهذا الطالب بعد.</p>'}<div class="card" style="margin-top:.7rem"><h3>توصيات وتدخلات المعلم</h3>${interventionRows.map(i => `<p><strong>${esc(displaySkillName(i.skill))}</strong><br>${esc(i.goal || '')}<br><span class="note">${esc(i.steps || '')}</span></p>`).join('') || '<p>لا توجد تدخلات مسجلة لهذا الطالب.</p>'}</div><div class="card" style="margin-top:.7rem"><h3>قياس الأثر</h3>${impactRows.map(i => `<p>${Number(i.before)}% ← ${Number(i.after)}% (${Number(i.difference)>0?'+':''}${Number(i.difference)} نقطة)</p><p class="note">${esc(getImpactEvidenceStatus(i))} • ${esc(i.evidence_tool || 'أداة القياس غير محددة')} • الجلسات ${Number(i.sessions_done || 0)}/${Number(i.sessions_planned || 0)}</p>`).join('') || '<p>لا توجد قياسات أثر مسجلة لهذا الطالب.</p>'}</div>`;
@@ -2622,8 +2625,8 @@ function renderPrincipalView() {
       if (i.student_id) return ids.has(i.student_id);
       const curriculum = i.curriculum || {};
       const gradeMatches = Boolean(gradeNumber(curriculum.grade) && gradeNumber(curriculum.grade) === gradeNumber(group[0]?.grade));
-      const interventionSection = String(curriculum.section || '').trim();
-      return Boolean(gradeMatches && (!interventionSection || interventionSection === String(group[0]?.section || '').trim()));
+      const interventionSection = sectionNumber(curriculum.section);
+      return Boolean(gradeMatches && (!interventionSection || interventionSection === sectionNumber(group[0]?.section)));
     }).length;
     return `<div class="card" style="margin-top:.7rem"><h3>${esc(name)}</h3><p>عدد الطلبة: ${group.length} • متوسط الإتقان: ${average === null ? 'لا توجد بيانات' : `${average}%`} • نتائج دون 70%: ${gaps} • التدخلات: ${groupInterventions}</p></div>`;
   }).join('');
