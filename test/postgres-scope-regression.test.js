@@ -161,6 +161,14 @@ test('parents and students receive class-wide impact only through a matching sam
 });
 
 
+test('supervisor completed intervention count is distinct from total intervention count and school scoped', () => {
+  const route = section("app.get('/api/supervisor/schools'", "app.get('/api/supervisor/recommendations'");
+  assert.match(route, /COUNT\(r\.id\) FILTER \(WHERE r\.kind='intervention'\)::int AS interventions/);
+  assert.match(route, /COUNT\(r\.id\) FILTER \(WHERE r\.kind='intervention' AND r\.payload->>'status'='completed'\)::int AS completed_interventions/);
+  assert.match(route, /r\.school_id=s\.school_id/);
+  assert.match(route, /GROUP BY s\.school_id,s\.school_name/);
+});
+
 test('supervisor documented impact count requires a valid same-school intervention link', () => {
   const route = section("app.get('/api/supervisor/schools'", "app.get('/api/supervisor/recommendations'");
   const documented = route.slice(route.indexOf("AS documented_impacts") > -1 ? route.lastIndexOf("COUNT(r.id) FILTER (WHERE r.kind='impact'", route.indexOf("AS documented_impacts")) : route.indexOf("COUNT(r.id) FILTER (WHERE r.kind='impact' AND length"));
