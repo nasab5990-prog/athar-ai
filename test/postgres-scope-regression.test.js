@@ -146,3 +146,16 @@ test('class-wide impact without a selected student still enforces teacher teachi
   assert.match(impact, /validateTeacherTeachingContext\(req\.user/);
   assert.match(impact, /section:normalizedSectionKey\(linkedCurriculum\.section\)/);
 });
+
+
+test('parents and students receive class-wide impact only through a matching same-school class intervention', () => {
+  const scope = section('async function getRecordsForUser(user)', 'app.get(\'\/api\/records\'');
+  assert.match(scope, /r\.kind='impact'/);
+  assert.match(scope, /r\.payload->>'intervention_record_id'/);
+  assert.match(scope, /i\.id::text=r\.payload->>'intervention_record_id'/);
+  assert.match(scope, /i\.school_id=r\.school_id/);
+  assert.match(scope, /i\.kind='intervention'/);
+  assert.match(scope, /i\.payload->'curriculum'->>'grade'/);
+  assert.match(scope, /i\.payload->'curriculum'->>'section'/);
+  assert.match(scope, /s\.payload->>'student_id'=ANY\(\$2::text\[\]\)/);
+});
