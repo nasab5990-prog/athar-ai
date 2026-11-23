@@ -2786,11 +2786,26 @@ function renderReports() {
     const lowCount = scores.filter(score => score < 70).length;
     return `<li><strong>${esc(skill)}</strong> — متوسط الإتقان ${average}% • نتائج دون 70%: ${lowCount} من ${scores.length}</li>`;
   }).join('');
-  const validInterventionIds = new Set(interventions.map(item => String(item.recordId)));
-  const linkedImpactRows = impacts.filter(item => item.intervention_record_id && validInterventionIds.has(String(item.intervention_record_id)));
+  const interventionById = new Map(interventions.map(item => [String(item.recordId), item]));
+  const linkedImpactRows = impacts.filter(item => {
+    if (!item.intervention_record_id) return false;
+    const intervention = interventionById.get(String(item.intervention_record_id));
+    if (!intervention) return false;
+    // An individual intervention's impact must identify the same learner.
+    if (intervention.student_id) return String(item.student_id || '') === String(intervention.student_id);
+    // For class-wide interventions, a learner-specific impact must belong to the target class.
+    if (item.student_id) {
+      const learner = students.find(student => String(student.student_id) === String(item.student_id));
+      const curriculum = intervention.curriculum || {};
+      if (!learner || gradeNumber(learner.grade) !== gradeNumber(curriculum.grade)) return false;
+      const targetSection = sectionNumber(curriculum.section);
+      if (targetSection && targetSection !== sectionNumber(learner.section)) return false;
+    }
+    return true;
+  });
   const impactRowsHtml = linkedImpactRows.slice(0,10).map(item => {
-    const intervention = interventions.find(row => String(row.recordId) === String(item.intervention_record_id));
-    const skill = displaySkillName(item.intervention_skill || intervention?.skill || 'مهارة غير محددة');
+    const intervention = interventionById.get(String(item.intervention_record_id));
+    const skill = displaySkillName(intervention?.skill || 'مهارة غير محددة');
     const studentName = item.student_name || intervention?.student_name || 'تقويم صفي';
     const delta = Number(item.difference ?? (Number(item.after)-Number(item.before)));
     return `<li><strong>${esc(skill)}</strong> — ${esc(studentName)}: ${Number(item.before)}% إلى ${Number(item.after)}% (${delta > 0 ? '+' : ''}${delta} نقطة) <span class="note">${esc(getImpactEvidenceStatus(item))}</span></li>`;
