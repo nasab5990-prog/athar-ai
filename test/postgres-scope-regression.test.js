@@ -124,3 +124,15 @@ test('individual intervention create and edit enforce normalized student grade a
     assert.match(route, /curriculum\.section=assignedSection/);
   }
 });
+
+test('all roles must use an existing same-school student for individual interventions', () => {
+  const createRoute = section("app.post('/api/records'", "app.put('/api/records/:id'");
+  const updateRoute = section("app.put('/api/records/:id'", "app.delete('/api/records/:id'");
+  assert.ok(createRoute.indexOf("if (clean.student_id)") < createRoute.indexOf("if (req.user.role==='teacher')"));
+  assert.ok(updateRoute.indexOf("if (current.student_id)") < updateRoute.indexOf("if (req.user.role==='teacher')"));
+  for (const route of [createRoute, updateRoute]) {
+    assert.match(route, /WHERE school_id=\$1 AND kind='student' AND payload->>'student_id'=\$2/);
+    assert.match(route, /normalizedGradeKey\(curriculum\.grade\)!==normalizedGradeKey\(assignedGrade\)/);
+    assert.match(route, /normalizedSectionKey\(curriculum\.section\)!==normalizedSectionKey\(assignedSection\)/);
+  }
+});
