@@ -241,6 +241,14 @@ test('parents and students receive individual impact only when its intervention 
   assert.match(individualImpact, /i\.school_id=r\.school_id/);
 });
 
+test('teaching AI JSON generation has enough output budget for structured intervention plans', () => {
+  const ai = section('async function generateTeachingAI', "app.post('/api/analysis'");
+  assert.match(ai, /max_tokens:4000/);
+  assert.match(ai, /max_output_tokens:4000/);
+  assert.match(ai, /response_format:\{type:'json_object'\}/);
+  assert.match(ai, /text:\{format:\{type:'json_object'\}\}/);
+});
+
 test('impact writes require a same-school intervention and enforce teacher ownership', () => {
   const impact = section("if (kind==='impact') {", "if (clean.student_id) {");
   assert.match(impact, /SELECT id,owner_id,payload FROM records WHERE id=\$1 AND school_id=\$2 AND kind='intervention'/);
