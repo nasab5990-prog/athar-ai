@@ -40,7 +40,7 @@ test('OTP login is rate limited, expires codes, caps attempts and compares hashe
   assert.match(otp, /verify-code',loginLimiter/);
   assert.match(otp, /row\.attempts>=5/);
   assert.match(otp, /expiresAtMs<Date\.now\(\)/);
-  assert.match(otp, /safeHexEqual\(row\.code_hash,hashOtp\(email,code\)\)/);
+  assert.match(otp, /safeHexEqual\(row\.code_hash,submittedHash\)/);
   assert.match(otp, /attempts=attempts\+1/);
 });
 
