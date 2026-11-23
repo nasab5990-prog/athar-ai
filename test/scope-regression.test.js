@@ -143,3 +143,13 @@ test('general reports separate individual and class assessment populations and g
   assert.match(view, /عدد النتائج الفردية:/);
   assert.match(view, /عدد التقويمات الصفية:/);
 });
+
+test('report impact rows require a valid intervention and matching learner or class scope', () => {
+  const view = section(app, 'function renderReports() {', 'let schoolGradeSections');
+  assert.match(view, /const interventionById = new Map\(interventions\.map/);
+  assert.match(view, /if \(intervention\.student_id\) return String\(item\.student_id \|\| ''\) === String\(intervention\.student_id\)/);
+  assert.match(view, /const learnerGrade = gradeNumber\(learner\?\.grade\)/);
+  assert.match(view, /const targetGrade = gradeNumber\(curriculum\.grade\)/);
+  assert.match(view, /if \(targetSection && targetSection !== sectionNumber\(learner\.section\)\) return false/);
+  assert.match(view, /const skill = displaySkillName\(intervention\?\.skill/);
+});
