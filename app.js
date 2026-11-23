@@ -2212,8 +2212,8 @@ async function calcImpact() {
     const interventionGrade = String(curriculum.grade || '').trim();
     const studentGrade = String(selectedStudent?.grade || '').trim();
     if (!selectedStudent || !gradeNumber(interventionGrade) || gradeNumber(interventionGrade) !== gradeNumber(studentGrade)) return showToast('الطالب لا ينتمي إلى الصف المستهدف في التدخل الصفي.');
-    const interventionSection = String(curriculum.section || '').trim();
-    const studentSection = String(selectedStudent.section || '').trim();
+    const interventionSection = sectionNumber(curriculum.section);
+    const studentSection = sectionNumber(selectedStudent.section);
     if (interventionSection && interventionSection !== studentSection) return showToast('الطالب لا ينتمي إلى الشعبة المستهدفة في التدخل الصفي.');
   }
   const student = students.find(s => s.student_id === studentId);
