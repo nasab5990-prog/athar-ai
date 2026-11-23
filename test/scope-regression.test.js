@@ -73,3 +73,11 @@ test('grade and section helpers normalize Arabic digits and grade prefixes', () 
   assert.ok(helper.includes("replace(/[٠-٩]/g"));
   assert.ok(helper.includes('function sectionNumber(value)'));
 });
+
+
+test('principal summaries group equivalent Arabic and Western grade and section labels together', () => {
+  const view = section(app, 'function renderPrincipalView() {', 'let supervisorReportSchoolId');
+  assert.match(view, /gradeNumber\(student\.grade\)/);
+  assert.match(view, /sectionNumber\(student\.section\)/);
+  assert.match(view, /groups\.has\(key\)/);
+});
