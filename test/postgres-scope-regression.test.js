@@ -13,6 +13,44 @@ function section(start, end) {
   return server.slice(from, to);
 }
 
+test('production startup requires strong session and OTP secrets', () => {
+  assert.match(server, /if \(production && \(!process\.env\.SESSION_SECRET \|\| process\.env\.SESSION_SECRET\.length < 32 \|\| !process\.env\.OTP_SECRET \|\| process\.env\.OTP_SECRET\.length < 32\)\)/);
+});
+
+test('sessions use PostgreSQL storage and secure production cookie attributes', () => {
+  assert.match(server, /store:new PgSession\(\{ pool, tableName:'session', createTableIfMissing:true \}\)/);
+  assert.match(server, /httpOnly:true/);
+  assert.match(server, /secure:production/);
+  assert.match(server, /sameSite:process\.env\.COOKIE_SAMESITE/);
+  assert.match(server, /partitioned:production/);
+  assert.match(server, /maxAge:8\*60\*60\*1000/);
+});
+
+test('authenticated requests reload active user records and enforce role guards', () => {
+  const auth = section('const requireAuth = asyncRoute', 'async function linkedStudentIds');
+  assert.match(auth, /req\.session\?\.user\?\.id/);
+  assert.match(auth, /await freshUser\(id\)/);
+  assert.match(auth, /!user \|\| !user\.active/);
+  assert.match(auth, /const requireRole = \(\.\.\.roles\)/);
+});
+
+test('OTP login is rate limited, expires codes, caps attempts and compares hashes safely', () => {
+  const otp = section("app.post('/api/auth/request-code'", "async function ensureDemoFixtures");
+  assert.match(otp, /request-code',loginLimiter/);
+  assert.match(otp, /verify-code',loginLimiter/);
+  assert.match(otp, /row\.attempts>=5/);
+  assert.match(otp, /expiresAtMs<Date\.now\(\)/);
+  assert.match(otp, /safeHexEqual\(row\.code_hash,hashOtp\(email,code\)\)/);
+  assert.match(otp, /attempts=attempts\+1/);
+});
+
+test('demo login is explicitly gated and restricted to supported personas', () => {
+  const demo = section("app.post('/api/auth/demo'", "app.get('/api/auth/me'");
+  assert.match(demo, /if \(!demoEnabled\)/);
+  assert.match(demo, /\['teacher','senior_teacher','principal','supervisor','parent','student'\]/);
+  assert.match(demo, /DEMO-SCHOOL/);
+});
+
 test('supervisor record feed is empty to prevent identifiable-record exposure', () => {
   const scope = section('async function getRecordsForUser(user) {', 'async function sessionLogin');
   assert.match(scope, /user\.role==='supervisor'[\s\S]*?return \[\]/);
