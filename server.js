@@ -208,6 +208,37 @@ async function getRecordsForUser(user) {
               )
           )
         )
+        OR (
+          r.kind='impact' AND COALESCE(r.payload->>'intervention_record_id','')<>''
+          AND EXISTS (
+            SELECT 1 FROM records i
+            JOIN records s ON s.school_id=i.school_id AND s.kind='student'
+              AND s.payload->>'student_id'=ANY($2::text[])
+            WHERE i.school_id=r.school_id AND i.kind='intervention'
+              AND i.id::text=r.payload->>'intervention_record_id'
+              AND COALESCE(i.payload->>'student_id','')=''
+              AND CASE translate(regexp_replace(btrim(COALESCE(i.payload->'curriculum'->>'grade','')), '^الصف\\s*', ''),'٠١٢٣٤٥٦٧٨٩','0123456789')
+                WHEN 'الأول' THEN '1' WHEN 'الاول' THEN '1' WHEN 'الثاني' THEN '2'
+                WHEN 'الثالث' THEN '3' WHEN 'الرابع' THEN '4' WHEN 'الخامس' THEN '5'
+                WHEN 'السادس' THEN '6' WHEN 'السابع' THEN '7' WHEN 'الثامن' THEN '8'
+                WHEN 'التاسع' THEN '9' WHEN 'العاشر' THEN '10' WHEN 'الحادي عشر' THEN '11'
+                WHEN 'الثاني عشر' THEN '12'
+                ELSE translate(regexp_replace(btrim(COALESCE(i.payload->'curriculum'->>'grade','')), '^الصف\\s*', ''),'٠١٢٣٤٥٦٧٨٩','0123456789')
+              END =
+              CASE translate(regexp_replace(btrim(COALESCE(s.payload->>'grade','')), '^الصف\\s*', ''),'٠١٢٣٤٥٦٧٨٩','0123456789')
+                WHEN 'الأول' THEN '1' WHEN 'الاول' THEN '1' WHEN 'الثاني' THEN '2'
+                WHEN 'الثالث' THEN '3' WHEN 'الرابع' THEN '4' WHEN 'الخامس' THEN '5'
+                WHEN 'السادس' THEN '6' WHEN 'السابع' THEN '7' WHEN 'الثامن' THEN '8'
+                WHEN 'التاسع' THEN '9' WHEN 'العاشر' THEN '10' WHEN 'الحادي عشر' THEN '11'
+                WHEN 'الثاني عشر' THEN '12'
+                ELSE translate(regexp_replace(btrim(COALESCE(s.payload->>'grade','')), '^الصف\\s*', ''),'٠١٢٣٤٥٦٧٨٩','0123456789')
+              END
+              AND (
+                COALESCE(btrim(i.payload->'curriculum'->>'section'),'')=''
+                OR translate(btrim(i.payload->'curriculum'->>'section'),'٠١٢٣٤٥٦٧٨٩','0123456789')=translate(btrim(COALESCE(s.payload->>'section','')),'٠١٢٣٤٥٦٧٨٩','0123456789')
+              )
+          )
+        )
       )
       ORDER BY r.id DESC LIMIT 500`,[user.school_id,ids])).rows;
   }
