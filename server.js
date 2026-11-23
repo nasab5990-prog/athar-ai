@@ -289,7 +289,7 @@ app.post('/api/auth/request-code',loginLimiter,asyncRoute(async(req,res)=>{
     try {
       await transporter.sendMail({ from:process.env.MAIL_FROM || process.env.SMTP_USER,to:email,subject:'رمز التحقق — أثَر',text:`رمز التحقق للدخول إلى منصة أثَر هو: ${code}\nصالح لمدة 10 دقائق. لا تشارك الرمز مع أحد.` });
     } catch(error) {
-      await query('DELETE FROM otp_codes WHERE email=$1',[email]); console.error('OTP email delivery failed:',error);
+      await query('DELETE FROM otp_codes WHERE email=$1 AND code_hash=$2',[email,hashOtp(email,code)]); console.error('OTP email delivery failed:',error);
       return res.status(502).json({ message:'تعذر إرسال رمز التحقق. تحقق من إعدادات البريد في الخادم.' });
     }
   }
