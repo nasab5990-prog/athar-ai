@@ -241,6 +241,24 @@ test('parents and students receive individual impact only when its intervention 
   assert.match(individualImpact, /i\.school_id=r\.school_id/);
 });
 
+test('impact writes require a same-school intervention and enforce teacher ownership', () => {
+  const impact = section("if (kind==='impact') {", "if (clean.student_id) {");
+  assert.match(impact, /SELECT id,owner_id,payload FROM records WHERE id=\$1 AND school_id=\$2 AND kind='intervention'/);
+  assert.match(impact, /req\.user\.role==='teacher'[\s\S]*?linked\.owner_id[\s\S]*?req\.user\.id/);
+  assert.match(impact, /linkedStudentId!==clean\.student_id/);
+  assert.match(impact, /clean\.intervention_record_id=interventionId/);
+});
+
+test('impact writes validate real calendar dates, ordered measurements, modes and session counts', () => {
+  const impact = section("if (kind==='impact') {", "if (clean.student_id) {");
+  assert.match(impact, /validEvidenceDate=value=>/);
+  assert.match(impact, /parsed\.toISOString\(\)\.slice\(0,10\)===date/);
+  assert.match(impact, /clean\.before_date>clean\.after_date/);
+  assert.match(impact, /\['offline','shared','online'\]/);
+  assert.match(impact, /planned<1\|\|planned>30\|\|!Number\.isInteger\(done\)\|\|done<0\|\|done>planned/);
+  assert.match(impact, /sessions_planned===undefined[\s\S]*?sessions_done===undefined/);
+});
+
 test('supervisor completed intervention count is distinct from total intervention count and school scoped', () => {
   const route = section("app.get('/api/supervisor/schools'", "app.get('/api/supervisor/recommendations'");
   assert.match(route, /COUNT\(r\.id\) FILTER \(WHERE r\.kind='intervention'\)::int AS interventions/);
