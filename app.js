@@ -2680,13 +2680,17 @@ function renderReports() {
     const studentsCount = sum('students'), assessmentsCount = sum('assessments'), interventionsCount = sum('interventions');
     const completedCount = sum('completed_interventions'), impactsCount = sum('impacts'), linkedCount = sum('linked_impacts');
     const documentedCount = sum('documented_impacts');
+    const unlinkedCount = Math.max(0, impactsCount - linkedCount);
+    const linkedIncompleteCount = Math.max(0, linkedCount - documentedCount);
     const metrics = '<div class="supervisor-report-metrics">'+
       '<div><span>المدارس المشمولة</span><strong>'+schools.length+'</strong></div>'+
       '<div><span>الطلبة</span><strong>'+studentsCount+'</strong></div>'+
       '<div><span>التقويمات</span><strong>'+assessmentsCount+'</strong></div>'+
       '<div><span>التدخلات المكتملة</span><strong>'+completedCount+' <small>من '+interventionsCount+'</small></strong><em>نسبة الإكمال: '+ratioLabel(completedCount,interventionsCount)+'</em></div>'+
       '<div><span>قياسات الأثر المرتبطة بتدخل</span><strong>'+linkedCount+' <small>من '+impactsCount+'</small></strong><em>نسبة الربط: '+ratioLabel(linkedCount,impactsCount)+'</em></div>'+
-      '<div><span>قياسات مكتملة حقول التوثيق</span><strong>'+documentedCount+' <small>من '+impactsCount+'</small></strong><em>نسبة اكتمال التوثيق: '+ratioLabel(documentedCount,impactsCount)+'</em></div>'+
+      '<div><span>قياسات مكتملة حقول التوثيق</span><strong>'+documentedCount+' <small>من '+linkedCount+' المرتبطة</small></strong><em>نسبة اكتمال التوثيق: '+ratioLabel(documentedCount,linkedCount)+'</em></div>'+
+      '<div><span>قياسات مرتبطة غير مكتملة التوثيق</span><strong>'+linkedIncompleteCount+'</strong></div>'+
+      '<div><span>قياسات غير مرتبطة بتدخل</span><strong>'+unlinkedCount+'</strong></div>'+
       '</div>';
     const recommendationMetrics='<h4>متابعة التوصيات الإشرافية</h4><div class="supervisor-report-metrics recommendation-report-metrics">'+
       '<div><span>إجمالي التوصيات</span><strong>'+recommendations.length+'</strong></div>'+
@@ -2724,8 +2728,8 @@ function renderReports() {
       return '<section class="card supervisor-report-school"><h3>'+esc(school.school_name)+'</h3>'+
         '<p>الطلبة: '+(Number(school.students)||0)+' • التقويمات: '+(Number(school.assessments)||0)+'</p>'+
         '<p>التدخلات: '+schoolInterventions+' • المكتمل: '+schoolCompleted+' ('+ratioLabel(schoolCompleted,schoolInterventions)+')</p>'+
-        '<p>قياسات الأثر: '+schoolImpacts+' • المرتبط بتدخل: '+schoolLinked+' ('+ratioLabel(schoolLinked,schoolImpacts)+')</p>'+
-        '<p>مكتمل حقول التوثيق: '+schoolDocumented+' ('+ratioLabel(schoolDocumented,schoolImpacts)+')</p>'+
+        '<p>قياسات الأثر: '+schoolImpacts+' • المرتبط بتدخل: '+schoolLinked+' ('+ratioLabel(schoolLinked,schoolImpacts)+') • غير المرتبط: '+Math.max(0,schoolImpacts-schoolLinked)+'</p>'+
+        '<p>مكتمل حقول التوثيق: '+schoolDocumented+' من '+schoolLinked+' المرتبطة ('+ratioLabel(schoolDocumented,schoolLinked)+') • المرتبط غير مكتمل التوثيق: '+Math.max(0,schoolLinked-schoolDocumented)+'</p>'+
         '<p><strong>التوصيات:</strong> '+schoolRecommendations.length+' • لم تبدأ: '+schoolPending+' • قيد التنفيذ: '+schoolInProgress+' • المنفذ: '+schoolDone+' ('+ratioLabel(schoolDone,schoolRecommendations.length)+')</p>'+
         '<p>ردود المديرين: '+schoolReplied+' • المتأخر: '+schoolOverdue+'</p>'+
         '<p class="note">آخر نشاط: '+(school.last_activity ? new Date(school.last_activity).toLocaleDateString('ar-OM') : 'لا يوجد نشاط مسجل')+'</p></section>';
@@ -2733,7 +2737,7 @@ function renderReports() {
     const interpretation = '<div class="report-metric-definitions"><strong>قراءة المؤشرات</strong><ul>'+
       '<li>نسبة إكمال التدخلات: التدخلات التي سُجلت حالتها «مكتمل» من إجمالي التدخلات.</li>'+
       '<li>نسبة ربط قياسات الأثر: القياسات المرتبطة بسجل تدخل محدد من إجمالي قياسات الأثر.</li>'+
-      '<li>نسبة اكتمال التوثيق: القياسات التي استوفت حقول التوثيق المطلوبة من إجمالي القياسات. اكتمال التوثيق لا يثبت وحده حدوث تحسن أو أن التدخل سبّبه.</li>'+
+      '<li>نسبة اكتمال التوثيق: القياسات التي استوفت حقول التوثيق المطلوبة من القياسات المرتبطة بتدخل صحيح في المدرسة نفسها. القياسات غير المرتبطة والمرتبطة غير مكتملة التوثيق تعرض منفصلة. اكتمال التوثيق لا يثبت وحده حدوث تحسن أو أن التدخل سبّبه.</li>'+
       '<li>نسبة تنفيذ التوصيات: التوصيات التي حدّثت المدرسة حالتها إلى «نُفذت» من إجمالي التوصيات.</li>'+
       '<li>التوصية المتأخرة: توصية لم تُنفذ وتجاوز تاريخ متابعتها المحدد.</li>'+
       '</ul></div>';
