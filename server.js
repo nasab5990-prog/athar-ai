@@ -1099,12 +1099,12 @@ async function generateTeachingAI(analysis, observedErrors, body) {
     model:process.env.GROQ_MODEL || 'openai/gpt-oss-120b',
     messages:[{role:'system',content:instructions},{role:'user',content:userPrompt}],
     response_format:{type:'json_object'},
-    max_tokens:2500,
+    max_tokens:4000,
     temperature:0.2
   }:{
     model:process.env.OPENAI_MODEL || 'gpt-4.1-mini',
     store:false,
-    max_output_tokens:2500,
+    max_output_tokens:4000,
     instructions,
     input:userPrompt,
     text:{format:{type:'json_object'}}
