@@ -48,7 +48,7 @@ test('demo login is explicitly gated and restricted to supported personas', () =
   const demo = section("app.post('/api/auth/demo'", "app.get('/api/auth/me'");
   assert.match(demo, /if \(!demoEnabled\)/);
   assert.match(demo, /\['teacher','senior_teacher','principal','supervisor','parent','student'\]/);
-  assert.match(demo, /DEMO-SCHOOL/);
+  assert.match(demo, /ensureDemoFixtures\(\)/);
 });
 
 test('supervisor record feed is empty to prevent identifiable-record exposure', () => {
