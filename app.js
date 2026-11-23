@@ -2612,11 +2612,12 @@ function renderPrincipalView() {
   if (!students.length) { el.innerHTML = '<p class="note">لا توجد سجلات طلبة في قاعدة بيانات المدرسة بعد.</p>'; return; }
   const groups = new Map();
   for (const student of students) {
-    const key = `${student.grade || 'غير محدد'} / ${student.section || '—'}`;
+    const key = `${gradeNumber(student.grade) || String(student.grade || 'غير محدد')} / ${sectionNumber(student.section) || '—'}`;
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(student);
   }
-  el.innerHTML = [...groups.entries()].map(([name, group]) => {
+  el.innerHTML = [...groups.entries()].map(([, group]) => {
+    const name = `${group[0]?.grade || 'غير محدد'} / ${group[0]?.section || '—'}`;
     const ids = new Set(group.map(s => s.student_id));
     const groupAssessments = latestAssessmentRows(assessments.filter(a => ids.has(a.student_id)));
     const average = groupAssessments.length ? Math.round(groupAssessments.reduce((sum,a)=>sum+Number(a.pct||0),0)/groupAssessments.length) : null;
