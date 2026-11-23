@@ -161,6 +161,16 @@ test('parents and students receive class-wide impact only through a matching sam
 });
 
 
+test('parents and students receive individual impact only when its intervention belongs to the same linked learner', () => {
+  const scope = section('async function getRecordsForUser(user)', 'app.get(\'/api/records\'');
+  assert.match(scope, /r\.kind<>'impact' AND r\.payload->>'student_id'=ANY\(\$2::text\[\]\)/);
+  const individualImpact = scope.slice(scope.indexOf("r.kind='impact' AND COALESCE(r.payload->>'intervention_record_id'"));
+  assert.match(individualImpact, /i\.id::text=r\.payload->>'intervention_record_id'/);
+  assert.match(individualImpact, /i\.payload->>'student_id'=r\.payload->>'student_id'/);
+  assert.match(individualImpact, /i\.payload->>'student_id'=ANY\(\$2::text\[\]\)/);
+  assert.match(individualImpact, /i\.school_id=r\.school_id/);
+});
+
 test('supervisor completed intervention count is distinct from total intervention count and school scoped', () => {
   const route = section("app.get('/api/supervisor/schools'", "app.get('/api/supervisor/recommendations'");
   assert.match(route, /COUNT\(r\.id\) FILTER \(WHERE r\.kind='intervention'\)::int AS interventions/);
