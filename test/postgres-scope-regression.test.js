@@ -158,6 +158,8 @@ test('parents and students receive class-wide impact only through a matching sam
   assert.match(scope, /i\.payload->'curriculum'->>'grade'/);
   assert.match(scope, /i\.payload->'curriculum'->>'section'/);
   assert.match(scope, /s\.payload->>'student_id'=ANY\(\$2::text\[\]\)/);
+  const classImpact = scope.slice(scope.indexOf("JOIN records s ON s.school_id=i.school_id"));
+  assert.match(classImpact, /COALESCE\(r\.payload->>'student_id',''\)='' OR r\.payload->>'student_id'=s\.payload->>'student_id'/);
 });
 
 
