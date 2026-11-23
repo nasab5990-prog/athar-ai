@@ -2797,7 +2797,9 @@ function renderReports() {
     if (item.student_id) {
       const learner = students.find(student => String(student.student_id) === String(item.student_id));
       const curriculum = intervention.curriculum || {};
-      if (!learner || gradeNumber(learner.grade) !== gradeNumber(curriculum.grade)) return false;
+      const learnerGrade = gradeNumber(learner?.grade);
+      const targetGrade = gradeNumber(curriculum.grade);
+      if (!learner || !learnerGrade || !targetGrade || learnerGrade !== targetGrade) return false;
       const targetSection = sectionNumber(curriculum.section);
       if (targetSection && targetSection !== sectionNumber(learner.section)) return false;
     }
