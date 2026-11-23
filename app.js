@@ -2635,13 +2635,17 @@ function renderPrincipalView() {
   el.innerHTML = [...groups.entries()].map(([, group]) => {
     const name = `${group[0]?.grade || 'غير محدد'} / ${group[0]?.section || '—'}`;
     const ids = new Set(group.map(s => s.student_id));
-    const groupAssessments = latestAssessmentRows(assessments.filter(a => {
+    const scopedAssessments = assessments.filter(a => {
       if (a.student_id) return ids.has(a.student_id);
       return gradeNumber(a.grade) === gradeNumber(group[0]?.grade) &&
         sectionNumber(a.section) === sectionNumber(group[0]?.section);
-    }));
-    const average = groupAssessments.length ? Math.round(groupAssessments.reduce((sum,a)=>sum+Number(a.pct||0),0)/groupAssessments.length) : null;
-    const gaps = groupAssessments.filter(a => Number(a.pct) < 70).length;
+    });
+    // Never blend class-level results with individual learner results in one average.
+    const individualAssessments = latestAssessmentRows(scopedAssessments.filter(a => a.student_id));
+    const classAssessments = latestAssessmentRows(scopedAssessments.filter(a => !a.student_id));
+    const averageRows = individualAssessments.length ? individualAssessments : classAssessments;
+    const average = averageRows.length ? Math.round(averageRows.reduce((sum,a)=>sum+Number(a.pct||0),0)/averageRows.length) : null;
+    const gaps = averageRows.filter(a => Number(a.pct) < 70).length;
     const groupInterventions = interventions.filter(i => {
       if (i.student_id) return ids.has(i.student_id);
       const curriculum = i.curriculum || {};
@@ -2649,7 +2653,7 @@ function renderPrincipalView() {
       const interventionSection = sectionNumber(curriculum.section);
       return Boolean(gradeMatches && (!interventionSection || interventionSection === sectionNumber(group[0]?.section)));
     }).length;
-    return `<div class="card" style="margin-top:.7rem"><h3>${esc(name)}</h3><p>عدد الطلبة: ${group.length} • متوسط الإتقان: ${average === null ? 'لا توجد بيانات' : `${average}%`} • نتائج دون 70%: ${gaps} • التدخلات: ${groupInterventions}</p></div>`;
+    return `<div class="card" style="margin-top:.7rem"><h3>${esc(name)}</h3><p>عدد الطلبة: ${group.length} • متوسط الإتقان ${individualAssessments.length ? '(من النتائج الفردية)' : classAssessments.length ? '(من التقويمات الصفية)' : ''}: ${average === null ? 'لا توجد بيانات' : `${average}%`} • نتائج دون 70%: ${gaps}</p><p class="note">النتائج الفردية: ${individualAssessments.length} • التقويمات الصفية: ${classAssessments.length} • التدخلات: ${groupInterventions}</p></div>`;
   }).join('');
 }
 let supervisorReportSchoolId = 'all';
