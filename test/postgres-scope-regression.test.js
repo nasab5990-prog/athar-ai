@@ -116,5 +116,5 @@ test('impact linked to a class intervention normalizes grade prefixes and Arabic
 
 test('teacher subject assignment matching collapses real whitespace sequences', () => {
   const helper = section('async function validateTeacherTeachingContext', 'async function studentExistsInSchool');
-  assert.equal((helper.match(/replace\\(\\/\\\\s\\+\\/g/g) || []).length, 2);
+  assert.equal(helper.split(String.raw`replace(/\\s+/g,' ')`).length - 1, 2);
 });
