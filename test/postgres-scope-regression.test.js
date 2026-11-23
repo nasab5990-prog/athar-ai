@@ -167,7 +167,7 @@ test('parents and students receive individual impact only when its intervention 
   const individualImpact = scope.slice(scope.indexOf("r.kind='impact' AND COALESCE(r.payload->>'intervention_record_id'"));
   assert.match(individualImpact, /i\.id::text=r\.payload->>'intervention_record_id'/);
   assert.match(individualImpact, /i\.payload->>'student_id'=r\.payload->>'student_id'/);
-  assert.match(individualImpact, /i\.payload->>'student_id'=ANY\(\$2::text\[\]\)/);
+  assert.match(individualImpact, /r\.payload->>'student_id'=ANY\(\$2::text\[\]\)/);
   assert.match(individualImpact, /i\.school_id=r\.school_id/);
 });
 
