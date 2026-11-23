@@ -476,7 +476,14 @@ app.get('/api/supervisor/schools',requireAuth,requireRole('supervisor'),asyncRou
             AND i.id::text=r.payload->>'intervention_record_id'
         ))::int AS linked_impacts,
       COUNT(r.id) FILTER (WHERE r.kind='impact'
-        AND COALESCE(r.payload->>'intervention_record_id','') ~ '^[0-9]+
+        AND COALESCE(r.payload->>'intervention_record_id','') ~ '^[0-9]+$'
+        AND EXISTS (
+          SELECT 1 FROM records i
+          WHERE i.school_id=r.school_id
+            AND i.kind='intervention'
+            AND i.id::text=r.payload->>'intervention_record_id'
+        )
+        AND length(btrim(COALESCE(r.payload->>'evidence_tool',''))) BETWEEN 1 AND 180
         AND COALESCE(r.payload->>'before_date','') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
         AND COALESCE(r.payload->>'after_date','') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
         AND r.payload->>'before_date' <= r.payload->>'after_date'
@@ -491,8 +498,7 @@ app.get('/api/supervisor/schools',requireAuth,requireRole('supervisor'),asyncRou
            AND LPAD(r.payload->>'sessions_done',2,'0') BETWEEN '01' AND '30'
            AND LPAD(r.payload->>'sessions_done',2,'0') <= LPAD(r.payload->>'sessions_planned',2,'0')
           ELSE FALSE
-        END)::int AS documented_impacts,
-      MAX(r.created_at) AS last_activity
+        END)::int AS documented_impacts,      MAX(r.created_at) AS last_activity
      FROM supervisor_schools s
      LEFT JOIN records r ON r.school_id=s.school_id
      WHERE s.user_id=$1
