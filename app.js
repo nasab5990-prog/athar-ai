@@ -2600,8 +2600,13 @@ function renderStudentProgress() {
   const student = students.find(s => s.student_id === selectedId && allowedIds.includes(s.student_id));
   if (!student) { el.innerHTML = '<p class="note">لا توجد بيانات مرتبطة بهذا الحساب. راجع إدارة المدرسة لربط الحساب بسجل الطالب الصحيح.</p>'; return; }
   const personal = assessments.filter(a => a.student_id === student.student_id);
-  const latest = new Map();
-  personal.forEach(a => { const key = a.skill || a.name; if (!latest.has(key)) latest.set(key, a); });
+  // Reuse the same subject/grade/section/skill grouping used by the reports.
+  const latest = new Map(latestAssessmentRows(personal).map(a => [
+    [String(a.subject || '').trim().toLowerCase(), gradeNumber(a.grade) || String(a.grade || '').trim(),
+      sectionNumber(a.section) || String(a.section || '').trim(),
+      displaySkillName(a.skill || a.name || 'skill')].join('|'),
+    a
+  ]));
   const interventionRows = interventions.filter(i => {
     if (i.student_id) return i.student_id === student.student_id;
     const curriculum = i.curriculum || {};
