@@ -539,7 +539,7 @@ app.post('/api/records',recordLimiter,requireAuth,requireRole('teacher','senior_
         if(!studentRow)return res.status(400).json({message:'الطالب المحدد غير موجود في سجلات المدرسة.'});
         const gradeNames={'الأول':'1','الاول':'1','الثاني':'2','الثالث':'3','الرابع':'4','الخامس':'5','السادس':'6','السابع':'7','الثامن':'8','التاسع':'9','العاشر':'10','الحادي عشر':'11','الثاني عشر':'12'};
         const normalizeGrade=value=>{
-          const raw=String(value||'').trim().replace(/^الصف\\s*/,'');
+          const raw=String(value||'').trim().replace(/^الصف\s*/,'');
           return /^(?:[1-9]|1[0-2])$/.test(raw)?raw:(gradeNames[raw]||raw);
         };
         if(normalizeGrade(studentRow.payload?.grade)!==normalizeGrade(clean.grade) ||
