@@ -147,6 +147,17 @@ test('principal mastery average weights each learner equally and labels low-mast
   assert.match(view, /const gapLabel = individualAssessments\.length \? 'طلبة دون 70%' : 'نتائج صفية دون 70%'/);
 });
 
+test('principal class summaries separate total active completed and paused interventions', () => {
+  const view = section(app, 'function renderPrincipalView() {', 'let supervisorReportSchoolId');
+  assert.match(view, /const groupInterventionRows = interventions\.filter\(i =>/);
+  assert.match(view, /i\.status === 'completed'/);
+  assert.match(view, /i\.status === 'paused'/);
+  assert.match(view, /التدخلات المسجلة:/);
+  assert.match(view, /مكتملة:/);
+  assert.match(view, /نشطة:/);
+  assert.match(view, /متوقفة مؤقتًا:/);
+});
+
 test('latest assessment selection relies on newest-first record ordering', () => {
   const loader = section(server, 'function getRecordsForUser(user) {', 'function findStudentOwnedBy');
   assert.match(loader, /ORDER BY id DESC/);
