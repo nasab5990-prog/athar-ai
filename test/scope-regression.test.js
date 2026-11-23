@@ -130,7 +130,9 @@ test('principal mastery average never blends class-wide and individual assessmen
   const view = section(app, 'function renderPrincipalView() {', 'let supervisorReportSchoolId');
   assert.match(view, /const individualAssessments = latestAssessmentRows\(scopedAssessments\.filter\(a => a\.student_id\)\)/);
   assert.match(view, /const classAssessments = latestAssessmentRows\(scopedAssessments\.filter\(a => !a\.student_id\)\)/);
-  assert.match(view, /const averageRows = individualAssessments\.length \? individualAssessments : classAssessments/);
+  assert.match(view, /const learnerMastery = \[\.\.\.learnerAverages\.values\(\)\]/);
+  assert.match(view, /const average = learnerMastery\.length/);
+  assert.match(view, /: classAssessments\.length/);
   assert.match(view, /النتائج الفردية:/);
   assert.match(view, /التقويمات الصفية:/);
 });
