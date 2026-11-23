@@ -48,6 +48,15 @@ test('teacher record access remains school and assignment scoped', () => {
   assert.match(scope, /payload->>'student_id'=ANY\(\$3::text\[\]\)/);
 });
 
+test('radar analysis must match the linked assessment student, scope, and skill', () => {
+  const route = section("app.post('/api/analysis'", "app.use((error,req,res,next)=>");
+  assert.match(route, /sourceAssessment\.payload/);
+  assert.match(route, /String\(source\.student_id\|\|''\)!==String\(requestBody\.student_id\|\|''\)/);
+  assert.match(route, /for\(const field of \['subject','grade','section'\]\)/);
+  assert.match(route, /sourceSkill&&requestedSkill&&sourceSkill!==requestedSkill/);
+  assert.match(route, /assessment_record_id:assessmentRecordId/);
+});
+
 test('individual assessments require a real student in the selected grade and section', () => {
   const route = section("app.post('/api/records'", "app.put('/api/records/:id'");
   assert.match(route, /assessmentScope==='individual'[\s\S]*?if\(!clean\.student_id\)/);
