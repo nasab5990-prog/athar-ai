@@ -45,11 +45,12 @@ test('teacher records are limited to the school and assigned learners', () => {
   assert.match(scope, /student_id/);
 });
 
-test('principal class intervention counts include matching grade and section records', () => {
+test('principal class intervention counts include matching grade and normalized section records', () => {
   const view = section(app, 'function renderPrincipalView() {', 'let supervisorReportSchoolId');
   assert.match(view, /if \(i\.student_id\) return ids\.has\(i\.student_id\)/);
   assert.match(view, /gradeNumber\(curriculum\.grade\)/);
-  assert.match(view, /sectionNumber\(curriculum\.section\)/);\n  assert.match(view, /sectionNumber\(group\[0\]\?\.section\)/);
+  assert.match(view, /sectionNumber\(curriculum\.section\)/);
+  assert.match(view, /sectionNumber\(group\[0\]\?\.section\)/);
 });
 
 test('reports list only impact measurements linked to an existing intervention', () => {
@@ -58,18 +59,17 @@ test('reports list only impact measurements linked to an existing intervention',
   assert.match(report, /item\.intervention_record_id && validInterventionIds\.has\(String\(item\.intervention_record_id\)\)/);
 });
 
-test('student progress includes individual and matching class interventions', () => {
+test('student progress includes individual and matching class interventions with normalized sections', () => {
   const view = section(app, 'function renderStudentProgress() {', 'function renderPrincipalView()');
   assert.match(view, /if \(i\.student_id\) return i\.student_id === student\.student_id/);
   assert.match(view, /gradeNumber\(curriculum\.grade\)/);
-  assert.match(view, /sectionNumber\(curriculum\.section\)/);\n  assert.match(view, /sectionNumber\(student\.section\)/);
+  assert.match(view, /sectionNumber\(curriculum\.section\)/);
+  assert.match(view, /sectionNumber\(student\.section\)/);
 });
 
-
-test('student and principal progress normalize Arabic grade and section digits', () => {
+test('grade and section helpers normalize Arabic digits and grade prefixes', () => {
   const helper = section(app, 'function gradeNumber(value)', 'function filterInterventionStudents()');
-  assert.match(helper, /replace\(\/\^الصف\\\\s\*\//);
-  assert.match(helper, /replace\(\/\[٠-٩\]\/g/);
-  assert.match(helper, /function sectionNumber\(value\)/);
-  assert.match(helper, /sectionNumber\(curriculum\.section\)/);
+  assert.ok(helper.includes(String.raw`replace(/^الصف\\s*/,'')`));
+  assert.ok(helper.includes("replace(/[٠-٩]/g"));
+  assert.ok(helper.includes('function sectionNumber(value)'));
 });
