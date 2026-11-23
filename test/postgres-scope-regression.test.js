@@ -95,6 +95,15 @@ test('parent and student class interventions normalize Arabic grade prefixes and
   assert.match(scope, /translate\(btrim\(r\.payload->'curriculum'->>'section'\),'٠١٢٣٤٥٦٧٨٩','0123456789'\)=translate\(btrim\(COALESCE\(s\.payload->>'section',''\)\),'٠١٢٣٤٥٦٧٨٩','0123456789'\)/);
 });
 
+
+test('impact grade normalizer strips the Arabic الصف prefix and maps Arabic digits', () => {
+  const helper = section('function normalizedGradeKey(value)', 'function assignedGradeLabels(grades)');
+  assert.ok(helper.includes(String.raw`replace(/^الصف\\s*/,'')`));
+  assert.ok(helper.includes("replace(/[٠-٩]/g"));
+  assert.ok(helper.includes("return labels[raw] || raw"));
+  assert.match(helper, /function normalizedSectionKey/);
+});
+
 test('impact linked to a class intervention normalizes grade prefixes and Arabic section digits', () => {
   const route = section("app.post('/api/records'", "app.put('/api/records/:id'");
   assert.match(route, /normalizedGradeKey\(curriculum\.grade\)/);
