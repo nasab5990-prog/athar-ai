@@ -301,14 +301,17 @@ app.post('/api/auth/verify-code',loginLimiter,asyncRoute(async(req,res)=>{
   const row=(await query('SELECT * FROM otp_codes WHERE email=$1',[email])).rows[0];
   const expiresAtMs=row?.expires_at instanceof Date?row.expires_at.getTime():(Number.isFinite(Number(row?.expires_at))?Number(row.expires_at):Date.parse(row?.expires_at));
   if (!row || !Number.isFinite(expiresAtMs) || expiresAtMs<Date.now() || row.attempts>=5) {
-    await query('DELETE FROM otp_codes WHERE email=$1',[email]);
+    if (row?.code_hash) await query('DELETE FROM otp_codes WHERE email=$1 AND code_hash=$2',[email,row.code_hash]);
     return res.status(401).json({ message:'انتهت صلاحية الرمز أو لم يعد صالحًا. اطلب رمزًا جديدًا.' });
   }
-  if (!safeHexEqual(row.code_hash,hashOtp(email,code))) {
-    await query('UPDATE otp_codes SET attempts=attempts+1 WHERE email=$1',[email]);
+  const submittedHash=hashOtp(email,code);
+  if (!safeHexEqual(row.code_hash,submittedHash)) {
+    await query('UPDATE otp_codes SET attempts=attempts+1 WHERE email=$1 AND code_hash=$2 AND attempts<5',[email,row.code_hash]);
     return res.status(401).json({ message:'رمز التحقق غير صحيح.' });
   }
-  await query('DELETE FROM otp_codes WHERE email=$1',[email]);
+  // Consume the OTP atomically: concurrent requests cannot both authenticate with one code.
+  const consumed=await query('DELETE FROM otp_codes WHERE email=$1 AND code_hash=$2 AND attempts<5 AND expires_at>NOW() RETURNING email',[email,submittedHash]);
+  if (!consumed.rowCount) return res.status(401).json({ message:'انتهت صلاحية الرمز أو استُخدم بالفعل. اطلب رمزًا جديدًا.' });
   const user=(await query('SELECT id,email,name,role,school_id,student_id,active FROM users WHERE email=$1 AND active=TRUE',[email])).rows[0];
   if (!user) return res.status(401).json({ message:'الحساب غير مفعّل. راجع مسؤول النظام.' });
   await sessionLogin(req,res,user);
