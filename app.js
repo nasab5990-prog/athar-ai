@@ -2602,7 +2602,11 @@ function renderStudentProgress() {
     const section = sectionNumber(curriculum.section);
     return Boolean(gradeMatches && (!section || section === sectionNumber(student.section)));
   });
-  const impactRows = impacts.filter(i => i.student_id === student.student_id);
+  const visibleInterventionIds = new Set(interventionRows.map(i => String(i.recordId || i.id || '')).filter(Boolean));
+  const impactRows = impacts.filter(i =>
+    i.student_id === student.student_id ||
+    (i.intervention_record_id && visibleInterventionIds.has(String(i.intervention_record_id)))
+  );
   el.innerHTML = `<div class="card"><h3>${esc(student.name)}</h3><p>${esc(student.grade || '')} • شعبة ${esc(student.section || '')}</p></div>${[...latest.values()].map(a => `<div class="card" style="margin-top:.7rem"><strong>${esc(displaySkillName(a.skill || a.name))}</strong><div class="progress"><div class="progress-bar" style="width:${Math.max(0,Math.min(100,Number(a.pct)||0))}%"></div></div><p>نسبة الإتقان المسجلة: ${Number(a.pct)}%</p></div>`).join('') || '<p class="note">لا توجد تقويمات فردية مرتبطة بهذا الطالب بعد.</p>'}<div class="card" style="margin-top:.7rem"><h3>توصيات وتدخلات المعلم</h3>${interventionRows.map(i => `<p><strong>${esc(displaySkillName(i.skill))}</strong><br>${esc(i.goal || '')}<br><span class="note">${esc(i.steps || '')}</span></p>`).join('') || '<p>لا توجد تدخلات مسجلة لهذا الطالب.</p>'}</div><div class="card" style="margin-top:.7rem"><h3>قياس الأثر</h3>${impactRows.map(i => `<p>${Number(i.before)}% ← ${Number(i.after)}% (${Number(i.difference)>0?'+':''}${Number(i.difference)} نقطة)</p><p class="note">${esc(getImpactEvidenceStatus(i))} • ${esc(i.evidence_tool || 'أداة القياس غير محددة')} • الجلسات ${Number(i.sessions_done || 0)}/${Number(i.sessions_planned || 0)}</p>`).join('') || '<p>لا توجد قياسات أثر مسجلة لهذا الطالب.</p>'}</div>`;
 }
 function renderPrincipalView() {
