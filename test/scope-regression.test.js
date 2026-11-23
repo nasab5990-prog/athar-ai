@@ -89,6 +89,15 @@ test('principal class summaries include class-wide assessments only in matching 
   assert.match(view, /sectionNumber\(a\.section\) === sectionNumber\(group\[0\]\?\.section\)/);
 });
 
+test('latest assessment summaries keep subjects grades and sections separate', () => {
+  const helper = section(app, 'function latestAssessmentRows(rows = assessments)', 'let supervisorRecommendations');
+  assert.match(helper, /assessment\.subject/);
+  assert.match(helper, /gradeNumber\(assessment\.grade\)/);
+  assert.match(helper, /sectionNumber\(assessment\.section\)/);
+  assert.match(helper, /displaySkillName\(assessment\.skill/);
+});
+
+
 
 
 test('student progress shows impact linked to visible class interventions', () => {
