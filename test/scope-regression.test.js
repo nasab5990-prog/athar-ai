@@ -82,6 +82,14 @@ test('principal summaries group equivalent Arabic and Western grade and section 
   assert.match(view, /groups\.has\(key\)/);
 });
 
+test('principal class summaries include class-wide assessments only in matching grade and section', () => {
+  const view = section(app, 'function renderPrincipalView() {', 'let supervisorReportSchoolId');
+  assert.match(view, /if \(a\.student_id\) return ids\.has\(a\.student_id\)/);
+  assert.match(view, /gradeNumber\(a\.grade\) === gradeNumber\(group\[0\]\?\.grade\)/);
+  assert.match(view, /sectionNumber\(a\.section\) === sectionNumber\(group\[0\]\?\.section\)/);
+});
+
+
 
 test('student progress shows impact linked to visible class interventions', () => {
   const view = section(app, 'function renderStudentProgress() {', 'function renderPrincipalView()');
