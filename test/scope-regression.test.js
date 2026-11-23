@@ -133,3 +133,13 @@ test('principal mastery average never blends class-wide and individual assessmen
   assert.match(view, /النتائج الفردية:/);
   assert.match(view, /التقويمات الصفية:/);
 });
+
+test('general reports separate individual and class assessment populations and group skills by subject', () => {
+  const view = section(app, 'function renderReports() {', 'let schoolGradeSections');
+  assert.match(view, /const individualReportAssessments = latestAssessmentRows\(allLatestAssessments\.filter\(a => a\.student_id\)\)/);
+  assert.match(view, /const classReportAssessments = latestAssessmentRows\(allLatestAssessments\.filter\(a => !a\.student_id\)\)/);
+  assert.match(view, /const currentAssessments = individualReportAssessments\.length \? individualReportAssessments : classReportAssessments/);
+  assert.match(view, /const label = subject \? subject \+ ' — ' \+ skill : skill/);
+  assert.match(view, /عدد النتائج الفردية:/);
+  assert.match(view, /عدد التقويمات الصفية:/);
+});
