@@ -310,7 +310,8 @@ app.post('/api/auth/verify-code',loginLimiter,asyncRoute(async(req,res)=>{
     return res.status(401).json({ message:'رمز التحقق غير صحيح.' });
   }
   // Consume the OTP atomically: concurrent requests cannot both authenticate with one code.
-  const consumed=await query('DELETE FROM otp_codes WHERE email=$1 AND code_hash=$2 AND attempts<5 AND expires_at>NOW() RETURNING email',[email,submittedHash]);
+  const consumeNow=otpExpiryUsesTimestamp?new Date():Date.now();
+  const consumed=await query('DELETE FROM otp_codes WHERE email=$1 AND code_hash=$2 AND attempts<5 AND expires_at>$3 RETURNING email',[email,submittedHash,consumeNow]);
   if (!consumed.rowCount) return res.status(401).json({ message:'انتهت صلاحية الرمز أو استُخدم بالفعل. اطلب رمزًا جديدًا.' });
   const user=(await query('SELECT id,email,name,role,school_id,student_id,active FROM users WHERE email=$1 AND active=TRUE',[email])).rows[0];
   if (!user) return res.status(401).json({ message:'الحساب غير مفعّل. راجع مسؤول النظام.' });
