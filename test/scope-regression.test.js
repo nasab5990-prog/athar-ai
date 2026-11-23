@@ -89,3 +89,12 @@ test('student progress shows impact linked to visible class interventions', () =
   assert.match(view, /i\.student_id === student\.student_id/);
   assert.match(view, /visibleInterventionIds\.has\(String\(i\.intervention_record_id\)\)/);
 });
+
+
+test('supervisor report separates unlinked and linked-but-undocumented impacts', () => {
+  const report = section("function renderReports()", "function ");
+  assert.match(report, /Math\.max\(0, impactsCount - linkedCount\)/);
+  assert.match(report, /Math\.max\(0, linkedCount - documentedCount\)/);
+  assert.match(report, /من '\+linkedCount\+' المرتبطة/);
+  assert.match(report, /غير المرتبط: '\+Math\.max\(0,schoolImpacts-schoolLinked\)/);
+});
