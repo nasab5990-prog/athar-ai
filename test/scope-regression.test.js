@@ -199,3 +199,23 @@ test('report impact rows require a valid intervention and matching learner or cl
   assert.match(view, /if \(targetSection && targetSection !== sectionNumber\(learner\.section\)\) return false/);
   assert.match(view, /const skill = displaySkillName\(intervention\?\.skill/);
 });
+
+
+test('assessment to radar to intervention to impact workflow preserves exact record links', () => {
+  const assessment = section(app, 'async function saveAssessment()', 'function enableAssessmentSave()');
+  assert.match(assessment, /syncRecord\('assessment', payload\)/);
+  assert.match(assessment, /assessment_record_id:result\.id/);
+  assert.match(assessment, /api\('\/api\/analysis'[\s\S]*?radarRequest/);
+  assert.match(assessment, /assessments\.unshift[\s\S]*?recordId:result\.id/);
+  assert.match(assessment, /analyses\.unshift[\s\S]*?assessment_record_id:result\.id/);
+
+  const intervention = section(app, 'async function saveIntervention()', 'function renderInt()');
+  assert.match(intervention, /suggestionMatchesCurrent/);
+  assert.match(intervention, /assessment_record_id:suggestionMatchesCurrent \? suggestion\.assessmentRecordId/);
+  assert.match(intervention, /syncRecord\('intervention', payload\)/);
+
+  const impact = section(app, 'function calcImpact()', 'function renderImpactHistory()');
+  assert.match(impact, /interventions\.find\(item => String\(item\.recordId\) === interventionId\)/);
+  assert.match(impact, /intervention_record_id:intervention\.recordId/);
+  assert.match(impact, /syncRecord\('impact', payload\)/);
+});
