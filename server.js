@@ -528,6 +528,27 @@ app.post('/api/records',recordLimiter,requireAuth,requireRole('teacher','senior_
           !Number.isFinite(pct) || pct<0 || pct>100 || !['class','individual'].includes(clean.assessment_scope||'class')) {
         return res.status(400).json({message:'بيانات التقويم غير مكتملة أو أن النتيجة خارج النطاق المسموح.'});
       }
+      const assessmentScope=clean.assessment_scope||'class';
+      if(assessmentScope==='individual'){
+        clean.student_id=safeText(clean.student_id,80);
+        if(!clean.student_id)return res.status(400).json({message:'اختر الطالب للتقويم الفردي.'});
+        const studentRow=(await query(
+          "SELECT payload FROM records WHERE school_id=$1 AND kind='student' AND payload->>'student_id'=$2 LIMIT 1",
+          [req.user.school_id,clean.student_id]
+        )).rows[0];
+        if(!studentRow)return res.status(400).json({message:'الطالب المحدد غير موجود في سجلات المدرسة.'});
+        const gradeNames={'الأول':'1','الاول':'1','الثاني':'2','الثالث':'3','الرابع':'4','الخامس':'5','السادس':'6','السابع':'7','الثامن':'8','التاسع':'9','العاشر':'10','الحادي عشر':'11','الثاني عشر':'12'};
+        const normalizeGrade=value=>{
+          const raw=String(value||'').trim().replace(/^الصف\\s*/,'');
+          return /^(?:[1-9]|1[0-2])$/.test(raw)?raw:(gradeNames[raw]||raw);
+        };
+        if(normalizeGrade(studentRow.payload?.grade)!==normalizeGrade(clean.grade) ||
+           String(studentRow.payload?.section||'').trim()!==String(clean.section||'').trim()){
+          return res.status(400).json({message:'الطالب المحدد لا ينتمي إلى الصف والشعبة المختارين للتقويم.'});
+        }
+      }else{
+        clean.student_id=null;
+      }
       try { await validateTeacherTeachingContext(req.user,{grade:clean.grade,section:clean.section,subject:clean.subject}); }
       catch(error) { return res.status(error.status||403).json({message:error.message}); }
     }
