@@ -115,3 +115,12 @@ test('supervisor report separates unlinked and linked-but-undocumented impacts',
   assert.match(report, /من '\+linkedCount\+' المرتبطة/);
   assert.match(report, /غير المرتبط: '\+Math\.max\(0,schoolImpacts-schoolLinked\)/);
 });
+
+test('student progress keeps same-named skills separate across subjects and class scopes', () => {
+  const view = section(app, 'function renderStudentProgress() {', 'function renderPrincipalView()');
+  assert.match(view, /latestAssessmentRows\(personal\)/);
+  assert.match(view, /String\(a\.subject \|\| ''\)\.trim\(\)\.toLowerCase\(\)/);
+  assert.match(view, /gradeNumber\(a\.grade\)/);
+  assert.match(view, /sectionNumber\(a\.section\)/);
+  assert.match(view, /displaySkillName\(a\.skill \|\| a\.name/);
+});
