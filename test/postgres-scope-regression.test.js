@@ -52,7 +52,7 @@ test('failed OTP email delivery only removes the code from that send attempt', (
 
 test('OTP verification consumes the matching unexpired code atomically to prevent replay', () => {
   const otp = section("app.post('/api/auth/verify-code'", "async function ensureDemoFixtures");
-  assert.match(otp, /DELETE FROM otp_codes WHERE email=\$1 AND code_hash=\$2 AND attempts<5 AND expires_at>NOW\(\) RETURNING email/);
+  assert.match(otp, /const consumeNow=otpExpiryUsesTimestamp\?new Date\(\):Date\.now\(\)/);\n  assert.match(otp, /DELETE FROM otp_codes WHERE email=\$1 AND code_hash=\$2 AND attempts<5 AND expires_at>\$3 RETURNING email/);
   assert.match(otp, /if \(!consumed\.rowCount\) return res\.status\(401\)/);
   assert.match(otp, /UPDATE otp_codes SET attempts=attempts\+1 WHERE email=\$1 AND code_hash=\$2 AND attempts<5/);
   assert.match(otp, /DELETE FROM otp_codes WHERE email=\$1 AND code_hash=\$2/);
