@@ -136,3 +136,13 @@ test('all roles must use an existing same-school student for individual interven
     assert.match(route, /normalizedSectionKey\(curriculum\.section\)!==normalizedSectionKey\(assignedSection\)/);
   }
 });
+
+test('class-wide impact without a selected student still enforces teacher teaching assignment', () => {
+  const route = section("app.post('/api/records'", "app.put('/api/records/:id'");
+  const impact = route.slice(route.indexOf("if (kind==='impact')"));
+  assert.match(impact, /else if \(!clean\.student_id && !linkedStudentId && req\.user\.role==='teacher'\)/);
+  assert.match(impact, /const classGrade=normalizedGradeKey\(linkedCurriculum\.grade\)/);
+  assert.match(impact, /!linkedCurriculum\.subject/);
+  assert.match(impact, /validateTeacherTeachingContext\(req\.user/);
+  assert.match(impact, /section:normalizedSectionKey\(linkedCurriculum\.section\)/);
+});
