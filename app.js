@@ -2748,7 +2748,8 @@ function renderReports() {
     const lowCount = scores.filter(score => score < 70).length;
     return `<li><strong>${esc(skill)}</strong> — متوسط الإتقان ${average}% • نتائج دون 70%: ${lowCount} من ${scores.length}</li>`;
   }).join('');
-  const linkedImpactRows = impacts.filter(item => item.intervention_record_id);
+  const validInterventionIds = new Set(interventions.map(item => String(item.recordId)));
+  const linkedImpactRows = impacts.filter(item => item.intervention_record_id && validInterventionIds.has(String(item.intervention_record_id)));
   const impactRowsHtml = linkedImpactRows.slice(0,10).map(item => {
     const intervention = interventions.find(row => String(row.recordId) === String(item.intervention_record_id));
     const skill = displaySkillName(item.intervention_skill || intervention?.skill || 'مهارة غير محددة');
