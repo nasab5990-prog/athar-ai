@@ -49,7 +49,7 @@ test('principal class intervention counts include matching grade and section rec
   const view = section(app, 'function renderPrincipalView() {', 'let supervisorReportSchoolId');
   assert.match(view, /if \(i\.student_id\) return ids\.has\(i\.student_id\)/);
   assert.match(view, /gradeNumber\(curriculum\.grade\)/);
-  assert.match(view, /interventionSection === String\(group\[0\]\?\.section/);
+  assert.match(view, /sectionNumber\(curriculum\.section\)/);\n  assert.match(view, /sectionNumber\(group\[0\]\?\.section\)/);
 });
 
 test('reports list only impact measurements linked to an existing intervention', () => {
@@ -62,5 +62,14 @@ test('student progress includes individual and matching class interventions', ()
   const view = section(app, 'function renderStudentProgress() {', 'function renderPrincipalView()');
   assert.match(view, /if \(i\.student_id\) return i\.student_id === student\.student_id/);
   assert.match(view, /gradeNumber\(curriculum\.grade\)/);
-  assert.match(view, /section === String\(student\.section/);
+  assert.match(view, /sectionNumber\(curriculum\.section\)/);\n  assert.match(view, /sectionNumber\(student\.section\)/);
+});
+
+
+test('student and principal progress normalize Arabic grade and section digits', () => {
+  const helper = section(app, 'function gradeNumber(value)', 'function filterInterventionStudents()');
+  assert.match(helper, /replace\(\/\^الصف\\\\s\*\//);
+  assert.match(helper, /replace\(\/\[٠-٩\]\/g/);
+  assert.match(helper, /function sectionNumber\(value\)/);
+  assert.match(helper, /sectionNumber\(curriculum\.section\)/);
 });
