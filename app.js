@@ -2623,7 +2623,11 @@ function renderPrincipalView() {
   el.innerHTML = [...groups.entries()].map(([, group]) => {
     const name = `${group[0]?.grade || 'غير محدد'} / ${group[0]?.section || '—'}`;
     const ids = new Set(group.map(s => s.student_id));
-    const groupAssessments = latestAssessmentRows(assessments.filter(a => ids.has(a.student_id)));
+    const groupAssessments = latestAssessmentRows(assessments.filter(a => {
+      if (a.student_id) return ids.has(a.student_id);
+      return gradeNumber(a.grade) === gradeNumber(group[0]?.grade) &&
+        sectionNumber(a.section) === sectionNumber(group[0]?.section);
+    }));
     const average = groupAssessments.length ? Math.round(groupAssessments.reduce((sum,a)=>sum+Number(a.pct||0),0)/groupAssessments.length) : null;
     const gaps = groupAssessments.filter(a => Number(a.pct) < 70).length;
     const groupInterventions = interventions.filter(i => {
