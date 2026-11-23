@@ -50,11 +50,11 @@ test('teacher record access remains school and assignment scoped', () => {
 
 test('individual assessments require a real student in the selected grade and section', () => {
   const route = section("app.post('/api/records'", "app.put('/api/records/:id'");
-  assert.match(route, /assessmentScope==='individual'[\\s\\S]*?if\\(!clean\\.student_id\\)/);
-  assert.match(route, /WHERE school_id=\\$1 AND kind='student' AND payload->>'student_id'=\\$2/);
-  assert.match(route, /normalizeGrade\\(studentRow\\.payload\\?\\.grade\\)!==normalizeGrade\\(clean\\.grade\\)/);
-  assert.match(route, /studentRow\\.payload\\?\\.section[\\s\\S]*?clean\\.section/);
-  assert.match(route, /assessmentScope!=='individual'[\\s\\S]*?clean\\.student_id=null/);
+  assert.match(route, /assessmentScope==='individual'[\s\S]*?if\(!clean\.student_id\)/);
+  assert.match(route, /WHERE school_id=\$1 AND kind='student' AND payload->>'student_id'=\$2/);
+  assert.match(route, /normalizeGrade\(studentRow\.payload\?\.grade\)!==normalizeGrade\(clean\.grade\)/);
+  assert.match(route, /studentRow\.payload\?\.section[\s\S]*?clean\.section/);
+  assert.match(route, /assessmentScope!=='individual'[\s\S]*?clean\.student_id=null/);
 });
 
 test('supervisor linked-impact counts require an existing intervention in the same school', () => {
