@@ -54,9 +54,10 @@ test('principal class intervention counts include matching grade and normalized 
 });
 
 test('reports list only impact measurements linked to an existing intervention', () => {
-  const report = section(app, 'const validInterventionIds = new Set(interventions.map', 'const impactRowsHtml = linkedImpactRows');
-  assert.match(report, /interventions\.map\(item => String\(item\.recordId\)\)/);
-  assert.match(report, /item\.intervention_record_id && validInterventionIds\.has\(String\(item\.intervention_record_id\)\)/);
+  const report = section(app, 'const interventionById = new Map(interventions.map', 'const impactRowsHtml = linkedImpactRows');
+  assert.match(report, /interventions\.map\(item => \[String\(item\.recordId\), item\]\)/);
+  assert.match(report, /if \(!intervention\) return false/);
+  assert.match(report, /if \(intervention\.student_id\) return String\(item\.student_id \|\| ''\) === String\(intervention\.student_id\)/);
 });
 
 test('student progress includes individual and matching class interventions with normalized sections', () => {
