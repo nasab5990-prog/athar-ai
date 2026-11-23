@@ -98,7 +98,7 @@ test('parent and student class interventions normalize Arabic grade prefixes and
 
 test('impact grade normalizer strips the Arabic الصف prefix and maps Arabic digits', () => {
   const helper = section('function normalizedGradeKey(value)', 'function assignedGradeLabels(grades)');
-  assert.ok(helper.includes(String.raw`replace(/^الصف\\s*/,'')`));
+  assert.ok(helper.includes(String.raw`replace(/^الصف\s*/,'')`));
   assert.ok(helper.includes("replace(/[٠-٩]/g"));
   assert.ok(helper.includes("return labels[raw] || raw"));
   assert.match(helper, /function normalizedSectionKey/);
