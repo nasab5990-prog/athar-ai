@@ -86,7 +86,7 @@ function teacherAssignmentMatches(assignments, student) {
 }
 async function validateStudentPlacement(user,gradeValue,sectionValue) {
   const gradeNames={'الأول':'1','الاول':'1','الثاني':'2','الثالث':'3','الرابع':'4','الخامس':'5','السادس':'6','السابع':'7','الثامن':'8','التاسع':'9','العاشر':'10','الحادي عشر':'11','الثاني عشر':'12'};
-  const rawGrade=String(gradeValue||'').trim().replace(/^الصف\\s*/,'');
+  const rawGrade=String(gradeValue||'').trim().replace(/^الصف\s*/,'');
   const grade=/^(?:[1-9]|1[0-2])$/.test(rawGrade)?rawGrade:(gradeNames[rawGrade]||'');
   const section=String(sectionValue||'').trim();
   const config=(await query('SELECT section_count FROM school_grade_sections WHERE school_id=$1 AND grade=$2',[user.school_id,grade])).rows[0];
