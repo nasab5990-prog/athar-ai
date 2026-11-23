@@ -124,3 +124,12 @@ test('student progress keeps same-named skills separate across subjects and clas
   assert.match(view, /sectionNumber\(a\.section\)/);
   assert.match(view, /displaySkillName\(a\.skill \|\| a\.name/);
 });
+
+test('principal mastery average never blends class-wide and individual assessment results', () => {
+  const view = section(app, 'function renderPrincipalView() {', 'let supervisorReportSchoolId');
+  assert.match(view, /const individualAssessments = latestAssessmentRows\(scopedAssessments\.filter\(a => a\.student_id\)\)/);
+  assert.match(view, /const classAssessments = latestAssessmentRows\(scopedAssessments\.filter\(a => !a\.student_id\)\)/);
+  assert.match(view, /const averageRows = individualAssessments\.length \? individualAssessments : classAssessments/);
+  assert.match(view, /النتائج الفردية:/);
+  assert.match(view, /التقويمات الصفية:/);
+});
