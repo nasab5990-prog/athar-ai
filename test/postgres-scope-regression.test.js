@@ -159,3 +159,16 @@ test('parents and students receive class-wide impact only through a matching sam
   assert.match(scope, /i\.payload->'curriculum'->>'section'/);
   assert.match(scope, /s\.payload->>'student_id'=ANY\(\$2::text\[\]\)/);
 });
+
+
+test('supervisor documented impact count requires a valid same-school intervention link', () => {
+  const route = section("app.get('/api/supervisor/schools'", "app.get('/api/supervisor/recommendations'");
+  const documented = route.slice(route.indexOf("AS documented_impacts") > -1 ? route.lastIndexOf("COUNT(r.id) FILTER (WHERE r.kind='impact'", route.indexOf("AS documented_impacts")) : route.indexOf("COUNT(r.id) FILTER (WHERE r.kind='impact' AND length"));
+  assert.match(documented, /intervention_record_id/);
+  assert.match(documented, /EXISTS \(/);
+  assert.match(documented, /i\.school_id=r\.school_id/);
+  assert.match(documented, /i\.kind='intervention'/);
+  assert.match(documented, /i\.id::text=r\.payload->>'intervention_record_id'/);
+  assert.match(documented, /evidence_tool/);
+  assert.match(documented, /sessions_done/);
+});
