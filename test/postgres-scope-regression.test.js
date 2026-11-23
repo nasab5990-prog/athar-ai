@@ -87,3 +87,10 @@ test('principal recommendation updates are limited to the principal school', () 
   assert.match(route, /WHERE id=\$4 AND school_id=\$5/);
   assert.match(route, /req\.user\.school_id/);
 });
+
+test('parent and student class interventions normalize Arabic grade prefixes and section digits', () => {
+  const scope = section('async function getRecordsForUser(user)', 'app.get(\'/api/records\'');
+  assert.match(scope, /regexp_replace\(btrim\(COALESCE\(r\.payload->'curriculum'->>'grade',''\)\), '\^الصف\\\\s\*'/);
+  assert.match(scope, /regexp_replace\(btrim\(COALESCE\(s\.payload->>'grade',''\)\), '\^الصف\\\\s\*'/);
+  assert.match(scope, /translate\(btrim\(r\.payload->'curriculum'->>'section'\),'٠١٢٣٤٥٦٧٨٩','0123456789'\)=translate\(btrim\(COALESCE\(s\.payload->>'section',''\)\),'٠١٢٣٤٥٦٧٨٩','0123456789'\)/);
+});
